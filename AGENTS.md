@@ -2,7 +2,7 @@
 
 El detalle de convenciones, arquitectura y workflows de este proyecto vive en skills bajo `.devin/skills/`, no en este archivo — cada skill cubre una sola responsabilidad y se invoca solo cuando es relevante, para no cargar contexto innecesario en cada sesión.
 
-> Estado actual: scaffold `flutter create` mínimo (`lib/` solo trae el counter demo) — la estructura Feature-First, los workflows de propuestas/subagentes y el design-system docs ya están definidos; el dominio y la identidad visual de Depredadog se definen con las primeras features.
+> Estado actual: bootstrap del core implementado (environment, DI, network, storage, router+guard, tema condimentos, i18n, Splash→Welcome placeholder) — propuesta 001-app-bootstrap. La primera feature funcional es auth (propuesta 003-app-auth) contra el backend `../pcalientes_backend`.
 
 ## Reglas mínimas siempre vigentes
 

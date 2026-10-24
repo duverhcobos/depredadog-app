@@ -23,5 +23,6 @@ class Environment {
   );
 
   static const bool isDev = currentEnvironment == EnvType.dev;
+  static const bool isStg = currentEnvironment == EnvType.stg;
   static const bool isProd = currentEnvironment == EnvType.prod;
 }

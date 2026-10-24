@@ -1368,3 +1368,21 @@ swapea en `setup_di` sin tocar consumers (el puerto ya está).
 - [x] `pendientes-produccion`: Crashlytics documentado en la carpeta
       compartida del backend.
 
+
+---
+
+## Correcciones post-revisión (aplicadas)
+
+Revisor: **APROBADO CON OBSERVACIONES** — 1 IMPORTANTE + 6 MENOR. Fixes aplicados por la sesión principal:
+
+- `pcalientes_backend/pendientes/README.md`: agregada fila del ítem 003 (crashlytics app) al índice — era el único IMPORTANTE.
+- `build.gradle.kts`: comentario sobre `minSdk = flutter.minSdkVersion` (24 ≥ 23 de secure storage — desviación intencional sobre la propuesta).
+- `ios/Runner/Info.plist`: `CFBundleName` → `Depredadog` (la propuesta 002 lo pedía).
+- `AGENTS.md` / `README.md`: "Estado actual" y setup refrescados al post-bootstrap (ya no hay counter demo; deps y paleta reales ya existen); capas corregidas a `{domain,data,presentation}`.
+- `ENVIRONMENTS.md`: ejemplos `--dart-define=API_TOKEN=...` reemplazados por las variables reales (`ENV`, `API_BASE_URL`).
+- `network_info_impl.dart` + `flutter_secure_storage_impl.dart`: comentarios de cabecera SOLID agregados.
+- `app_router.dart`: typo `002-app-auth` → `003-app-auth` (002 quedó tomada por el rename).
+- `environment.dart`: agregado `isStg` por simetría.
+- `pcalientes_backend/README.md`: referencia `../pcalientes_app` → `../depredadog_app` (efectiva al renombrar la carpeta).
+
+INFOs aceptados sin acción: ternaria vs switch-expression (limitación const), secure storage 11.x sin `encryptedSharedPreferences` (default cifrado), `slideUp` sin consumidores aún, `widget_test.dart` placeholder sancionado.

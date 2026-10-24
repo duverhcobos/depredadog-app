@@ -30,14 +30,14 @@ class AppRouter {
       ),
       // /home es el destino autenticado — pantalla real llega con las
       // features; por ahora el guard bloquea el acceso sin sesión.
-      // PROVISIONAL: placeholder hasta que 002-app-auth/defina el shell.
+      // PROVISIONAL: placeholder hasta que 003-app-auth defina el shell.
       GoRoute(
         path: AuthGuard.homeRoute,
         pageBuilder: (context, state) =>
             CustomTransitions.fade(state, const WelcomeScreen()),
       ),
       // Las rutas /login, /register, /verify-email, /forgot-password y
-      // /reset-password se registran en la propuesta 002-app-auth — el
+      // /reset-password se registran en la propuesta 003-app-auth — el
       // guard ya las trata como públicas.
     ],
   );

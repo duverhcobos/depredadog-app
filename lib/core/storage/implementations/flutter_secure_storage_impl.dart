@@ -2,6 +2,8 @@ import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 
 import '../interfaces/i_secure_storage.dart';
 
+/// OCP: la app depende de ISecureStorage; este impl aísla flutter_secure_storage.
+/// Solo expone read/write/delete por clave — nunca deleteAll (sesión selectiva).
 class FlutterSecureStorageImpl implements ISecureStorage {
   // flutter_secure_storage 11.x: el cifrado (cipher storage propio, sucesor
   // de EncryptedSharedPreferences) es el default — no requiere opt-in.

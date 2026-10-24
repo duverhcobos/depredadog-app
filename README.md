@@ -4,7 +4,7 @@ App móvil de **Depredadog** en Flutter con **Clean Architecture + SOLID**, `flu
 
 ## Qué trae
 
-- Estructura Feature-First (`lib/features/<feature>/{domain,application,infrastructure,presentation}`).
+- Estructura Feature-First (`lib/features/<feature>/{domain,data,presentation}`).
 - Workflows de agente: propuestas en `propuestas/`, subagentes implementador/revisor en `.devin/agents/`.
 - 19 skills de desarrollo en `.devin/skills/` (arquitectura, i18n, theming, testing, navegación, etc.).
 - `Design/design-system.yaml` — fuente de verdad de la identidad visual (versionado por cambio visual).
@@ -14,8 +14,8 @@ App móvil de **Depredadog** en Flutter con **Clean Architecture + SOLID**, `flu
 
 1. `flutter pub get` y verificar `flutter analyze` limpio.
 2. `flutter run --dart-define=ENV=dev` — ver `ENVIRONMENTS.md` para apuntar al backend local.
-3. Redefinir `Design/design-system.yaml` (paleta/brand) con la primera pantalla real.
-4. Las dependencias de arquitectura (bloc, go_router, get_it, dio…) se agregan al `pubspec.yaml` con la primera feature — las skills `flutter-architecture` y `new-feature-checklist` describen el stack objetivo.
+
+El core ya está bootstrapeado (propuesta `001-app-bootstrap`): environment, DI (`get_it`), `dio` tras `INetworkService`, `flutter_secure_storage`, `go_router` + `AuthGuard`, tema Material 3 con la paleta de condimentos y localización `es`. Las features nuevas siguen `new-feature-checklist` dentro de `lib/features/`.
 
 ## Backend hermano
 

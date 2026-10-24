@@ -25,20 +25,22 @@ Si estás operando o diagnosticando la aplicación desde la terminal, jamás eje
   - Dispositivo físico: `--dart-define=API_BASE_URL=http://<ip-lan-del-pc>:3000` (el backend NestJS debe ser accesible en la LAN — `app.listen` ya bindea a `0.0.0.0`; revisar firewall de Windows).
 
 - **Pruebas y QA (Staging):**
-  `flutter run --dart-define=ENV=stg --dart-define=API_TOKEN=<tu-token-stg>`
+  `flutter run --dart-define=ENV=stg --dart-define=API_BASE_URL=<url-api-stg>`
 
 - **Generar Instalador Final Absoluto (Producción):**
-  `flutter build appbundle --dart-define=ENV=prod --dart-define=API_TOKEN=<tu-token-prod>`
+  `flutter build appbundle --dart-define=ENV=prod --dart-define=API_BASE_URL=<url-api-prod>`
+
+Las variables soportadas hoy son `ENV` (`dev`/`stg`/`prod`, default `dev`) y `API_BASE_URL` (default `http://10.0.2.2:3000`). Cualquier variable nueva (ej. una key pública de terceros) se agrega primero en `environment.dart` con `String.fromEnvironment` y se documenta aquí.
 
 **Por qué se hace así (y no con `.env` ni valores en archivos del repo):**
 
 1. El token real **nunca toca un archivo versionado** → es imposible commitearlo por accidente.
 2. No se usa `.env` porque viaja como texto plano dentro del APK/IPA y además es el archivo que más se filtra a git por descuido (este repo lo ignora preventivamente en `.gitignore`).
-3. Renovar un token = cambiar el valor en el comando o en el vault de CI; ningún archivo versionado cambia, así que `git status` jamás muestra un secreto en diff.
+3. Renovar un valor = cambiarlo en el comando o en el vault de CI; ningún archivo versionado cambia, así que `git status` jamás muestra un secreto en diff.
 4. El mismo patrón escala a CI/CD sin cambios: el pipeline inyecta los valores desde su vault de secretos directo en el comando `flutter build` — ningún archivo intermedio.
 
 ---
 
 ## 3. Beneficios Arquitectónicos de esta decisión
 1. **Open/Closed Principle (OCP):** Puedes crear 20 entornos nuevos u 80 variables secretas extra en tu máquina, y la lógica de enrutamiento o repositorios jamás sufrirá alteraciones. La inyección es agnóstica a la arquitectura.
-2. **Seguridad mejorada (con límites conocidos):** a diferencia de archivos texto plano `.env`, los valores `--dart-define` viajan compilados dentro del binario. ⚠️ Ojo: igualmente son **extraíbles del APK/IPA** con herramientas de ingeniería inversa — son más difíciles de leer que un `.env`, no imposibles. Por eso `API_TOKEN` solo debe usarse para keys **no sensibles** (IDs de cliente, keys públicas acotadas); ningún secreto real puede vivir en el cliente, y la autorización fuerte siempre la da el JWT por usuario desde el secure storage.
+2. **Seguridad mejorada (con límites conocidos):** a diferencia de archivos texto plano `.env`, los valores `--dart-define` viajan compilados dentro del binario. ⚠️ Ojo: igualmente son **extraíbles del APK/IPA** con herramientas de ingeniería inversa — son más difíciles de leer que un `.env`, no imposibles. Por eso los `--dart-define` solo deben usarse para valores **no sensibles** (URLs, IDs de cliente, keys públicas acotadas); ningún secreto real puede vivir en el cliente, y la autorización fuerte siempre la da el JWT por usuario desde el secure storage.
