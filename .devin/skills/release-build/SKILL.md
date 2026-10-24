@@ -25,8 +25,9 @@ APK falle con "No se pudo conectar al servidor" (el permiso solo existe en
 - [ ] **`usesCleartextTraffic`** si el backend corre por `http://` (IP LAN
   de desarrollo) — Android bloquea cleartext por defecto en release.
 - [ ] **Entorno elegido** vía `--dart-define=ENV=dev|stg|prod`
-  (`lib/core/constants/environment/environment.dart`, cuando exista) — sin
-  flag cae a `dev`. `API_TOKEN` idem si aplica.
+  (`lib/core/constants/environment/environment.dart`) — sin
+  flag cae a `dev`. Cualquier `--dart-define` nuevo (ej. `GOOGLE_SERVER_CLIENT_ID`)
+  se declara primero en `environment.dart`.
 - [ ] **`API_BASE_URL` inyectada** — `environment.dart` no debe tener URLs de
   stg/prod hardcodeadas: pasar `--dart-define=API_BASE_URL=...` (default dev:
   `http://10.0.2.2:3000` para emulador → `pcalientes_backend` local). Sin

@@ -18,9 +18,13 @@ Reglas para manejar entornos y secretos en **Depredadog**, un proyecto camino a 
   `String.fromEnvironment`.
 - Ejecución local:
   ```bash
-  flutter run --dart-define=ENV=dev --dart-define=API_TOKEN=<token>
+  flutter run --dart-define=ENV=dev
   ```
-  Entornos válidos: `dev`, `stg`, `prod`.
+  Variables activas hoy: `ENV` (`dev`/`stg`/`prod`, default `dev`) y
+  `API_BASE_URL` (default `http://10.0.2.2:3000` = localhost del host vía emulador).
+  Toda variable nueva se declara primero en `environment.dart` y se documenta en
+  `ENVIRONMENTS.md` — no inyectar `--dart-define` de variables que `environment.dart`
+  no lea (se ignoran silenciosamente).
 - Nunca usar archivos `.env` de texto plano para secretos de producción; el mecanismo del proyecto
   es `--dart-define`.
 
