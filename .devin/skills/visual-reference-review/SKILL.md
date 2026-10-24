@@ -40,7 +40,7 @@ filtro y barra:
   la semántica debe medir lo que dice medir (caso real: barras a 50% cuando la fracción
   real era otra → corregido a la fracción medida).
 - **¿El filtro esconde datos?** Un scope de período en un nivel de resumen hace que el KPI
-  deje de ser el total real ("Octubre" ocultaba adelantos viejos pendientes — rechazado).
+  deje de ser el total real ("Octubre" ocultaba ítems viejos pendientes — rechazado).
 - **¿El label es honesto?** Un "$170.000" pelado no dice si es bruto, pagado o pendiente →
   "queda $X".
 - **¿La affordance existe de verdad?** Un chevron/botón que no navega a nada es mentira visual.
@@ -72,4 +72,4 @@ si nace una convención transversal, candidata a `components.*` + `continuity_ru
 - Copiar la referencia literal con valores hardcodeados fuera de `AppColors`/tokens.
 - Implementar sin sign-off cuando el usuario solo pidió análisis.
 - "Mejoras" que agregan ruido: más badges, más iconos, más colores compitiendo — la dirección
-  Pronósticos gasta la audacia en UN elemento firma por pantalla/sección.
+  PCalientes gasta la audacia en UN elemento firma por pantalla/sección.

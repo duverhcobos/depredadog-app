@@ -1,12 +1,12 @@
 ---
 name: solid-clean-architecture
-description: Reglas S.O.L.I.D. y de separación de capas obligatorias al escribir o revisar código en Pronósticos
+description: Reglas S.O.L.I.D. y de separación de capas obligatorias al escribir o revisar código en PCalientes
 triggers:
   - user
   - model
 ---
 
-Reglas de diseño obligatorias para **Pronósticos**. Aplican al escribir código nuevo y al
+Reglas de diseño obligatorias para **PCalientes**. Aplican al escribir código nuevo y al
 revisar/auditar código existente.
 
 1. **Domain layer pura:** prohibido importar Flutter u otras librerías de UI en `domain/`. Solo

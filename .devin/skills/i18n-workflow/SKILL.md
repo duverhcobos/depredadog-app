@@ -1,12 +1,12 @@
 ---
 name: i18n-workflow
-description: Flujo obligatorio para agregar o modificar textos visibles al usuario en Pronósticos
+description: Flujo obligatorio para agregar o modificar textos visibles al usuario en PCalientes
 triggers:
   - user
   - model
 ---
 
-Flujo de internacionalización para **Pronósticos** (`I18N_GUIDE.md`).
+Flujo de internacionalización para **PCalientes** (`I18N_GUIDE.md`).
 
 - Prohibido texto estático quemado en widgets (`Text('Login')`). Todo texto va por
   `AppLocalizations`.
@@ -20,7 +20,7 @@ Flujo de internacionalización para **Pronósticos** (`I18N_GUIDE.md`).
    agregar también el bloque `@claveDelTexto` con `placeholders`.
 2. Ejecutar `flutter gen-l10n` para regenerar las clases.
 3. Consumir con `AppLocalizations.of(context)!.miClave` (import
-   `package:template_flutter/l10n/app_localizations.dart`).
+   `package:pcalientes_app/l10n/app_localizations.dart`).
 
 No editar manualmente los archivos generados `lib/l10n/app_localizations*.dart` (se regeneran).
 Cuando se proponga un cambio que toque i18n, la propuesta debe indicar "ejecutar

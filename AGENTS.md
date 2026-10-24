@@ -1,17 +1,17 @@
-# Instrucciones del Proyecto — Template Flutter
+# Instrucciones del Proyecto — PCalientes App (Flutter)
 
 El detalle de convenciones, arquitectura y workflows de este proyecto vive en skills bajo `.devin/skills/`, no en este archivo — cada skill cubre una sola responsabilidad y se invoca solo cuando es relevante, para no cargar contexto innecesario en cada sesión.
 
-> Este repo es un **template de arranque** para apps Flutter con Clean Architecture — la estructura Feature-First, los workflows de propuestas/subagentes y el design-system docs son genéricos; el producto, el dominio y la identidad visual se definen al clonarlo para un producto real.
+> Estado actual: scaffold `flutter create` mínimo (`lib/` solo trae el counter demo) — la estructura Feature-First, los workflows de propuestas/subagentes y el design-system docs ya están definidos; el dominio y la identidad visual de PCalientes se definen con las primeras features.
 
 ## Reglas mínimas siempre vigentes
 
 - **Idioma de respuesta: español neutro latinoamericano** — tuteo estándar ("tienes", "puedes", "revisa"), SIN voseo rioplatense ni formas de España.
-- **Framework:** Flutter, Clean Architecture + S.O.L.I.D. Package: `template_flutter`.
+- **Framework:** Flutter, Clean Architecture + S.O.L.I.D. Package: `pcalientes_app`.
 - **Commits sin trailer de herramienta** — no agregar `Generated with ...` ni `Co-Authored-By` al mensaje; solo el texto del commit.
 - **Nunca editar archivos fuente directamente** para implementar funcionalidad o lógica de negocio: ver skill `code-proposals` antes de escribir/modificar código (excepción: correcciones triviales de un solo archivo).
 - **OS de desarrollo**: Windows — los comandos de ejemplo deben ser compatibles con el terminal del agente.
-- **Producto: app móvil** consumidora de un backend HTTP (ej. `../template_nestj`) — único cliente esperado, sin panel web. Tratar todo cambio con rigor de código productivo — ver skill `environments-secrets` **siempre** que se toquen entornos, URLs, tokens o certificados.
+- **Producto: app móvil** consumidora del backend NestJS `../pcalientes_backend` (`:3000`) — único cliente esperado, sin panel web. Tratar todo cambio con rigor de código productivo — ver skill `environments-secrets` **siempre** que se toquen entornos, URLs, tokens o certificados.
 - **Decisiones con opciones, siempre**: cuando una tarea llegue a un punto de decisión con alternativas, presentar las opciones como pregunta de elección con trade-offs breves — no decidir unilateralmente ni pedir confirmación abierta.
 
 ## Índice de skills
@@ -33,7 +33,7 @@ El detalle de convenciones, arquitectura y workflows de este proyecto vive en sk
 | `production-checklist` | **Siempre** antes de dar por terminado un cambio |
 | `navigation-routing` | Al tocar rutas/pantallas — go_router: constantes en el guard, segmentos relativos en hijos, push vs go |
 | `release-build` | Antes de generar APK/AAB release — permisos, --dart-define por entorno, firma y versionado |
-| `pendientes-produccion` | Al crear/consultar pendientes pre-producción — carpeta `pendientes/` en la raíz del backend (`../backend/pendientes/`), compartida entre ambos proyectos |
+| `pendientes-produccion` | Al crear/consultar pendientes pre-producción — carpeta `pendientes/` en la raíz del backend (`../pcalientes_backend/pendientes/`), compartida entre ambos proyectos |
 | `design-system-docs` | Tras cualquier cambio visual — cómo actualizar `Design/design-system.yaml` (version, spec, changelog) |
 | `new-feature-checklist` | Al agregar un módulo/feature nuevo — orden exacto de archivos del dominio a la pantalla |
 | `token-saving-tools-policy` | Al explorar el código — cuándo leer directo vs. usar el grafo codebase-memory, batching |

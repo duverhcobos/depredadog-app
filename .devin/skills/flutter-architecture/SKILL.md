@@ -1,12 +1,12 @@
 ---
 name: flutter-architecture
-description: Stack tecnológico y estructura de carpetas Feature-First de Pronósticos
+description: Stack tecnológico y estructura de carpetas Feature-First de PCalientes
 triggers:
   - user
   - model
 ---
 
-Referencia de arquitectura para crear archivos/features nuevas en **Pronósticos** (Flutter,
+Referencia de arquitectura para crear archivos/features nuevas en **PCalientes** (Flutter,
 Clean Architecture + S.O.L.I.D.).
 
 ## Stack e infraestructura
@@ -24,9 +24,10 @@ Clean Architecture + S.O.L.I.D.).
 - **Conectividad:** `internet_connection_checker`.
 - **i18n:** `flutter_localizations` + `intl`, diccionarios `.arb` en `lib/l10n/`.
 - **Testing:** `flutter_test`, `bloc_test`, `mocktail`.
-- **Plataformas destino:** android, ios (app móvil — único cliente del MVP, ver
-  `../planeaciones/003-decision-plataforma-frontend-movil.md` en el backend). Los scaffolds
-  `web/`, `windows/`, `linux/`, `macos/` existen pero no son target de producto.
+- **Plataformas destino:** android, ios (app móvil — único cliente del MVP de
+  PCalientes, único consumidor esperado del backend). Solo existen los scaffolds
+  `android/` e `ios/`; si alguna vez se generan `web/`, `windows/`, `linux/` o
+  `macos/`, igualmente no son target de producto.
 
 No agregar dependencias nuevas sin verificar que resuelven un problema real y que no duplican una
 ya existente en `pubspec.yaml`.

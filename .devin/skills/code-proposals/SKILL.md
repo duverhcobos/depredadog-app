@@ -1,12 +1,12 @@
 ---
 name: code-proposals
-description: Flujo obligatorio de propuestas antes de tocar código fuente en Pronósticos
+description: Flujo obligatorio de propuestas antes de tocar código fuente en PCalientes
 triggers:
   - user
   - model
 ---
 
-Este proyecto (**Pronósticos**, app móvil Flutter en desarrollo activo con destino a producción) exige
+Este proyecto (**PCalientes**, app móvil Flutter en desarrollo activo con destino a producción) exige
 que los cambios de código **no se apliquen directamente**: se plantean primero como una propuesta
 para que el usuario la revise y apruebe.
 

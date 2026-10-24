@@ -1,6 +1,6 @@
 ---
 name: production-checklist
-description: Checklist final antes de considerar terminado un cambio en Pronósticos (proyecto camino a producción)
+description: Checklist final antes de considerar terminado un cambio en PCalientes (proyecto camino a producción)
 allowed-tools:
   - read
   - grep
@@ -11,7 +11,7 @@ triggers:
   - model
 ---
 
-**Pronósticos** es la app real en desarrollo activo con destino a producción, no un repo de
+**PCalientes** es la app real en desarrollo activo con destino a producción, no un repo de
 prueba. Antes de considerar terminado cualquier cambio (propio o de un cambio previamente
 aplicado), correr este checklist:
 

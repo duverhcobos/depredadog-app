@@ -1,6 +1,6 @@
 ---
 name: bloc-patterns
-description: Cuándo usar context.read/watch/select vs BlocBuilder/BlocListener/BlocConsumer en Pronósticos — división UI vs efectos, y dónde vive cada cosa (screen shell vs widgets extraídos)
+description: Cuándo usar context.read/watch/select vs BlocBuilder/BlocListener/BlocConsumer en PCalientes — división UI vs efectos, y dónde vive cada cosa (screen shell vs widgets extraídos)
 allowed-tools:
   - read
   - grep
@@ -10,7 +10,7 @@ triggers:
   - model
 ---
 
-Convenciones de `flutter_bloc` para **Pronósticos**. Regla de oro: los `context.*`
+Convenciones de `flutter_bloc` para **PCalientes**. Regla de oro: los `context.*`
 son funciones; los widgets `Bloc*` son widgets. Elegir según lo que se quiere
 hacer — nunca usar `watch`/`select` para efectos ni `read` dentro de `build`.
 

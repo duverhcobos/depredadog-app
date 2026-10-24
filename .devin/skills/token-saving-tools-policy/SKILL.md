@@ -18,7 +18,7 @@ consumo de tokens por sesión.
    en la misma sesión), usar `read`/`grep` directamente. No pasar por el grafo (codebase-memory)
    para esto — es más caro y no aporta nada que no dé una lectura directa.
 2. **Ubicación desconocida o relación entre capas/features → ahí sí, grafo.** El proyecto ya está
-   indexado en `codebase-memory-mcp` (proyecto `C-Users-Usuario-Documents-DHC30-template_flutter`).
+   indexado en `codebase-memory-mcp` (proyecto `C-Users-Usuario-Documents-DHC30-PCALIENTES-pcalientes_app` — indexar al primer uso real; la app es scaffold y aún no está indexada).
    Reservar `search_graph`, `trace_path`, `query_graph` para cuando de verdad no se sabe dónde vive
    algo, o se necesita trazar quién llama a qué a través de varias capas (`domain` → `data` →
    `presentation`, o quién usa un Use Case/Cubit específico). `get_architecture` solo para un

@@ -1,6 +1,6 @@
 ---
 name: release-build
-description: Checklist para generar APK/AAB release de Pronósticos — permisos, --dart-define por entorno, mocks de dev, firma y versionado
+description: Checklist para generar APK/AAB release de PCalientes — permisos, --dart-define por entorno, mocks de dev, firma y versionado
 allowed-tools:
   - read
   - grep
@@ -10,7 +10,7 @@ triggers:
   - model
 ---
 
-Checklist antes de generar un build release de **Pronósticos** (`flutter build
+Checklist antes de generar un build release de **PCalientes** (`flutter build
 apk`/`appbundle`). Lo que en `flutter run` (debug) "funciona" puede romper
 en release — el caso típico: el manifest `main/` sin `INTERNET` hace que el
 APK falle con "No se pudo conectar al servidor" (el permiso solo existe en
@@ -29,8 +29,9 @@ APK falle con "No se pudo conectar al servidor" (el permiso solo existe en
   flag cae a `dev`. `API_TOKEN` idem si aplica.
 - [ ] **`API_BASE_URL` inyectada** — `environment.dart` no debe tener URLs de
   stg/prod hardcodeadas: pasar `--dart-define=API_BASE_URL=...` (default dev:
-  `http://10.0.2.2:8000` para emulador → FastAPI local). Sin `API_BASE_URL` un
-  build stg/prod apunta al default del emulador y falla en device físico.
+  `http://10.0.2.2:3000` para emulador → `pcalientes_backend` local). Sin
+  `API_BASE_URL` un build stg/prod apunta al default del emulador y falla en
+  device físico.
 - [ ] **Versiones sincronizadas**: `version:` de `pubspec.yaml` y
   `Environment.appVersion` (cuando exista) — Dart no lee el pubspec en
   runtime, hay que subir ambas a mano.

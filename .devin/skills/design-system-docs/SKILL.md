@@ -1,6 +1,6 @@
 ---
 name: design-system-docs
-description: Contrato de documentación del design system — cuándo y cómo actualizar design-system.yaml (version bump, spec, changelog) tras cualquier cambio visual en Pronósticos
+description: Contrato de documentación del design system — cuándo y cómo actualizar design-system.yaml (version bump, spec, changelog) tras cualquier cambio visual en PCalientes
 allowed-tools:
   - read
   - grep
@@ -10,8 +10,8 @@ triggers:
   - model
 ---
 
-`Design/design-system.yaml` (carpeta hermana de `Frontend/`) es la
-**fuente de verdad** de la identidad visual de Pronósticos — specs por
+`Design/design-system.yaml` (en la raíz de este repo) es la
+**fuente de verdad** de la identidad visual de PCalientes — specs por
 pantalla/componente + changelog versionado. Todo cambio visual que llega a
 código debe reflejarse ahí en la misma iteración, no después.
 

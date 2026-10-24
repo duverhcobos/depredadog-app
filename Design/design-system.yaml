@@ -1,11 +1,11 @@
-# Design System — Template Flutter
+# Design System — PCalientes
 # Convención: ver .devin/skills/design-system-docs
 # Cada cambio visual → bump de version + spec actualizado + entrada en changelog.
 
 meta:
-  product: template_flutter
-  version: 1.0.0
-  updated: 2026-10-16
+  product: PCalientes
+  version: 1.0.1
+  updated: 2026-10-23
 
 palette:
   # Seed mínima — redefinir al clonar el template para un producto real.
@@ -30,3 +30,6 @@ changelog:
   - version: 1.0.0
     date: 2026-10-16
     notes: Seed inicial del template — paleta y tokens genéricos, sin specs de producto.
+  - version: 1.0.1
+    date: 2026-10-23
+    notes: Rebranding del seed al producto PCalientes — sin cambios visuales; paleta/tokens genéricos pendientes de definir con la primera pantalla real.

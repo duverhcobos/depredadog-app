@@ -11,7 +11,7 @@ identidad visual que no se pueda confundir con "otra app Flutter con Material De
 La identidad de marca de la app se define en `Design/design-system.yaml` — ese documento es la
 **fuente de verdad** de la identidad visual (paleta, imagotipo, especificaciones por pantalla;
 cuando aún no exista, la primera propuesta de diseño lo crea). Las decisiones de diseño salen de
-ahí y del dominio del producto (pronósticos deportivos, su audiencia y su tono), no de un tema de
+ahí y del dominio del producto (su audiencia y su tono), no de un tema de
 Material genérico con el nombre de la app encima.
 
 ## Diagnóstico honesto del estado actual
@@ -32,8 +32,8 @@ solo archivo de tema (`AppColors`/`AppTheme` con tokens `app*`), nunca sueltos p
   registrarse una sola vez en `AppTheme`, nunca con `TextStyle(fontFamily: ...)` sueltos en cada
   pantalla.
 - **La estructura debe significar algo.** Si en algún momento se necesitan indicadores numerados,
-  divisores o "chips" de estado, que representen algo real del dominio (ej. marcador, cuota,
-  estado de un pronóstico) — no decoración genérica tipo "01 / 02 / 03" sin relación con el
+  divisores o "chips" de estado, que representen algo real del dominio (ej. total de un pedido,
+  estado de una orden) — no decoración genérica tipo "01 / 02 / 03" sin relación con el
   contenido.
 - **Movimiento con intención, no decoración.** Al agregar micro-interacciones (botones,
   transiciones) preguntarse si refuerzan la sensación que el producto quiere dar, o si son solo

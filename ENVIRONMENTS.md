@@ -19,10 +19,10 @@ El código fuente de toda la aplicación consume las constantes generadas en esa
 ## 2. Cómo compilar y ejecutar (Vía Terminal)
 Si estás operando o diagnosticando la aplicación desde la terminal, jamás ejecutes un simple `flutter run`. Dependiendo hacia qué base de datos quieras apuntar, debes inyectar el entorno explícitamente:
 
-- **Desarrollo (backend FastAPI local):**
+- **Desarrollo (backend NestJS local):**
   `flutter run --dart-define=ENV=dev`
-  - Emulador Android: sin más — `API_BASE_URL` default `http://10.0.2.2:8000` apunta al localhost del host.
-  - Dispositivo físico: `--dart-define=API_BASE_URL=http://<ip-lan-del-pc>:8000` (el backend debe escuchar en `0.0.0.0` o la LAN — `uvicorn --host 0.0.0.0`).
+  - Emulador Android: sin más — `API_BASE_URL` default `http://10.0.2.2:3000` apunta al localhost del host (`pcalientes_backend` corre en `:3000`).
+  - Dispositivo físico: `--dart-define=API_BASE_URL=http://<ip-lan-del-pc>:3000` (el backend NestJS debe ser accesible en la LAN — `app.listen` ya bindea a `0.0.0.0`; revisar firewall de Windows).
 
 - **Pruebas y QA (Staging):**
   `flutter run --dart-define=ENV=stg --dart-define=API_TOKEN=<tu-token-stg>`
