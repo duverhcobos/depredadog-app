@@ -40,7 +40,7 @@ flutter gen-l10n
 Ve a tu Widget donde pretendes usar tu nuevo botón.
 Añade la clase generada en tus importaciones en la parte superior del archivo:
 ```dart
-import 'package:pcalientes_app/l10n/app_localizations.dart';
+import 'package:depredadog_app/l10n/app_localizations.dart';
 ```
 
 Extrae el texto dinámico dentro del método `build`:

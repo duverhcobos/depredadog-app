@@ -1,6 +1,6 @@
 ---
 name: file-size-refactoring
-description: Regla obligatoria de refactorización por tamaño — cuándo y cómo partir archivos grandes en widgets/componentes extraídos para mantener legibilidad en PCalientes
+description: Regla obligatoria de refactorización por tamaño — cuándo y cómo partir archivos grandes en widgets/componentes extraídos para mantener legibilidad en Depredadog
 allowed-tools:
   - read
   - grep
@@ -10,7 +10,7 @@ triggers:
   - model
 ---
 
-Regla de tamaño y legibilidad para **PCalientes**. Aplica **siempre**: al crear
+Regla de tamaño y legibilidad para **Depredadog**. Aplica **siempre**: al crear
 una pantalla/widget nuevo y también al modificar uno existente (si tu cambio
 deja el archivo más grande, evalúa partirlo ANTES de dar por terminado).
 

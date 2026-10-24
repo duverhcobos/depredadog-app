@@ -1,12 +1,12 @@
 ---
 name: flutter-architecture
-description: Stack tecnológico y estructura de carpetas Feature-First de PCalientes
+description: Stack tecnológico y estructura de carpetas Feature-First de Depredadog
 triggers:
   - user
   - model
 ---
 
-Referencia de arquitectura para crear archivos/features nuevas en **PCalientes** (Flutter,
+Referencia de arquitectura para crear archivos/features nuevas en **Depredadog** (Flutter,
 Clean Architecture + S.O.L.I.D.).
 
 ## Stack e infraestructura
@@ -25,7 +25,7 @@ Clean Architecture + S.O.L.I.D.).
 - **i18n:** `flutter_localizations` + `intl`, diccionarios `.arb` en `lib/l10n/`.
 - **Testing:** `flutter_test`, `bloc_test`, `mocktail`.
 - **Plataformas destino:** android, ios (app móvil — único cliente del MVP de
-  PCalientes, único consumidor esperado del backend). Solo existen los scaffolds
+  Depredadog, único consumidor esperado del backend). Solo existen los scaffolds
   `android/` e `ios/`; si alguna vez se generan `web/`, `windows/`, `linux/` o
   `macos/`, igualmente no son target de producto.
 

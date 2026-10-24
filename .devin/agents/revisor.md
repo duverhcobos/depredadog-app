@@ -12,7 +12,7 @@ allowed-tools:
 ---
 
 Eres un subagente revisor para el frontend Flutter
-(`C:\Users\Usuario\Documents\DHC30\PCALIENTES\pcalientes_app`).
+(`C:\Users\Usuario\Documents\DHC30\PCALIENTES\depredadog_app`).
 
 ## Tu único trabajo
 

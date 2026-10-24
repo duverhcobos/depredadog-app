@@ -1,6 +1,6 @@
 ---
 name: release-build
-description: Checklist para generar APK/AAB release de PCalientes — permisos, --dart-define por entorno, mocks de dev, firma y versionado
+description: Checklist para generar APK/AAB release de Depredadog — permisos, --dart-define por entorno, mocks de dev, firma y versionado
 allowed-tools:
   - read
   - grep
@@ -10,7 +10,7 @@ triggers:
   - model
 ---
 
-Checklist antes de generar un build release de **PCalientes** (`flutter build
+Checklist antes de generar un build release de **Depredadog** (`flutter build
 apk`/`appbundle`). Lo que en `flutter run` (debug) "funciona" puede romper
 en release — el caso típico: el manifest `main/` sin `INTERNET` hace que el
 APK falle con "No se pudo conectar al servidor" (el permiso solo existe en

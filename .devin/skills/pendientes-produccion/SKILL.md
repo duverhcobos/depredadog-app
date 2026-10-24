@@ -1,6 +1,6 @@
 ---
 name: pendientes-produccion
-description: Checklist de pendientes pre-producción (../pcalientes_backend/pendientes/, compartida con el backend) — cuándo crear ítems, formato, estados y cuándo revisarlos antes de un release de PCalientes
+description: Checklist de pendientes pre-producción (../pcalientes_backend/pendientes/, compartida con el backend) — cuándo crear ítems, formato, estados y cuándo revisarlos antes de un release de Depredadog
 triggers:
   - user
   - model

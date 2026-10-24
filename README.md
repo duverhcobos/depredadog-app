@@ -1,6 +1,6 @@
-# PCalientes — App
+# Depredadog — App
 
-App móvil de **PCalientes** en Flutter con **Clean Architecture + SOLID**, `flutter_bloc`, `go_router`, `get_it` y localización `.arb`. Cliente único del backend `../pcalientes_backend`.
+App móvil de **Depredadog** en Flutter con **Clean Architecture + SOLID**, `flutter_bloc`, `go_router`, `get_it` y localización `.arb`. Cliente único del backend `../pcalientes_backend`.
 
 ## Qué trae
 

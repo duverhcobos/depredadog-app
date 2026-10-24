@@ -1,12 +1,12 @@
 ---
 name: environments-secrets
-description: Manejo de entornos (dev/stg/prod), variables --dart-define y secretos en PCalientes
+description: Manejo de entornos (dev/stg/prod), variables --dart-define y secretos en Depredadog
 triggers:
   - user
   - model
 ---
 
-Reglas para manejar entornos y secretos en **PCalientes**, un proyecto camino a producción.
+Reglas para manejar entornos y secretos en **Depredadog**, un proyecto camino a producción.
 
 ## Entornos (`ENVIRONMENTS.md`)
 
@@ -28,7 +28,7 @@ Reglas para manejar entornos y secretos en **PCalientes**, un proyecto camino a 
 
 - **Cero endpoints/datos de prueba fuera de `dev`:** `dummyjson.com` u otros mocks públicos solo
   pueden usarse cuando `Environment.currentEnvironment == EnvType.dev`. Los entornos `stg` y `prod`
-  deben apuntar siempre a infraestructura real de PCalientes; nunca dejar un `TODO`/URL
+  deben apuntar siempre a infraestructura real de Depredadog; nunca dejar un `TODO`/URL
   placeholder sin avisar explícitamente al usuario. Cualquier lógica "truco" específica de una API
   de pruebas (ej. transformar email en username) debe estar gateada por entorno, nunca ejecutarse
   incondicionalmente.

@@ -1,13 +1,13 @@
-# Instrucciones del Proyecto — PCalientes App (Flutter)
+# Instrucciones del Proyecto — Depredadog App (Flutter)
 
 El detalle de convenciones, arquitectura y workflows de este proyecto vive en skills bajo `.devin/skills/`, no en este archivo — cada skill cubre una sola responsabilidad y se invoca solo cuando es relevante, para no cargar contexto innecesario en cada sesión.
 
-> Estado actual: scaffold `flutter create` mínimo (`lib/` solo trae el counter demo) — la estructura Feature-First, los workflows de propuestas/subagentes y el design-system docs ya están definidos; el dominio y la identidad visual de PCalientes se definen con las primeras features.
+> Estado actual: scaffold `flutter create` mínimo (`lib/` solo trae el counter demo) — la estructura Feature-First, los workflows de propuestas/subagentes y el design-system docs ya están definidos; el dominio y la identidad visual de Depredadog se definen con las primeras features.
 
 ## Reglas mínimas siempre vigentes
 
 - **Idioma de respuesta: español neutro latinoamericano** — tuteo estándar ("tienes", "puedes", "revisa"), SIN voseo rioplatense ni formas de España.
-- **Framework:** Flutter, Clean Architecture + S.O.L.I.D. Package: `pcalientes_app`.
+- **Framework:** Flutter, Clean Architecture + S.O.L.I.D. Package: `depredadog_app`.
 - **Commits sin trailer de herramienta** — no agregar `Generated with ...` ni `Co-Authored-By` al mensaje; solo el texto del commit.
 - **Nunca editar archivos fuente directamente** para implementar funcionalidad o lógica de negocio: ver skill `code-proposals` antes de escribir/modificar código (excepción: correcciones triviales de un solo archivo).
 - **OS de desarrollo**: Windows — los comandos de ejemplo deben ser compatibles con el terminal del agente.

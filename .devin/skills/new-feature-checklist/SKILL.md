@@ -1,6 +1,6 @@
 ---
 name: new-feature-checklist
-description: Orden exacto de archivos a crear al agregar un módulo/feature nuevo en PCalientes — del dominio a la pantalla, rutas, l10n, tests y design system
+description: Orden exacto de archivos a crear al agregar un módulo/feature nuevo en Depredadog — del dominio a la pantalla, rutas, l10n, tests y design system
 allowed-tools:
   - read
   - grep
@@ -11,7 +11,7 @@ triggers:
 ---
 
 Orden obligatorio para aterrizar un módulo nuevo (ej. Pedidos,
-Catálogo) en **PCalientes**. Es el equivalente frontend del
+Catálogo) en **Depredadog**. Es el equivalente frontend del
 `new-endpoint-checklist` del backend. Antes de empezar: propuesta en
 `propuestas/` aprobada (skill `code-proposals`) y skills `flutter-architecture`,
 `solid-clean-architecture`, `ui-design-standard` cargadas.

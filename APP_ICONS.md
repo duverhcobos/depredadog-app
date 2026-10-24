@@ -1,12 +1,12 @@
-# Íconos de la app — cómo configurarlos en PCalientes
+# Íconos de la app — cómo configurarlos en Depredadog
 
-Guía de referencia para definir el ícono de PCalientes: qué archivos intervienen,
+Guía de referencia para definir el ícono de Depredadog: qué archivos intervienen,
 para qué sirve cada uno y a dónde se copia.
 
 > **Estado actual:** scaffold `flutter create` — solo existen los PNGs default de
 > Flutter en `res/mipmap-{d}/ic_launcher.png`, sin íconos adaptativos, sin capas
 > foreground/monochrome ni fondo de marca. El `android:label` del manifest ya es
-> `"PCalientes"`. Toda la configuración de marca de esta guía está por hacerse
+> `"Depredadog"`. Toda la configuración de marca de esta guía está por hacerse
 > cuando exista el isotipo.
 
 ---
@@ -65,7 +65,7 @@ Densidades y tamaño del ícono de launcher:
 
 ```xml
 <application
-    android:label="PCalientes"                           <!-- ya configurado -->
+    android:label="Depredadog"                           <!-- ya configurado -->
     android:icon="@mipmap/ic_launcher"                   <!-- ícono estándar -->
     android:roundIcon="@mipmap/ic_launcher_round">       <!-- agregar al tener el pack -->
 ```
@@ -89,7 +89,7 @@ Pack generado (carpeta `isotipo_app/android/res/` o equivalente):
 |---------------|--------------------|----------|
 | `mipmap-anydpi-v26/ic_launcher.xml` | `android/app/src/main/res/mipmap-anydpi-v26/` | Descriptor adaptativo estándar |
 | `mipmap-anydpi-v26/ic_launcher_round.xml` | `android/app/src/main/res/mipmap-anydpi-v26/` | Descriptor adaptativo redondo |
-| `values/ic_launcher_background.xml` | `android/app/src/main/res/values/` | Color de fondo del adaptativo (definir con la paleta de PCalientes) |
+| `values/ic_launcher_background.xml` | `android/app/src/main/res/values/` | Color de fondo del adaptativo (definir con la paleta de Depredadog) |
 | `mipmap-{d}/ic_launcher.png` | `res/mipmap-{d}/` | Ícono legacy cuadrado (API <26) |
 | `mipmap-{d}/ic_launcher_foreground.png` | `res/mipmap-{d}/` | Capa foreground del adaptativo |
 | `mipmap-{d}/ic_launcher_monochrome.png` | `res/mipmap-{d}/` | Capa monocromática (Android 13+ themed icons) |

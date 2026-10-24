@@ -72,4 +72,4 @@ si nace una convención transversal, candidata a `components.*` + `continuity_ru
 - Copiar la referencia literal con valores hardcodeados fuera de `AppColors`/tokens.
 - Implementar sin sign-off cuando el usuario solo pidió análisis.
 - "Mejoras" que agregan ruido: más badges, más iconos, más colores compitiendo — la dirección
-  PCalientes gasta la audacia en UN elemento firma por pantalla/sección.
+  Depredadog gasta la audacia en UN elemento firma por pantalla/sección.

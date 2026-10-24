@@ -1,6 +1,6 @@
 ---
 name: testing-workflow
-description: Convenciones y comandos para escribir y correr tests en PCalientes
+description: Convenciones y comandos para escribir y correr tests en Depredadog
 allowed-tools:
   - read
   - grep
@@ -12,7 +12,7 @@ triggers:
   - model
 ---
 
-Convenciones de testing para **PCalientes** (Flutter + `flutter_test` + `bloc_test` +
+Convenciones de testing para **Depredadog** (Flutter + `flutter_test` + `bloc_test` +
 `mocktail`).
 
 ## Estructura

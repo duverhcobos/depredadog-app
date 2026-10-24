@@ -1,6 +1,6 @@
 ---
 name: navigation-routing
-description: Convenciones de go_router en PCalientes — rutas completas en AuthGuard, segmentos relativos en GoRoute hijos, push vs go, fuente de verdad de la ruta activa en el shell
+description: Convenciones de go_router en Depredadog — rutas completas en AuthGuard, segmentos relativos en GoRoute hijos, push vs go, fuente de verdad de la ruta activa en el shell
 allowed-tools:
   - read
   - grep
@@ -10,7 +10,7 @@ triggers:
   - model
 ---
 
-Convenciones de navegación con `go_router` (`^18`) en **PCalientes**. Las rutas
+Convenciones de navegación con `go_router` (`^18`) en **Depredadog**. Las rutas
 viven en `lib/core/routes/`: `app_router.dart` (declaración),
 `auth_guard.dart` (constantes públicas) y `custom_transitions.dart`
 (page builders). Toda pantalla nueva pasa por ahí — nunca `Navigator.push`

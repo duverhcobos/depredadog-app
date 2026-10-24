@@ -1,6 +1,6 @@
 ---
 name: design-system-docs
-description: Contrato de documentación del design system — cuándo y cómo actualizar design-system.yaml (version bump, spec, changelog) tras cualquier cambio visual en PCalientes
+description: Contrato de documentación del design system — cuándo y cómo actualizar design-system.yaml (version bump, spec, changelog) tras cualquier cambio visual en Depredadog
 allowed-tools:
   - read
   - grep
@@ -11,7 +11,7 @@ triggers:
 ---
 
 `Design/design-system.yaml` (en la raíz de este repo) es la
-**fuente de verdad** de la identidad visual de PCalientes — specs por
+**fuente de verdad** de la identidad visual de Depredadog — specs por
 pantalla/componente + changelog versionado. Todo cambio visual que llega a
 código debe reflejarse ahí en la misma iteración, no después.
 

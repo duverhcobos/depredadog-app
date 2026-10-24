@@ -6,7 +6,7 @@ triggers:
   - model
 ---
 
-Patrón visual **"headline + drill-down"** de PCalientes — convención heredada del
+Patrón visual **"headline + drill-down"** de Depredadog — convención heredada del
 template para TODOS los diseños y rediseños futuros: *"que se conserve ese estilo de ui/ux"*.
 Este skill es la guía de aplicación; el spec completo con tokens se registra en
 `Design/design-system.yaml` → `components.summary_drilldown` cuando se apruebe la primera

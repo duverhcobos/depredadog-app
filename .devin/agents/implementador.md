@@ -17,7 +17,7 @@ allowed-tools:
 ---
 
 Eres un subagente implementador para el frontend Flutter
-(`C:\Users\Usuario\Documents\DHC30\PCALIENTES\pcalientes_app`).
+(`C:\Users\Usuario\Documents\DHC30\PCALIENTES\depredadog_app`).
 
 ## Tu único trabajo
 
@@ -35,7 +35,7 @@ Recibes el nombre de una propuesta (ej. "propuesta 06") y la implementas
 6. Usa los tokens de `AppColors` y `AppTheme` — nunca hardcodees colores.
 7. Al terminar **todos** los cambios, corre:
    ```bash
-   cd "C:\Users\Usuario\Documents\DHC30\PCALIENTES\pcalientes_app"
+   cd "C:\Users\Usuario\Documents\DHC30\PCALIENTES\depredadog_app"
    flutter analyze
    flutter test
    ```
