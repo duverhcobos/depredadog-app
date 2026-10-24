@@ -1,19 +1,28 @@
-# Design System — PCalientes
+# Design System — Depredadog
 # Convención: ver .devin/skills/design-system-docs
 # Cada cambio visual → bump de version + spec actualizado + entrada en changelog.
 
 meta:
-  product: PCalientes
-  version: 1.0.1
-  updated: 2026-10-23
+  product: Depredadog
+  version: 1.1.0
+  updated: 2026-10-24
 
 palette:
-  # Seed mínima — redefinir al clonar el template para un producto real.
-  primary: "#1565C0"
-  on_primary: "#FFFFFF"
-  surface: "#FFFFFF"
-  on_surface: "#212121"
-  error: "#B00020"
+  # Identidad Depredadog — "condimentos" (definida por el usuario, §001):
+  # ketchup / mostaza / pan / parrilla / pepinillo.
+  primary_light: "#D62828"
+  secondary_light: "#FBBF24"
+  tertiary_light: "#5B8C3A"
+  surface_light: "#FFF3D6"
+  on_surface_light: "#4A2511"
+  error_light: "#B3261E"
+  primary_dark: "#FF8A7A"
+  secondary_dark: "#FCD34D"
+  tertiary_dark: "#8FBF6A"
+  surface_dark: "#241511"
+  on_surface_dark: "#FFF3D6"
+  error_dark: "#F2B8B5"
+  on_brand_gradient: "#FFFFFF"
 
 typography:
   scale: material3 # display/headline/title/body/label por defecto de M3
@@ -22,14 +31,32 @@ spacing:
   unit: 4
   tokens: {xs: 4, sm: 8, md: 16, lg: 24, xl: 32}
 
-components: {}   # specs por widget se agregan aquí con cada feature visual
+components:
+  app_backdrop:
+    description: "Degradado llama primary→secondary ocupando el tercio superior; el resto surface. Va tras el contenido en Stack."
+  app_brand_mark:
+    description: "Icono de marca (flama redondeada), 80px default, siempre on_brand_gradient sobre el backdrop."
 
-screens: {}      # specs por pantalla
+screens:
+  splash:
+    route: "/"
+    spec: "AppBackdrop + AppBrandMark + appName (headline w800) + tagline sobre gradiente; navega a /welcome tras 1.2s."
+  welcome:
+    route: "/welcome"
+    status: "provisional — reemplazará el flujo auth de 002"
+    spec: "Backdrop + brand mark + título + card con copy temporal."
 
 changelog:
+  - version: "1.1.0"
+    date: 2026-10-24
+    status: "completed"
+    changes:
+      - "Paleta real Depredadog 'condimentos' (ketchup/mostaza/pan/parrilla/pepinillo, definida por el usuario) reemplaza el seed genérico (§001-app-bootstrap)."
+      - "Primeras specs visuales: app_backdrop, app_brand_mark, splash, welcome (provisional)."
+      - "Tema M3 light+dark, botones 48px radius 12, inputs radius 12."
   - version: 1.0.0
     date: 2026-10-16
     notes: Seed inicial del template — paleta y tokens genéricos, sin specs de producto.
   - version: 1.0.1
     date: 2026-10-23
-    notes: Rebranding del seed al producto PCalientes — sin cambios visuales; paleta/tokens genéricos pendientes de definir con la primera pantalla real.
+    notes: Rebranding del seed al producto Depredadog — sin cambios visuales; paleta/tokens genéricos pendientes de definir con la primera pantalla real.

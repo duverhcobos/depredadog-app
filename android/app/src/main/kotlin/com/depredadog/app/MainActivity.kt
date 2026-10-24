@@ -1,4 +1,4 @@
-package com.pcalientes.app
+package com.depredadog.app
 
 import io.flutter.embedding.android.FlutterActivity
 

@@ -1,0 +1,8 @@
+{
+  "@@locale": "es",
+  "appName": "Depredadog",
+  "splashTagline": "Perros calientes que muerden de vuelta",
+  "welcomeTitle": "Bienvenido a Depredadog",
+  "welcomeBody": "La autenticación llega en la próxima iteración. Esta pantalla es temporal.",
+  "welcomeAuthPending": "Acceso disponible muy pronto"
+}
