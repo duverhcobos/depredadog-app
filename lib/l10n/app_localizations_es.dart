@@ -16,12 +16,70 @@ class AppLocalizationsEs extends AppLocalizations {
   String get splashTagline => 'Perros calientes que muerden de vuelta';
 
   @override
-  String get welcomeTitle => 'Bienvenido a Depredadog';
+  String get loginHeadline => 'VUELVE A LA MANADA';
 
   @override
-  String get welcomeBody =>
-      'La autenticación llega en la próxima iteración. Esta pantalla es temporal.';
+  String get loginSubtitle =>
+      'Inicia sesión para pedir algo salvajemente bueno.';
 
   @override
-  String get welcomeAuthPending => 'Acceso disponible muy pronto';
+  String get loginEmailLabel => 'Correo electrónico';
+
+  @override
+  String get loginEmailHint => 'nombre@ejemplo.com';
+
+  @override
+  String get loginEmailRequired => 'Ingresa tu correo';
+
+  @override
+  String get loginEmailError => 'Ingresa un correo válido';
+
+  @override
+  String get loginPasswordLabel => 'Contraseña';
+
+  @override
+  String get loginPasswordHint => 'Ej: HotDog2024';
+
+  @override
+  String get loginPasswordRequired => 'Ingresa tu contraseña';
+
+  @override
+  String get loginPasswordError => 'Mínimo 6 caracteres';
+
+  @override
+  String get loginFormInvalid => 'Revisa los campos marcados';
+
+  @override
+  String get loginShowPassword => 'Mostrar contraseña';
+
+  @override
+  String get loginHidePassword => 'Ocultar contraseña';
+
+  @override
+  String get loginForgotPassword => '¿Olvidaste tu contraseña?';
+
+  @override
+  String get loginRememberMe => 'Recuérdame';
+
+  @override
+  String get loginButton => 'Iniciar sesión';
+
+  @override
+  String get loginOrContinueWith => 'o continúa con';
+
+  @override
+  String get loginGoogleButton => 'Ingresar con Google';
+
+  @override
+  String get loginNoAccount => '¿No tienes cuenta? ';
+
+  @override
+  String get loginRegisterLink => 'Regístrate';
+
+  @override
+  String get loginDemoSuccess =>
+      'Inicio de sesión simulado — sin backend todavía';
+
+  @override
+  String get comingSoon => 'Disponible próximamente';
 }

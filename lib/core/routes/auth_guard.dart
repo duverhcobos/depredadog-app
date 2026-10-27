@@ -13,10 +13,9 @@ class AuthGuard {
 
   // ---- Rutas (constantes públicas, siempre completas) ----
   static const String splashRoute = '/';
-  static const String welcomeRoute = '/welcome';
   static const String homeRoute = '/home';
 
-  // Rutas de la feature auth (002) — declaradas ya para que el guard las
+  // Rutas de la feature auth — declaradas ya para que el guard las
   // conozca; se registran en app_router cuando existan sus pantallas.
   static const String loginRoute = '/login';
   static const String registerRoute = '/register';
@@ -27,7 +26,6 @@ class AuthGuard {
   /// Rutas accesibles sin sesión.
   static const Set<String> defaultPublicRoutes = {
     splashRoute,
-    welcomeRoute,
     loginRoute,
     registerRoute,
     verifyEmailRoute,
@@ -36,7 +34,7 @@ class AuthGuard {
   };
 
   /// A dónde mandar a un usuario sin sesión que pide una ruta protegida.
-  static const String unauthenticatedRedirect = welcomeRoute;
+  static const String unauthenticatedRedirect = loginRoute;
 
   /// A dónde mandar a un usuario con sesión que pide una ruta de auth.
   static const String authenticatedRedirect = homeRoute;

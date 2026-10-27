@@ -106,23 +106,137 @@ abstract class AppLocalizations {
   /// **'Perros calientes que muerden de vuelta'**
   String get splashTagline;
 
-  /// No description provided for @welcomeTitle.
+  /// No description provided for @loginHeadline.
   ///
   /// In es, this message translates to:
-  /// **'Bienvenido a Depredadog'**
-  String get welcomeTitle;
+  /// **'VUELVE A LA MANADA'**
+  String get loginHeadline;
 
-  /// No description provided for @welcomeBody.
+  /// No description provided for @loginSubtitle.
   ///
   /// In es, this message translates to:
-  /// **'La autenticación llega en la próxima iteración. Esta pantalla es temporal.'**
-  String get welcomeBody;
+  /// **'Inicia sesión para pedir algo salvajemente bueno.'**
+  String get loginSubtitle;
 
-  /// No description provided for @welcomeAuthPending.
+  /// No description provided for @loginEmailLabel.
   ///
   /// In es, this message translates to:
-  /// **'Acceso disponible muy pronto'**
-  String get welcomeAuthPending;
+  /// **'Correo electrónico'**
+  String get loginEmailLabel;
+
+  /// No description provided for @loginEmailHint.
+  ///
+  /// In es, this message translates to:
+  /// **'nombre@ejemplo.com'**
+  String get loginEmailHint;
+
+  /// No description provided for @loginEmailRequired.
+  ///
+  /// In es, this message translates to:
+  /// **'Ingresa tu correo'**
+  String get loginEmailRequired;
+
+  /// No description provided for @loginEmailError.
+  ///
+  /// In es, this message translates to:
+  /// **'Ingresa un correo válido'**
+  String get loginEmailError;
+
+  /// No description provided for @loginPasswordLabel.
+  ///
+  /// In es, this message translates to:
+  /// **'Contraseña'**
+  String get loginPasswordLabel;
+
+  /// No description provided for @loginPasswordHint.
+  ///
+  /// In es, this message translates to:
+  /// **'Ej: HotDog2024'**
+  String get loginPasswordHint;
+
+  /// No description provided for @loginPasswordRequired.
+  ///
+  /// In es, this message translates to:
+  /// **'Ingresa tu contraseña'**
+  String get loginPasswordRequired;
+
+  /// No description provided for @loginPasswordError.
+  ///
+  /// In es, this message translates to:
+  /// **'Mínimo 6 caracteres'**
+  String get loginPasswordError;
+
+  /// No description provided for @loginFormInvalid.
+  ///
+  /// In es, this message translates to:
+  /// **'Revisa los campos marcados'**
+  String get loginFormInvalid;
+
+  /// No description provided for @loginShowPassword.
+  ///
+  /// In es, this message translates to:
+  /// **'Mostrar contraseña'**
+  String get loginShowPassword;
+
+  /// No description provided for @loginHidePassword.
+  ///
+  /// In es, this message translates to:
+  /// **'Ocultar contraseña'**
+  String get loginHidePassword;
+
+  /// No description provided for @loginForgotPassword.
+  ///
+  /// In es, this message translates to:
+  /// **'¿Olvidaste tu contraseña?'**
+  String get loginForgotPassword;
+
+  /// No description provided for @loginRememberMe.
+  ///
+  /// In es, this message translates to:
+  /// **'Recuérdame'**
+  String get loginRememberMe;
+
+  /// No description provided for @loginButton.
+  ///
+  /// In es, this message translates to:
+  /// **'Iniciar sesión'**
+  String get loginButton;
+
+  /// No description provided for @loginOrContinueWith.
+  ///
+  /// In es, this message translates to:
+  /// **'o continúa con'**
+  String get loginOrContinueWith;
+
+  /// No description provided for @loginGoogleButton.
+  ///
+  /// In es, this message translates to:
+  /// **'Ingresar con Google'**
+  String get loginGoogleButton;
+
+  /// No description provided for @loginNoAccount.
+  ///
+  /// In es, this message translates to:
+  /// **'¿No tienes cuenta? '**
+  String get loginNoAccount;
+
+  /// No description provided for @loginRegisterLink.
+  ///
+  /// In es, this message translates to:
+  /// **'Regístrate'**
+  String get loginRegisterLink;
+
+  /// No description provided for @loginDemoSuccess.
+  ///
+  /// In es, this message translates to:
+  /// **'Inicio de sesión simulado — sin backend todavía'**
+  String get loginDemoSuccess;
+
+  /// No description provided for @comingSoon.
+  ///
+  /// In es, this message translates to:
+  /// **'Disponible próximamente'**
+  String get comingSoon;
 }
 
 class _AppLocalizationsDelegate

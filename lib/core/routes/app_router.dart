@@ -1,7 +1,8 @@
 import 'package:go_router/go_router.dart';
 
+import '../../features/auth/presentation/screens/login_screen.dart';
+import '../screens/home_placeholder_screen.dart';
 import '../screens/splash_screen.dart';
-import '../screens/welcome_screen.dart';
 import 'auth_guard.dart';
 import 'custom_transitions.dart';
 
@@ -23,22 +24,21 @@ class AppRouter {
         pageBuilder: (context, state) =>
             CustomTransitions.fade(state, const SplashScreen()),
       ),
-      GoRoute(
-        path: AuthGuard.welcomeRoute,
-        pageBuilder: (context, state) =>
-            CustomTransitions.fade(state, const WelcomeScreen()),
-      ),
       // /home es el destino autenticado — pantalla real llega con las
       // features; por ahora el guard bloquea el acceso sin sesión.
-      // PROVISIONAL: placeholder hasta que 003-app-auth defina el shell.
+      // PROVISIONAL: placeholder hasta que exista el shell autenticado.
       GoRoute(
         path: AuthGuard.homeRoute,
         pageBuilder: (context, state) =>
-            CustomTransitions.fade(state, const WelcomeScreen()),
+            CustomTransitions.fade(state, const HomePlaceholderScreen()),
       ),
-      // Las rutas /login, /register, /verify-email, /forgot-password y
-      // /reset-password se registran en la propuesta 003-app-auth — el
-      // guard ya las trata como públicas.
+      GoRoute(
+        path: AuthGuard.loginRoute,
+        pageBuilder: (context, state) =>
+            CustomTransitions.slideUp(state, const LoginScreen()),
+      ),
+      // /register, /verify-email, /forgot-password y /reset-password se
+      // registran con cada pantalla — el guard ya las trata como públicas.
     ],
   );
 }

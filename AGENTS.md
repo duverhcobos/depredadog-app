@@ -2,7 +2,7 @@
 
 El detalle de convenciones, arquitectura y workflows de este proyecto vive en skills bajo `.devin/skills/`, no en este archivo — cada skill cubre una sola responsabilidad y se invoca solo cuando es relevante, para no cargar contexto innecesario en cada sesión.
 
-> Estado actual: bootstrap del core implementado (environment, DI, network, storage, router+guard, tema condimentos, i18n, Splash→Welcome placeholder) — propuesta 001-app-bootstrap. La primera feature funcional es auth (propuesta 003-app-auth) contra el backend `../pcalientes_backend`.
+> Estado actual: bootstrap del core implementado (environment, DI, network, storage, router+guard, tema condimentos, i18n) — propuesta 001-app-bootstrap. Pantalla de **login** en presentación aprobada visualmente (light+dark, §003) — welcome eliminado, splash redirige a /login sin sesión. Siguiente: integración de `/auth/login` contra `../pcalientes_backend` (screen-first: un endpoint por ciclo).
 
 ## Reglas mínimas siempre vigentes
 
@@ -36,6 +36,7 @@ El detalle de convenciones, arquitectura y workflows de este proyecto vive en sk
 | `pendientes-produccion` | Al crear/consultar pendientes pre-producción — carpeta `pendientes/` propia del repo (los del backend van en la suya) |
 | `design-system-docs` | Tras cualquier cambio visual — cómo actualizar `Design/design-system.yaml` (version, spec, changelog) |
 | `new-feature-checklist` | Al agregar un módulo/feature nuevo — orden exacto de archivos del dominio a la pantalla |
+| `screen-first-workflow` | **Workflow de desarrollo por pantallas** — fase 1: solo presentación sin conectar (aprobación visual); fase 2: integración un endpoint a la vez (pruebas → aprobación → commit → siguiente) |
 | `token-saving-tools-policy` | Al explorar el código — cuándo leer directo vs. usar el grafo codebase-memory, batching |
 | `app-icons` | Al tocar íconos de launcher o el splash nativo — ícono por modo, capas adaptativas, `mipmap-night-*`, procedimiento de actualización |
 
@@ -62,6 +63,11 @@ El proyecto tiene dos subagentes custom en `.devin/agents/`. **Usarlos siempre q
 
 La sesión principal **piensa y decide**; los subagentes **ejecutan y verifican**.
 Correcciones triviales de un solo archivo no necesitan subagente.
+
+**Desarrollo por pantallas (ver `screen-first-workflow`):** las features de UI se
+construyen en dos fases — primero solo la capa de presentación (aprobación
+visual del usuario), luego la integración domain/data **un endpoint a la vez**
+(probar → aprobar → commit → siguiente endpoint).
 
 ### Cambios visuales/UX: el usuario ve antes de verificar
 

@@ -1,12 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+
 import '../../l10n/app_localizations.dart';
 import '../routes/auth_guard.dart';
 import '../theme/app_colors.dart';
 import '../widgets/app_backdrop.dart';
 
-/// Splash de marca: flama + nombre + tagline. Tras ~1.2s navega según el
-/// estado de sesión (el guard decide — sin sesión cae en /welcome).
+/// Splash de marca: flama + nombre + tagline. Tras ~1.2s navega al login
+/// (sin sesión — el guard redirige las rutas protegidas igualmente).
 class SplashScreen extends StatefulWidget {
   const SplashScreen({super.key});
 
@@ -19,7 +20,7 @@ class _SplashScreenState extends State<SplashScreen> {
   void initState() {
     super.initState();
     Future.delayed(const Duration(milliseconds: 1200), () {
-      if (mounted) context.go(AuthGuard.welcomeRoute);
+      if (mounted) context.go(AuthGuard.loginRoute);
     });
   }
 
@@ -39,16 +40,16 @@ class _SplashScreenState extends State<SplashScreen> {
                 Text(
                   l10n.appName,
                   style: Theme.of(context).textTheme.headlineMedium?.copyWith(
-                        color: AppColors.onBrandGradient,
-                        fontWeight: FontWeight.w800,
-                      ),
+                    color: AppColors.onBrandGradient,
+                    fontWeight: FontWeight.w800,
+                  ),
                 ),
                 const SizedBox(height: 8),
                 Text(
                   l10n.splashTagline,
                   style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                        color: AppColors.onBrandGradient.withValues(alpha: 0.9),
-                      ),
+                    color: AppColors.onBrandGradient.withValues(alpha: 0.9),
+                  ),
                 ),
               ],
             ),

@@ -1,0 +1,11 @@
+{
+  "version": 1,
+  "skills": {
+    "flutter-building-forms": {
+      "source": "thesimpleapp/flutter-app-skills",
+      "sourceType": "github",
+      "skillPath": "skills/flutter-building-forms/SKILL.md",
+      "computedHash": "eda45eaec38384f21398c207fd6337d045524666f4bf98ae5e8d4eab658fa54b"
+    }
+  }
+}

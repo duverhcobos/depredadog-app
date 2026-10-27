@@ -3,14 +3,14 @@ import 'package:depredadog_app/core/routes/auth_guard.dart';
 
 void main() {
   group('AuthGuard', () {
-    test('sin sesión: ruta pública pasa, protegida redirige a /welcome', () {
+    test('sin sesión: ruta pública pasa, protegida redirige a /login', () {
       final guard = AuthGuard(isAuthenticated: () => false);
 
-      expect(guard.redirect(AuthGuard.welcomeRoute), isNull);
       expect(guard.redirect(AuthGuard.loginRoute), isNull);
-      expect(guard.redirect('/welcome/cualquier-hija'), isNull);
-      expect(guard.redirect(AuthGuard.homeRoute), AuthGuard.welcomeRoute);
-      expect(guard.redirect('/perfil'), AuthGuard.welcomeRoute);
+      expect(guard.redirect(AuthGuard.registerRoute), isNull);
+      expect(guard.redirect('/register/cualquier-hija'), isNull);
+      expect(guard.redirect(AuthGuard.homeRoute), AuthGuard.loginRoute);
+      expect(guard.redirect('/perfil'), AuthGuard.loginRoute);
     });
 
     test('con sesión: ruta de auth redirige a /home, protegida pasa', () {
@@ -32,7 +32,7 @@ void main() {
         publicRoutes: {'/beta'},
       );
       expect(guard.redirect('/beta'), isNull);
-      expect(guard.redirect(AuthGuard.welcomeRoute), AuthGuard.welcomeRoute);
+      expect(guard.redirect(AuthGuard.loginRoute), AuthGuard.loginRoute);
     });
   });
 }

@@ -4,8 +4,8 @@
 
 meta:
   product: Depredadog
-  version: 1.1.0
-  updated: 2026-10-24
+  version: 1.3.0
+  updated: 2026-10-27
 
 palette:
   # Identidad Depredadog — "condimentos" (definida por el usuario, §001):
@@ -14,18 +14,21 @@ palette:
   secondary_light: "#FBBF24"
   tertiary_light: "#5B8C3A"
   surface_light: "#FFF3D6"
+  scaffold_light: "#FFFFFF"
   on_surface_light: "#4A2511"
   error_light: "#B3261E"
-  primary_dark: "#FF8A7A"
+  primary_dark: "#FDD019" # mostaza del logo — decisión del usuario tras comparar vs rojo pleno y rojo pálido
   secondary_dark: "#FCD34D"
   tertiary_dark: "#8FBF6A"
   surface_dark: "#241511"
+  scaffold_dark: "#000000" # negro puro — decisión del usuario
   on_surface_dark: "#FFF3D6"
   error_dark: "#F2B8B5"
   on_brand_gradient: "#FFFFFF"
 
 typography:
   scale: material3 # display/headline/title/body/label por defecto de M3
+  login_headline: "headlineSmall w800, letterSpacing 1.2, color primary"
 
 spacing:
   unit: 4
@@ -33,20 +36,54 @@ spacing:
 
 components:
   app_backdrop:
-    description: "Degradado llama primary→secondary ocupando el tercio superior; el resto surface. Va tras el contenido en Stack."
+    description: "Degradado llama primary→secondary ocupando el tercio superior; el resto surface. Va tras el contenido en Stack. (Solo lo usa splash — las pantallas de formulario van sobre scaffold liso.)"
   app_brand_mark:
-    description: "Icono de marca (flama redondeada), 80px default, siempre on_brand_gradient sobre el backdrop."
+    description: "Icono de marca (flama redondeada), 80px default, siempre on_brand_gradient sobre el backdrop. PROVISIONAL: será reemplazado por el isotipo Depredadog."
+  app_launcher_icon:
+    description: "Ícono por modo (decisión del usuario): CLARO = isotipo_mascota_negro (positiva) sobre #FFFFFF; OSCURO = isotipo_mascota (negativa) sobre #000000. Implementado con calificadores: mipmap-{d}=claro, mipmap-night-{d}=oscuro, values=#FFFFFF, values-night=#000000. Compartidos: monochrome=isotipo_blanco (themed icons) y playstore 512 positivo en store_assets/. Pendiente: set iOS."
+  brand_kit:
+    description: "Kit completo en Design/brand/: png/ por densidad (0.75x–4x), svg/ fuentes vectoriales, appicon-pack-mascota-color/ (pack previo, registro). Convención de nombres: _blanco = tinta blanca para fondos oscuros, _negro = tinta oscura para fondos claros, _mascota = full color, _mono_* = una tinta. Tagline oficial: 'HOT DOGS & MÁS'."
+  brand_tagline:
+    description: "Tagline oficial de la guía de marca: 'HOT DOGS & MÁS'."
+  elevated_button_primary:
+    description: "Ancho completo, alto 52, radius 14, fondo sólido primary + texto onPrimary w600 16px (override del tonal M3 — la marca pide el primario sólido). En dark: mostaza sólida con texto negro rico."
+  custom_text_field:
+    description: "Campo de formulario con label externo arriba (labelLarge w600 onSurface), icono prefijo opcional, radius 14, fill surfaceContainerLowest, enabledBorder outlineVariant. Foco en onSurface 1.6px — el primario rojo se confundía con error (feedback usuario). Error en línea reservada con helperText ' ' para no re-fluir el formulario."
+  google_sign_in_button:
+    description: "OutlinedButton ancho completo alto 52 radius 14, logo G oficial (assets/images/google_g.png) + texto. PROVISIONAL sin endpoint — snackbar 'Disponible próximamente'."
+  remember_row:
+    description: "Fila bajo el campo contraseña: Checkbox 'Recuérdame' (compacto, tap en texto alterna) a la izquierda + link '¿Olvidaste tu contraseña?' (bodySmall primary w600) a la derecha. rememberMe decidirá en integración si el refresh token persiste entre sesiones."
+  login_brand_header:
+    description: "Imagotipo vertical 148px + headline primary + subtítulo (bodyMedium onSurface 70%). Asset por tema: imagotipo_depredadog.png (=imagotipo_negro_*) en claro; imagotipo_depredadog_dark.png (=imagotipo__1*, trazos blancos + color) en oscuro. Densidades 1.5x–4x."
 
 screens:
   splash:
     route: "/"
-    spec: "AppBackdrop + AppBrandMark + appName (headline w800) + tagline sobre gradiente; navega a /welcome tras 1.2s."
+    spec: "AppBackdrop + AppBrandMark + appName (headline w800) + tagline sobre gradiente; AuthGuard decide: sin sesión → /login, con sesión → /home."
+  login:
+    route: "/login"
+    spec: "Scaffold liso + scroll. LoginBrandHeader, campos email/password (CustomTextField con AutofillGroup, error por campo que se limpia al editar), remember_row, ElevatedButton 'Iniciar sesión' (loading reemplaza el botón por spinner centrado), divider 'o continúa con', GoogleSignInButton, fila '¿No tienes cuenta? Regístrate'. Submit vacío → errores + snackbar + foco al primer inválido. PROVISIONAL: submit simulado 1.2s → snackbar demo; forgot/register/google sin endpoint."
   welcome:
-    route: "/welcome"
-    status: "provisional — reemplazará el flujo auth de 002"
-    spec: "Backdrop + brand mark + título + card con copy temporal."
+    status: "ELIMINADA (decisión del usuario) — splash va directo a /login para no autenticados"
 
 changelog:
+  - version: "1.3.0"
+    date: 2026-10-27
+    page: "login"
+    status: "completed"
+    changes:
+      - "Pantalla de login (presentación, §003): imagotipo por tema, headline 'VUELVE A LA MANADA', email+password con errores por campo, Recuérdame + ¿Olvidaste tu contraseña? en una fila, botón primario sólido, divider, Google outlined, link registro."
+      - "Feedback del usuario iterado: fondo blanco en claro (scaffold_light #FFFFFF, antes surface crema), foco de inputs en onSurface (el rojo se leía como error), hints nombre@ejemplo.com + 'Ej: HotDog2024', snackbar 'Revisa los campos marcados', sin ícono en el botón primario, error por campo que se limpia al escribir."
+      - "Modo oscuro ajustado: scaffold #000000 (antes surface parrilla), primary_dark mostaza #FDD019 con texto negro (evaluados rojo pleno y #FF8A7A — el usuario eligió mostaza), imagotipo dark = imagotipo__1 (trazos blancos + color)."
+      - "themeMode: system — ambos modos activos (la decisión 'MVP solo claro' quedó superada al diseñarse el oscuro)."
+      - "Pantalla welcome eliminada: AuthGuard en splash redirige directo a /login sin sesión."
+      - "PROVISIONAL sin backend: submit simulado, forgot/register/Google sin endpoint."
+  - version: "1.2.0"
+    date: 2026-10-24
+    status: "completed"
+    changes:
+      - "Isotipo Depredadog por modo en íconos Android (positiva claro / negativa oscuro, calificadores night) + kit de marca completo en Design/brand/ (png ×6 densidades + svg + pack previo)."
+      - "app_brand_mark declarado provisional — pendiente imagotipo para splash/welcome."
   - version: "1.1.0"
     date: 2026-10-24
     status: "completed"
