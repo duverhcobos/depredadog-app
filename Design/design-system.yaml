@@ -4,7 +4,7 @@
 
 meta:
   product: Depredadog
-  version: 1.3.0
+  version: 1.3.1
   updated: 2026-10-27
 
 palette:
@@ -40,7 +40,7 @@ components:
   app_brand_mark:
     description: "Icono de marca (flama redondeada), 80px default, siempre on_brand_gradient sobre el backdrop. PROVISIONAL: será reemplazado por el isotipo Depredadog."
   app_launcher_icon:
-    description: "Ícono por modo (decisión del usuario): CLARO = isotipo_mascota_negro (positiva) sobre #FFFFFF; OSCURO = isotipo_mascota (negativa) sobre #000000. Implementado con calificadores: mipmap-{d}=claro, mipmap-night-{d}=oscuro, values=#FFFFFF, values-night=#000000. Compartidos: monochrome=isotipo_blanco (themed icons) y playstore 512 positivo en store_assets/. Pendiente: set iOS."
+    description: "Ícono FIJO (decisión del usuario tras probar el modo-dual): isotipo_mascota negativa (tintas blancas) sobre plato #000000, igual en claro y oscuro. El modo-dual con calificadores mipmap-night-* se descartó — launchers/Settings cachean el ícono sin el modo en la clave, el usuario ve variantes stale ('no cambia nada'). Implementado: mipmap-{d} + values/ic_launcher_background=#000000 únicos. El splash nativo comparte la misma marca fija (plato negro + depredador blanco) sobre ventana por tema. Compartidos: monochrome=isotipo_blanco (themed icons) y playstore 512 en store_assets/. Pendiente: set iOS."
   brand_kit:
     description: "Kit completo en Design/brand/: png/ por densidad (0.75x–4x), svg/ fuentes vectoriales, appicon-pack-mascota-color/ (pack previo, registro). Convención de nombres: _blanco = tinta blanca para fondos oscuros, _negro = tinta oscura para fondos claros, _mascota = full color, _mono_* = una tinta. Tagline oficial: 'HOT DOGS & MÁS'."
   brand_tagline:
@@ -67,6 +67,12 @@ screens:
     status: "ELIMINADA (decisión del usuario) — splash va directo a /login para no autenticados"
 
 changelog:
+  - version: "1.3.1"
+    date: 2026-10-27
+    page: "app_launcher_icon"
+    status: "completed"
+    changes:
+      - "Ícono de launcher pasa de por-modo a FIJO (negro + depredador blanco) — el usuario probó el modo-dual y verificó que launchers/Settings cachean el ícono sin refrescar por tema ('no cambia nada'); mipmap-night-* y values-night/ic_launcher_background eliminados."
   - version: "1.3.0"
     date: 2026-10-27
     page: "login"

@@ -5,6 +5,12 @@
         <!-- Show a splash screen on the activity. Automatically removed when
              the Flutter engine draws its first frame -->
         <item name="android:windowBackground">@drawable/launch_background</item>
+        <!-- Plato del ícono del splash nativo — toma el fondo por modo
+             (values=#FFFFFF claro / values-night=#000000 oscuro) -->
+        <item name="android:windowSplashScreenIconBackgroundColor">@color/ic_launcher_background</item>
+        <!-- Foreground transparente por modo (mipmap-* claro / mipmap-night-* oscuro)
+             para que el plato del ícono quede detrás del arte -->
+        <item name="android:windowSplashScreenAnimatedIcon">@drawable/splash_icon</item>
     </style>
     <!-- Theme applied to the Android Window as soon as the process has started.
          This theme determines the color of the Android Window while your

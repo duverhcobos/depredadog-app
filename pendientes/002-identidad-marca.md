@@ -9,10 +9,10 @@
 El kit de identidad ya está integrado y verificado en emulador:
 
 - `Design/brand/` — PNGs ×6 densidades + SVGs fuente + pack previo `appicon-pack-mascota-color/` (registro)
-- Ícono Android **por modo**: claro = `isotipo_mascota_negro` sobre `#FFFFFF`, oscuro = `isotipo_mascota` sobre `#000000` (calificadores `mipmap-night-*` + `values-night`)
-- Splash nativo por modo: `windowSplashScreenAnimatedIcon` = foreground transparente + `windowSplashScreenIconBackgroundColor` por modo
+- Ícono Android **fijo**: `isotipo_mascota` negativa sobre `#000000` — el modo-dual se descartó tras pruebas del usuario (launchers/Settings cachean el ícono por tema; skill `app-icons` documenta el porqué)
+- Splash nativo: `windowSplashScreenAnimatedIcon` = foreground transparente + plato `#000000` fijo sobre ventana por tema
 - Compartidos: `ic_launcher_monochrome` (themed icons), `ic_launcher_round`, `store_assets/` playstore 512
-- Docs: skill `app-icons` (fuente de verdad del mecanismo) + `design-system.yaml` v1.2.0
+- Docs: skill `app-icons` (fuente de verdad del mecanismo) + `design-system.yaml` v1.3.1
 
 **Todo el frente está en el working tree sin commitear** — el usuario decidió diferir el commit hasta que la marca quede cerrada.
 

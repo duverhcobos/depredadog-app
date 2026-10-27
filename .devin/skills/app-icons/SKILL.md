@@ -1,6 +1,6 @@
 ---
 name: app-icons
-description: Sistema de íconos y splash nativo de Depredadog — ícono por modo (claro/oscuro), capas adaptativas, recursos mipmap-night-*, plato del splash, procedimiento de actualización y fuente del arte (Design/brand/)
+description: Sistema de íconos y splash nativo de Depredadog — ícono FIJO (plato negro + depredador blanco; el modo-dual se descartó por caché de launchers), capas adaptativas, procedimiento de actualización y fuente del arte (Design/brand/)
 triggers:
   - user
   - model
@@ -11,16 +11,21 @@ triggers:
 Guía de referencia para definir el ícono de Depredadog: qué archivos intervienen,
 para qué sirve cada uno y a dónde se copia.
 
-> **Estado actual:** ícono **por modo** (decisión del usuario) —
-> tema claro: `isotipo_mascota_negro` (versión positiva) sobre
-> `ic_launcher_background` `#FFFFFF`; tema oscuro: `isotipo_mascota`
-> (versión negativa) sobre `#000000`. Implementado con calificadores de
-> recurso: `mipmap-{d}/` = claro, `mipmap-night-{d}/` = oscuro,
-> `values/`→`#FFFFFF`, `values-night/`→`#000000`. Compartidos:
-> `ic_launcher_monochrome` (silueta de `isotipo_blanco` — themed icons) y
-> `store_assets/ic_launcher-playstore.png` (positiva 512). Generado con
-> System.Drawing desde `Design/brand/png/4x/` — foreground 70%, legacy 82%,
-> playstore 86%. Manifest con `android:icon` +
+> **Estado actual:** ícono **FIJO** (decisión del usuario, tras probar el
+> modo-dual) — `isotipo_mascota` (versión negativa, tintas blancas) sobre
+> `ic_launcher_background` `#000000`, igual en claro y oscuro. Implementado
+> sin calificadores: `mipmap-{d}/` y `values/`→`#000000` únicos (los
+> `mipmap-night-{d}/` y `values-night/ic_launcher_background.xml` se
+> eliminaron). Compartidos: `ic_launcher_monochrome` (silueta de
+> `isotipo_blanco` — themed icons) y `store_assets/` playstore.
+>
+> **Por qué fijo y no por modo:** los calificadores `-night` resuelven
+> bien, pero launchers y Settings cachean el ícono sin el modo en la clave
+> — el usuario ve una variante aleatoria cacheada que "no cambia nada".
+> Confirmado en pruebas del usuario: app-info mostraba el ícono night en
+> ambos modos. Android no soporta ícono por tema de forma confiable.
+> Generado con System.Drawing desde `Design/brand/png/4x/` — foreground
+> 70%, legacy 82%, playstore 86%. Manifest con `android:icon` +
 > `android:roundIcon`. El kit completo de marca vive en `Design/brand/`
 > (png por densidad + svg + pack previo `appicon-pack-mascota-color/`).
 > **Pendiente:** el set de iOS (ver sección "Pendiente — iOS") — ver
@@ -61,8 +66,10 @@ adaptativos y necesitan el ícono ya renderizado:
   por densidad de pantalla.
 - `res/mipmap-{density}/ic_launcher_round.png` — variante redonda, usada por
   launchers circulares cuando el manifest declara `android:roundIcon`.
-- `res/mipmap-night-{density}/` — las mismas variantes para modo oscuro
-  (el sistema las resuelve con el calificador `night`).
+- ~~`res/mipmap-night-{density}/`~~ — el ícono por modo se **descartó**
+  (ver nota de estado): los calificadores `night` resuelven en el recurso
+  pero launchers/Settings cachean el bitmap sin el modo — el usuario ve
+  variantes stale, no el cambio de tema.
 
 Densidades y tamaño del ícono de launcher:
 
@@ -114,10 +121,9 @@ Pack generado (carpeta `isotipo_app/android/res/` o equivalente):
 | `mipmap-{d}/ic_launcher_monochrome.png` | `res/mipmap-{d}/` | Capa monocromática (Android 13+ themed icons) |
 | `playstore-icon.png` | `store_assets/ic_launcher-playstore.png` | Ficha de Play Console (512×512) |
 
-`{d}` = `hdpi`, `mdpi`, `xhdpi`, `xxhdpi`, `xxxhdpi` (5 densidades). Para la
-variante por modo, las copias de oscuro van en `mipmap-night-{d}/` y
-`values-night/` respectivamente (la fuente del arte por variante está en
-`Design/brand/png/4x/`).
+`{d}` = `hdpi`, `mdpi`, `xhdpi`, `xxhdpi`, `xxxhdpi` (5 densidades). El
+ícono es fijo — una sola variante en `mipmap-{d}/` + `values/` (la fuente
+del arte está en `Design/brand/png/4x/`).
 
 ### Excepciones del pack
 
@@ -134,10 +140,10 @@ variante por modo, las copias de oscuro van en `mipmap-night-{d}/` y
 1. Generar el pack con la imagen fuente del isotipo (ej.
    [appicon.ikit.app](https://appicon.ikit.app) o `flutter_launcher_icons` si se
    prefiere vía pubspec), o componer manualmente con System.Drawing desde
-   `Design/brand/png/4x/` (arte por modo: negro para claro, mascota para oscuro).
+   `Design/brand/png/4x/` (arte actual: `isotipo_mascota`, negativa).
 2. Copiar todo el contenido de `<pack>/android/res/` dentro de
-   `android/app/src/main/res/` (merge + sobrescribir); copiar la variante
-   oscura a `mipmap-night-{d}/` y `values-night/`.
+   `android/app/src/main/res/` (merge + sobrescribir) — sin variantes
+   `-night` (ícono fijo).
 3. En cada `android/app/src/main/res/mipmap-{d}/`, duplicar
    `ic_launcher.png` → `ic_launcher_round.png` si el pack no lo trae.
 4. Copiar `<pack>/android/res/playstore-icon.png` →
@@ -163,9 +169,13 @@ implementada por modo en `res/values{,-night}/styles.xml` → `LaunchTheme`:
 
 | Atributo (API 31+) | Valor | Qué hace |
 |--------------------|-------|----------|
-| `android:windowSplashScreenAnimatedIcon` | `@mipmap/ic_launcher_foreground` | Fuerza el **foreground transparente** (no el ícono legacy cuadrado) — resuelve `mipmap-*` claro / `mipmap-night-*` oscuro |
-| `android:windowSplashScreenIconBackgroundColor` | `@color/ic_launcher_background` | El "plato" circular del ícono — `#FFFFFF` claro / `#000000` oscuro |
+| `android:windowSplashScreenAnimatedIcon` | `@mipmap/ic_launcher_foreground` | Fuerza el **foreground transparente** (no el ícono legacy cuadrado) — ícono fijo: depredador blanco en ambos modos |
+| `android:windowSplashScreenIconBackgroundColor` | `@color/ic_launcher_background` | El "plato" circular del ícono — `#000000` fijo (igual que el launcher icon) |
 | `android:windowBackground` | `@drawable/launch_background` | Fondo de la ventana — blanco claro / `?colorBackground` (negro) oscuro |
+
+El resultado: la **ventana** del splash sí sigue el tema (clara u oscura),
+pero el **ícono + plato** son fijos (negro + depredador blanco), igual que
+el ícono de launcher — consistente en cualquier modo.
 
 > **Por qué `windowSplashScreenAnimatedIcon` explícito:** sin él, el sistema
 > resuelve el ícono por densidad y puede dibujar el PNG **legacy** (cuadrado
@@ -173,9 +183,11 @@ implementada por modo en `res/values{,-night}/styles.xml` → `LaunchTheme`:
 > Con el foreground transparente el plato queda detrás del arte y el resultado
 > es el isotipo limpio sobre el color de fondo en ambos modos.
 
-Nota de verificación: los launchers cachean íconos compuestos — si al cambiar el
-tema del sistema el ícono no cambia, es caché del launcher (no del recurso);
-basta reiniciar el launcher (en el emulador: `pm clear` al nexuslauncher).
+Nota de verificación: los launchers cachean íconos compuestos — si tras un
+cambio el ícono no se actualiza, es caché del launcher (no del recurso);
+basta reiniciar el launcher (en el emulador: `pm clear` al nexuslauncher)
+o desinstalar/reinstalar. Fue exactamente esta limitación la que descartó
+el ícono por modo.
 
 ## Assets relacionados (por crear)
 
