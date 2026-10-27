@@ -1,13 +1,30 @@
+---
+name: app-icons
+description: Sistema de íconos y splash nativo de Depredadog — ícono por modo (claro/oscuro), capas adaptativas, recursos mipmap-night-*, plato del splash, procedimiento de actualización y fuente del arte (Design/brand/)
+triggers:
+  - user
+  - model
+---
+
 # Íconos de la app — cómo configurarlos en Depredadog
 
 Guía de referencia para definir el ícono de Depredadog: qué archivos intervienen,
 para qué sirve cada uno y a dónde se copia.
 
-> **Estado actual:** scaffold `flutter create` — solo existen los PNGs default de
-> Flutter en `res/mipmap-{d}/ic_launcher.png`, sin íconos adaptativos, sin capas
-> foreground/monochrome ni fondo de marca. El `android:label` del manifest ya es
-> `"Depredadog"`. Toda la configuración de marca de esta guía está por hacerse
-> cuando exista el isotipo.
+> **Estado actual:** ícono **por modo** (decisión del usuario) —
+> tema claro: `isotipo_mascota_negro` (versión positiva) sobre
+> `ic_launcher_background` `#FFFFFF`; tema oscuro: `isotipo_mascota`
+> (versión negativa) sobre `#000000`. Implementado con calificadores de
+> recurso: `mipmap-{d}/` = claro, `mipmap-night-{d}/` = oscuro,
+> `values/`→`#FFFFFF`, `values-night/`→`#000000`. Compartidos:
+> `ic_launcher_monochrome` (silueta de `isotipo_blanco` — themed icons) y
+> `store_assets/ic_launcher-playstore.png` (positiva 512). Generado con
+> System.Drawing desde `Design/brand/png/4x/` — foreground 70%, legacy 82%,
+> playstore 86%. Manifest con `android:icon` +
+> `android:roundIcon`. El kit completo de marca vive en `Design/brand/`
+> (png por densidad + svg + pack previo `appicon-pack-mascota-color/`).
+> **Pendiente:** el set de iOS (ver sección "Pendiente — iOS") — ver
+> `pendientes/002-identidad-marca.md`.
 
 ---
 
@@ -27,7 +44,7 @@ combina y recorta según la forma del launcher (círculo, squircle, gota…):
 | `foreground` | `@mipmap/ic_launcher_foreground` | El isotipo — PNG transparente dibujado más grande que el ícono final (la zona segura visible es ~el 66% central) |
 | `monochrome` | `@mipmap/ic_launcher_monochrome` | Variante monocromática (solo alfa) — Android 13+ la tiñe con el color del tema del usuario ("themed icons") |
 
-Los **descriptores** son XML en `res/mipmap-anydpi-v26/` (aún no existen en este repo):
+Los **descriptores** son XML en `res/mipmap-anydpi-v26/`:
 
 - `ic_launcher.xml` — define el ícono adaptativo estándar (background + foreground + monochrome).
 - `ic_launcher_round.xml` — la variante para launchers que piden forma circular.
@@ -38,12 +55,14 @@ pantallas — el sistema escoge el PNG de capa de la densidad adecuada.
 ### 2. PNGs legacy (API < 26)
 
 Los dispositivos con Android 7.x e inferiores **no entienden** los XML
-adaptativos y necesitan el ícono ya renderizado (es lo único que existe hoy):
+adaptativos y necesitan el ícono ya renderizado:
 
 - `res/mipmap-{density}/ic_launcher.png` — ícono cuadrado completo, pre-renderizado
   por densidad de pantalla.
 - `res/mipmap-{density}/ic_launcher_round.png` — variante redonda, usada por
   launchers circulares cuando el manifest declara `android:roundIcon`.
+- `res/mipmap-night-{density}/` — las mismas variantes para modo oscuro
+  (el sistema las resuelve con el calificador `night`).
 
 Densidades y tamaño del ícono de launcher:
 
@@ -61,13 +80,13 @@ Densidades y tamaño del ícono de launcher:
 
 ### 3. Referencias en el manifest
 
-`android/app/src/main/AndroidManifest.xml` — estado actual vs. objetivo:
+`android/app/src/main/AndroidManifest.xml`:
 
 ```xml
 <application
-    android:label="Depredadog"                           <!-- ya configurado -->
-    android:icon="@mipmap/ic_launcher"                   <!-- ícono estándar -->
-    android:roundIcon="@mipmap/ic_launcher_round">       <!-- agregar al tener el pack -->
+    android:label="Depredadog"
+    android:icon="@mipmap/ic_launcher"
+    android:roundIcon="@mipmap/ic_launcher_round">
 ```
 
 En API ≥26, `@mipmap/ic_launcher` y `@mipmap/ic_launcher_round` resuelven a los
@@ -77,7 +96,7 @@ XML de `mipmap-anydpi-v26/`; en API <26 resuelven a los PNG de `mipmap-*/`.
 
 `store_assets/ic_launcher-playstore.png` — 512×512, **no se compila en el APK**:
 es el asset que se sube a Play Console para la ficha de la tienda. Vive fuera de
-`res/` a propósito (carpeta por crear).
+`res/` a propósito.
 
 ---
 
@@ -95,7 +114,10 @@ Pack generado (carpeta `isotipo_app/android/res/` o equivalente):
 | `mipmap-{d}/ic_launcher_monochrome.png` | `res/mipmap-{d}/` | Capa monocromática (Android 13+ themed icons) |
 | `playstore-icon.png` | `store_assets/ic_launcher-playstore.png` | Ficha de Play Console (512×512) |
 
-`{d}` = `hdpi`, `mdpi`, `xhdpi`, `xxhdpi`, `xxxhdpi` (5 densidades).
+`{d}` = `hdpi`, `mdpi`, `xhdpi`, `xxhdpi`, `xxxhdpi` (5 densidades). Para la
+variante por modo, las copias de oscuro van en `mipmap-night-{d}/` y
+`values-night/` respectivamente (la fuente del arte por variante está en
+`Design/brand/png/4x/`).
 
 ### Excepciones del pack
 
@@ -111,9 +133,11 @@ Pack generado (carpeta `isotipo_app/android/res/` o equivalente):
 
 1. Generar el pack con la imagen fuente del isotipo (ej.
    [appicon.ikit.app](https://appicon.ikit.app) o `flutter_launcher_icons` si se
-   prefiere vía pubspec).
+   prefiere vía pubspec), o componer manualmente con System.Drawing desde
+   `Design/brand/png/4x/` (arte por modo: negro para claro, mascota para oscuro).
 2. Copiar todo el contenido de `<pack>/android/res/` dentro de
-   `android/app/src/main/res/` (merge + sobrescribir).
+   `android/app/src/main/res/` (merge + sobrescribir); copiar la variante
+   oscura a `mipmap-night-{d}/` y `values-night/`.
 3. En cada `android/app/src/main/res/mipmap-{d}/`, duplicar
    `ic_launcher.png` → `ic_launcher_round.png` si el pack no lo trae.
 4. Copiar `<pack>/android/res/playstore-icon.png` →
@@ -134,21 +158,24 @@ el mismo isotipo en el generador (exportar bundle iOS) o con
 
 ## Splash nativo por modo (claro/oscuro)
 
-La pantalla de arranque (lo que se ve antes del primer frame de Flutter) puede
-cambiar de color según el modo del sistema usando **calificadores de recursos**
-(configuración por hacerse — hoy existe solo el `launch_background.xml` default
-en `res/drawable/` y `res/drawable-v21/`):
+La pantalla de arranque (lo que se ve antes del primer frame de Flutter) está
+implementada por modo en `res/values{,-night}/styles.xml` → `LaunchTheme`:
 
-| Archivo | Rol |
-|---------|-----|
-| `res/values/colors.xml` | `launch_background` — color modo claro |
-| `res/values-night/colors.xml` | `launch_background` — color modo oscuro |
-| `res/drawable{,-v21}/launch_background.xml` | `@color/launch_background` — Android resuelve el valor según el modo automáticamente |
-| `res/values{,-night}/styles.xml` | `LaunchTheme`: `windowSplashScreenBackground` apunta al mismo color (API 31+) |
+| Atributo (API 31+) | Valor | Qué hace |
+|--------------------|-------|----------|
+| `android:windowSplashScreenAnimatedIcon` | `@mipmap/ic_launcher_foreground` | Fuerza el **foreground transparente** (no el ícono legacy cuadrado) — resuelve `mipmap-*` claro / `mipmap-night-*` oscuro |
+| `android:windowSplashScreenIconBackgroundColor` | `@color/ic_launcher_background` | El "plato" circular del ícono — `#FFFFFF` claro / `#000000` oscuro |
+| `android:windowBackground` | `@drawable/launch_background` | Fondo de la ventana — blanco claro / `?colorBackground` (negro) oscuro |
 
-Para cambiar los colores solo se edita `colors.xml` / `values-night/colors.xml`
-— los drawables y estilos no se tocan. El mismo mecanismo (`-night`) sirve para
-cualquier otro recurso que deba variar por modo (imágenes, drawables…).
+> **Por qué `windowSplashScreenAnimatedIcon` explícito:** sin él, el sistema
+> resuelve el ícono por densidad y puede dibujar el PNG **legacy** (cuadrado
+> opaco) dentro del plato — se veía como "círculo blanco con cuadrado negro".
+> Con el foreground transparente el plato queda detrás del arte y el resultado
+> es el isotipo limpio sobre el color de fondo en ambos modos.
+
+Nota de verificación: los launchers cachean íconos compuestos — si al cambiar el
+tema del sistema el ícono no cambia, es caché del launcher (no del recurso);
+basta reiniciar el launcher (en el emulador: `pm clear` al nexuslauncher).
 
 ## Assets relacionados (por crear)
 

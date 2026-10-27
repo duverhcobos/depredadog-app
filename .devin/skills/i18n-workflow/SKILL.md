@@ -6,12 +6,16 @@ triggers:
   - model
 ---
 
-Flujo de internacionalización para **Depredadog** (`I18N_GUIDE.md`).
+Flujo de internacionalización para **Depredadog**.
 
 - Prohibido texto estático quemado en widgets (`Text('Login')`). Todo texto va por
   `AppLocalizations`.
 - Prohibido también hardcodear colores en las mismas pantallas que tienen el texto (usar
   `Theme.of(context).colorScheme` o `AppColors`, no `Colors.blue`/`Colors.red` directos).
+
+Piezas del motor: `l10n.yaml` (raíz — config del generador), `lib/l10n/*.arb`
+(diccionarios; hoy solo `app_es.arb` — un idioma por `.arb`), clases generadas
+`lib/l10n/app_localizations*.dart` (no editar a mano).
 
 ## Pasos obligatorios al agregar un texto nuevo
 

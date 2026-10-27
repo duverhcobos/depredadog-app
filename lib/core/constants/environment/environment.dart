@@ -1,4 +1,4 @@
-/// Emisor único de configuración de entorno (ver ENVIRONMENTS.md).
+/// Emisor único de configuración de entorno (ver skill `environments-secrets`).
 /// Toda variable externa entra por --dart-define y se centraliza aquí;
 /// ningún otro archivo lee variables de entorno directamente.
 enum EnvType { dev, stg, prod }

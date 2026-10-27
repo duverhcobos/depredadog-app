@@ -64,4 +64,6 @@ revisar/auditar código existente.
   datasources directamente).
 - No hacer commits/push sin que el usuario lo pida explícitamente.
 
-Referencia detallada y ejemplos de código: `promt_solid.md` en la raíz del repo.
+14. **Comentarios SOLID en código:** las clases/interfaces nuevas llevan un comentario
+    breve marcando el principio que aplican (ej. `// SOLID (SRP): esta clase solo cambia
+    si...`) — convención de aprendizaje del proyecto.

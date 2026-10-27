@@ -8,25 +8,35 @@ triggers:
 
 Reglas para manejar entornos y secretos en **Depredadog**, un proyecto camino a producción.
 
-## Entornos (`ENVIRONMENTS.md`)
+## Entornos
 
 - **Nunca hardcodear URLs, tokens o API keys** en el código fuente.
 - Toda variable de entorno se define exclusivamente vía `--dart-define` y se centraliza en
   `lib/core/constants/environment/environment.dart` (`Environment`). Ningún otro archivo debe leer
   variables de entorno directamente.
-- Para agregar una nueva variable secreta: editar `environment.dart` usando
+- Para agregar una nueva variable: editar `environment.dart` usando
   `String.fromEnvironment`.
-- Ejecución local:
+- Comandos por entorno:
   ```bash
+  # dev — emulador Android (API_BASE_URL default = localhost del host vía 10.0.2.2)
   flutter run --dart-define=ENV=dev
+  # dev — dispositivo físico en la misma LAN (backend bindea 0.0.0.0; revisar firewall de Windows)
+  flutter run --dart-define=ENV=dev --dart-define=API_BASE_URL=http://<ip-lan-del-pc>:3000
+  # staging
+  flutter run --dart-define=ENV=stg --dart-define=API_BASE_URL=<url-api-stg>
+  # producción
+  flutter build appbundle --dart-define=ENV=prod --dart-define=API_BASE_URL=<url-api-prod>
   ```
   Variables activas hoy: `ENV` (`dev`/`stg`/`prod`, default `dev`) y
   `API_BASE_URL` (default `http://10.0.2.2:3000` = localhost del host vía emulador).
-  Toda variable nueva se declara primero en `environment.dart` y se documenta en
-  `ENVIRONMENTS.md` — no inyectar `--dart-define` de variables que `environment.dart`
-  no lea (se ignoran silenciosamente).
-- Nunca usar archivos `.env` de texto plano para secretos de producción; el mecanismo del proyecto
-  es `--dart-define`.
+  Toda variable nueva se declara primero en `environment.dart` — no inyectar
+  `--dart-define` de variables que `environment.dart` no lea (se ignoran
+  silenciosamente).
+- Nunca usar archivos `.env` de texto plano: viajan en claro dentro del APK/IPA y son el
+  archivo que más se filtra a git por descuido. El mecanismo `--dart-define` compila los
+  valores en el binario — ojo, igual son **extraíbles** con ingeniería inversa: solo
+  valores no sensibles (URLs, client IDs, keys públicas acotadas). La autorización fuerte
+  la da el JWT desde secure storage, nada más vive en el cliente.
 
 ## Reglas de seguridad reforzadas (proyecto camino a producción)
 

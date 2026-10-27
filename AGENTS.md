@@ -33,12 +33,13 @@ El detalle de convenciones, arquitectura y workflows de este proyecto vive en sk
 | `production-checklist` | **Siempre** antes de dar por terminado un cambio |
 | `navigation-routing` | Al tocar rutas/pantallas — go_router: constantes en el guard, segmentos relativos en hijos, push vs go |
 | `release-build` | Antes de generar APK/AAB release — permisos, --dart-define por entorno, firma y versionado |
-| `pendientes-produccion` | Al crear/consultar pendientes pre-producción — carpeta `pendientes/` en la raíz del backend (`../pcalientes_backend/pendientes/`), compartida entre ambos proyectos |
+| `pendientes-produccion` | Al crear/consultar pendientes pre-producción — carpeta `pendientes/` propia del repo (los del backend van en la suya) |
 | `design-system-docs` | Tras cualquier cambio visual — cómo actualizar `Design/design-system.yaml` (version, spec, changelog) |
 | `new-feature-checklist` | Al agregar un módulo/feature nuevo — orden exacto de archivos del dominio a la pantalla |
 | `token-saving-tools-policy` | Al explorar el código — cuándo leer directo vs. usar el grafo codebase-memory, batching |
+| `app-icons` | Al tocar íconos de launcher o el splash nativo — ícono por modo, capas adaptativas, `mipmap-night-*`, procedimiento de actualización |
 
-Si una instrucción parece faltar acá, buscarla primero en `.devin/skills/` antes de asumir que no existe. La documentación extendida vive en `README.md`, `ENVIRONMENTS.md`, `I18N_GUIDE.md` y `promt_solid.md`.
+Si una instrucción parece faltar acá, buscarla primero en `.devin/skills/` antes de asumir que no existe. En la raíz solo viven los esenciales: `AGENTS.md` y `README.md`.
 
 ## Flujo de desarrollo con subagentes
 
