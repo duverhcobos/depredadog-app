@@ -1,6 +1,6 @@
 ---
 name: pendientes-produccion
-description: Checklist de pendientes pre-producción (../pcalientes_backend/pendientes/, compartida con el backend) — cuándo crear ítems, formato, estados y cuándo revisarlos antes de un release de Depredadog
+description: Checklist de pendientes pre-producción (pendientes/ propia del repo) — cuándo crear ítems, formato, estados y cuándo revisarlos antes de un release de Depredadog
 triggers:
   - user
   - model
@@ -8,7 +8,9 @@ triggers:
 
 # Pendientes pre-producción
 
-La carpeta `pendientes/` vive en la **raíz del repo backend** (`../pcalientes_backend/pendientes/`, compartida entre backend y frontend — mismo criterio que `../pcalientes_backend/planeaciones/`). Guarda ítems accionables que hoy funcionan como workaround de dev/MVP pero deben resolverse — o aceptarse explícitamente — antes de desplegar a producción.
+La carpeta `pendientes/` vive en la **raíz de este repo** (`./pendientes/`). Guarda ítems accionables del lado **frontend/app** que hoy funcionan como workaround de dev/MVP pero deben resolverse — o aceptarse explícitamente — antes de desplegar a producción.
+
+> **Convención (decisión del usuario): cada repo tiene su propia `pendientes/`** — los ítems del backend van en `../pcalientes_backend/pendientes/`, los de la app acá. (Diferente de `planeaciones/`, que sigue compartida en el backend.)
 
 ## Qué SÍ va en `pendientes/` (lado frontend)
 
@@ -24,13 +26,13 @@ La carpeta `pendientes/` vive en la **raíz del repo backend** (`../pcalientes_b
 
 ## Formato
 
-Un archivo por ítem en `../pcalientes_backend/pendientes/`: `NNN-titulo-corto.md` (numeración secuencial). Debajo del título:
+Un archivo por ítem en `./pendientes/`: `NNN-titulo-corto.md` (numeración secuencial del repo — revisar el número más alto existente antes de crear). Debajo del título:
 
 ```markdown
 # Pendiente: <Título>
 
 > **Estado: 🔴 PENDIENTE** — <detalle breve>
-> **Producto:** backend | frontend | ambos
+> **Producto:** frontend | ambos
 > **Bloqueo:** bloqueante | recomendado | opcional
 ```
 
@@ -39,7 +41,7 @@ Bloqueo: **bloqueante** (no desplegar sin resolver) · **recomendado** (salir co
 
 ## Cuándo crear / consultar
 
-- **Crear**: al introducir un workaround temporal en una propuesta o fix (ej. esquema custom en lugar de App Links), o al detectar dependencia externa relevante a producción. Actualizar siempre la tabla del `../pcalientes_backend/pendientes/README.md`.
+- **Crear**: al introducir un workaround temporal en una propuesta o fix (ej. esquema custom en lugar de App Links), o al detectar dependencia externa relevante a producción. Actualizar siempre la tabla del `pendientes/README.md`.
 - **Consultar**: antes de generar un release (complementa a `release-build` — esa skill cubre el checklist técnico del build; `pendientes/` cubre los ítems de producto/infra diferidos), y cuando el usuario pregunte "¿qué falta para producción?".
 
-La convención completa (formato detallado, criterio de cierre, relación con propuestas) está en `../pcalientes_backend/.devin/skills/pendientes-produccion/SKILL.md` del backend — ambas skills describen la misma carpeta.
+La convención de formato detallado (criterio de cierre, relación con propuestas) es la misma que en `../pcalientes_backend/.devin/skills/pendientes-produccion/SKILL.md` — misma estructura, carpetas separadas por repo.
