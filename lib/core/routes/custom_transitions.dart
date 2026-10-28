@@ -21,15 +21,21 @@ class CustomTransitions {
     return CustomTransitionPage<void>(
       key: state.pageKey,
       child: child,
-      transitionDuration: const Duration(milliseconds: 300),
+      // 500ms (no 300ms): el Hero del imagotipo (splash → login) comparte
+      // esta duración — a 300ms el vuelo se sentía demasiado rápido para
+      // apreciarse (feedback del usuario).
+      transitionDuration: const Duration(milliseconds: 500),
       transitionsBuilder: (context, animation, secondaryAnimation, child) =>
           SlideTransition(
-        position: Tween<Offset>(
-          begin: const Offset(0, 0.08),
-          end: Offset.zero,
-        ).animate(CurvedAnimation(parent: animation, curve: Curves.easeOut)),
-        child: FadeTransition(opacity: animation, child: child),
-      ),
+            position:
+                Tween<Offset>(
+                  begin: const Offset(0, 0.08),
+                  end: Offset.zero,
+                ).animate(
+                  CurvedAnimation(parent: animation, curve: Curves.easeOut),
+                ),
+            child: FadeTransition(opacity: animation, child: child),
+          ),
     );
   }
 }

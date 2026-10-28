@@ -1,9 +1,0 @@
-<?xml version="1.0" encoding="utf-8"?>
-<!-- Ícono del splash nativo: el sistema dibuja el ícono dentro de una
-     máscara circular y las garras del isotipo llegan a las esquinas del
-     cuadrado → inset 15% para que el arte quepa dentro del círculo
-     inscrito (~70.7% del lado). El @mipmap resuelve claro/oscuro solo
-     (mipmap-night-*) así que un solo archivo basta. -->
-<inset xmlns:android="http://schemas.android.com/apk/res/android"
-    android:drawable="@mipmap/ic_launcher_foreground"
-    android:inset="15%" />

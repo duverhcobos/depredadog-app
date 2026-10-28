@@ -2,7 +2,7 @@
 
 El detalle de convenciones, arquitectura y workflows de este proyecto vive en skills bajo `.devin/skills/`, no en este archivo — cada skill cubre una sola responsabilidad y se invoca solo cuando es relevante, para no cargar contexto innecesario en cada sesión.
 
-> Estado actual: bootstrap del core implementado (environment, DI, network, storage, router+guard, tema condimentos, i18n) — propuesta 001-app-bootstrap. Pantalla de **login** en presentación aprobada visualmente (light+dark, §003) — welcome eliminado, splash redirige a /login sin sesión. Siguiente: integración de `/auth/login` contra `../pcalientes_backend` (screen-first: un endpoint por ciclo).
+> Estado actual: bootstrap del core implementado (environment, DI, network, storage, router+guard, tema condimentos, i18n) — propuesta 001-app-bootstrap. Pantalla de **login** en presentación aprobada visualmente (§003) — welcome eliminado, splash redirige a /login sin sesión, imagotipo con Hero entre splash y login. **MVP solo tema oscuro** (decisión del usuario): `ThemeMode.dark` fijo, splash nativo negro fijo sin seguir el sistema — código light queda sin usar en el repo. Siguiente: integración de `/auth/login` contra `../pcalientes_backend` (screen-first: un endpoint por ciclo).
 
 ## Reglas mínimas siempre vigentes
 

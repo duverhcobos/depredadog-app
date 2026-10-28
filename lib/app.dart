@@ -6,8 +6,10 @@ import 'core/routes/app_router.dart';
 import 'core/theme/app_theme.dart';
 import 'l10n/app_localizations.dart';
 
-/// Raíz de la app: MaterialApp.router con tema M3 (system light/dark),
-/// router propio y localización es.
+/// Raíz de la app: MaterialApp.router con tema M3.
+/// MVP: solo tema oscuro (decisión del usuario) — ThemeMode.dark fijo,
+/// ignora el tema del sistema. AppTheme.light()/AppColors *Light siguen
+/// en el repo sin usarse por si se reactiva el soporte claro más adelante.
 class DepredadogApp extends StatelessWidget {
   const DepredadogApp({super.key});
 
@@ -16,9 +18,9 @@ class DepredadogApp extends StatelessWidget {
     return MaterialApp.router(
       title: 'Depredadog',
       debugShowCheckedModeBanner: false,
-      theme: AppTheme.light(),
+      theme: AppTheme.dark(),
       darkTheme: AppTheme.dark(),
-      themeMode: ThemeMode.system,
+      themeMode: ThemeMode.dark,
       routerConfig: locator<AppRouter>().router,
       localizationsDelegates: const [
         AppLocalizations.delegate,

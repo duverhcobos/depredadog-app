@@ -2,12 +2,15 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../l10n/app_localizations.dart';
+import '../constants/hero_tags.dart';
 import '../routes/auth_guard.dart';
-import '../theme/app_colors.dart';
-import '../widgets/app_backdrop.dart';
 
-/// Splash de marca: flama + nombre + tagline. Tras ~1.2s navega al login
-/// (sin sesión — el guard redirige las rutas protegidas igualmente).
+/// Splash de marca: imagotipo centrado sobre el fondo del tema (positivo
+/// en claro, negativo a color en oscuro) — continuidad visual con el
+/// splash nativo y el login. Navega al login ~0.8s después de que el
+/// imagotipo termina de decodificarse (precache: el login lo hereda del
+/// ImageCache y pinta el header sin parpadeo). Cuando exista chequeo de
+/// sesión esta pantalla decide login vs home.
 class SplashScreen extends StatefulWidget {
   const SplashScreen({super.key});
 
@@ -16,45 +19,45 @@ class SplashScreen extends StatefulWidget {
 }
 
 class _SplashScreenState extends State<SplashScreen> {
+  late final String _imagotypeAsset;
+  bool _scheduled = false;
+
   @override
-  void initState() {
-    super.initState();
-    Future.delayed(const Duration(milliseconds: 1200), () {
-      if (mounted) context.go(AuthGuard.loginRoute);
-    });
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    if (_scheduled) return;
+    _scheduled = true;
+    _imagotypeAsset = Theme.of(context).brightness == Brightness.dark
+        ? 'assets/images/imagotipo_depredadog_dark.png'
+        : 'assets/images/imagotipo_depredadog.png';
+    _goNext();
+  }
+
+  Future<void> _goNext() async {
+    // Secuencial, no Future.wait: si el decode termina después del delay,
+    // wait() resolvería en el mismo frame en que la imagen se pinta y la
+    // marca no llegaría a verse. Decode primero → 800ms visibles garantizados.
+    await precacheImage(
+      AssetImage(_imagotypeAsset),
+      context,
+    ).catchError((_) {});
+    await Future<void>.delayed(const Duration(milliseconds: 800));
+    if (mounted) context.go(AuthGuard.loginRoute);
   }
 
   @override
   Widget build(BuildContext context) {
-    final l10n = AppLocalizations.of(context)!;
     return Scaffold(
-      body: Stack(
-        children: [
-          const AppBackdrop(),
-          Center(
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                const AppBrandMark(),
-                const SizedBox(height: 16),
-                Text(
-                  l10n.appName,
-                  style: Theme.of(context).textTheme.headlineMedium?.copyWith(
-                    color: AppColors.onBrandGradient,
-                    fontWeight: FontWeight.w800,
-                  ),
-                ),
-                const SizedBox(height: 8),
-                Text(
-                  l10n.splashTagline,
-                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                    color: AppColors.onBrandGradient.withValues(alpha: 0.9),
-                  ),
-                ),
-              ],
-            ),
+      body: Center(
+        child: Hero(
+          tag: HeroTags.brandImagotipo,
+          child: Image.asset(
+            _imagotypeAsset,
+            height: 220,
+            fit: BoxFit.contain,
+            semanticLabel: AppLocalizations.of(context)!.appName,
           ),
-        ],
+        ),
       ),
     );
   }

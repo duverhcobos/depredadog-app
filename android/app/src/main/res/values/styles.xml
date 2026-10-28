@@ -1,16 +1,31 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <!-- Theme applied to the Android Window while the process is starting when the OS's Dark Mode setting is off -->
-    <style name="LaunchTheme" parent="@android:style/Theme.Light.NoTitleBar">
+    <!-- MVP: solo tema oscuro (decisión del usuario) — único styles.xml,
+         sin calificador -night. El splash nativo queda negro fijo,
+         ignora el modo claro/oscuro del SISTEMA (antes seguía el tema del
+         dispositivo; se unificó para que no haya flash blanco→negro justo
+         antes de que Flutter, ahora forzado a ThemeMode.dark, pinte su
+         primer frame). Si se reactiva el tema claro más adelante, restaurar
+         el parent Theme.Light.NoTitleBar + values-night/ con Theme.Black. -->
+    <style name="LaunchTheme" parent="@android:style/Theme.Black.NoTitleBar">
         <!-- Show a splash screen on the activity. Automatically removed when
              the Flutter engine draws its first frame -->
         <item name="android:windowBackground">@drawable/launch_background</item>
-        <!-- Plato del ícono del splash nativo — toma el fondo por modo
-             (values=#FFFFFF claro / values-night=#000000 oscuro) -->
-        <item name="android:windowSplashScreenIconBackgroundColor">@color/ic_launcher_background</item>
-        <!-- Foreground transparente por modo (mipmap-* claro / mipmap-night-* oscuro)
-             para que el plato del ícono quede detrás del arte -->
-        <item name="android:windowSplashScreenAnimatedIcon">@drawable/splash_icon</item>
+        <!-- Sin ícono en el splash nativo (decisión del usuario): la API
+             windowSplashScreenAnimatedIcon rasteriza el ícono internamente
+             a un bitmap de tamaño fijo antes de componerlo — confirmado
+             que produce un borde suavizado (blur) independiente del
+             recurso fuente (probado con PNG grande y VectorDrawable, ambos
+             con el mismo resultado byte a byte) y es una limitación de la
+             plataforma (API 31+), no de nuestros assets. El plato liso
+             (negro fijo) ya lo da @drawable/launch_background; el primer
+             logo nítido que ve el usuario es el del splash Flutter (Skia,
+             sin ese pipeline).
+             IMPORTANTE: si se omite windowSplashScreenAnimatedIcon por
+             completo, Android 12+ autocompone el ícono del LAUNCHER (fijo,
+             negro+blanco redondo) — no queda en blanco. Se declara un
+             drawable vacío explícito para forzar la pantalla lisa. -->
+        <item name="android:windowSplashScreenAnimatedIcon">@drawable/splash_icon_empty</item>
     </style>
     <!-- Theme applied to the Android Window as soon as the process has started.
          This theme determines the color of the Android Window while your
@@ -18,7 +33,7 @@
          running.
 
          This Theme is only used starting with V2 of Flutter's Android embedding. -->
-    <style name="NormalTheme" parent="@android:style/Theme.Light.NoTitleBar">
+    <style name="NormalTheme" parent="@android:style/Theme.Black.NoTitleBar">
         <item name="android:windowBackground">?android:colorBackground</item>
     </style>
 </resources>

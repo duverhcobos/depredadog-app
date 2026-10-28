@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Drawable vacío/transparente — fuerza a la Splash Screen API a NO
+     autocomponer el ícono del launcher (comportamiento por defecto de
+     Android 12+ cuando windowSplashScreenAnimatedIcon no se declara).
+     Decisión del usuario: splash nativo sin ícono, plato liso por tema;
+     el primer logo nítido que ve el usuario es el del splash Flutter. -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="240dp"
+    android:height="240dp"
+    android:viewportWidth="240"
+    android:viewportHeight="240">
+    <path android:fillColor="#00000000" android:pathData="M0,0h240v240h-240z"/>
+</vector>

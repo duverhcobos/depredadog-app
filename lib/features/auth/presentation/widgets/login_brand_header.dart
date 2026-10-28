@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../../../../core/constants/hero_tags.dart';
 import '../../../../l10n/app_localizations.dart';
 
 /// Encabezado de marca del login: imagotipo vertical Depredadog
@@ -15,13 +16,16 @@ class LoginBrandHeader extends StatelessWidget {
     final isDark = theme.brightness == Brightness.dark;
     return Column(
       children: [
-        Image.asset(
-          isDark
-              ? 'assets/images/imagotipo_depredadog_dark.png'
-              : 'assets/images/imagotipo_depredadog.png',
-          height: 148,
-          fit: BoxFit.contain,
-          semanticLabel: l10n.appName,
+        Hero(
+          tag: HeroTags.brandImagotipo,
+          child: Image.asset(
+            isDark
+                ? 'assets/images/imagotipo_depredadog_dark.png'
+                : 'assets/images/imagotipo_depredadog.png',
+            height: 148,
+            fit: BoxFit.contain,
+            semanticLabel: l10n.appName,
+          ),
         ),
         const SizedBox(height: 24),
         Text(

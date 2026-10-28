@@ -4,12 +4,16 @@
 
 meta:
   product: Depredadog
-  version: 1.3.1
+  version: 1.7.0
   updated: 2026-10-27
 
 palette:
   # Identidad Depredadog — "condimentos" (definida por el usuario, §001):
   # ketchup / mostaza / pan / parrilla / pepinillo.
+  # MVP: solo tema oscuro (decisión del usuario) — ThemeMode.dark fijo en
+  # MaterialApp.router, ignora el tema del sistema. Los tokens *_light
+  # quedan documentados y en AppColors/AppTheme.light() sin usarse, por si
+  # se reactiva el soporte claro más adelante.
   primary_light: "#D62828"
   secondary_light: "#FBBF24"
   tertiary_light: "#5B8C3A"
@@ -35,14 +39,18 @@ spacing:
   tokens: {xs: 4, sm: 8, md: 16, lg: 24, xl: 32}
 
 components:
+  app_theme_mode:
+    description: "MVP solo oscuro (decisión del usuario): MaterialApp.router con theme=AppTheme.dark(), darkTheme=AppTheme.dark(), themeMode=ThemeMode.dark fijo — ignora el brightness del sistema. AppTheme.light()/AppColors *Light no se eliminaron (quedan sin usar, reversible). Consecuencia en Android nativo: values/styles.xml unificado (LaunchTheme/NormalTheme parten de Theme.Black.NoTitleBar sin calificador -night) para que el splash nativo también sea negro fijo y no haya flash blanco→negro con el sistema en modo claro — se eliminaron values-night/ y drawable-night-v21/ por redundantes."
   app_backdrop:
-    description: "Degradado llama primary→secondary ocupando el tercio superior; el resto surface. Va tras el contenido en Stack. (Solo lo usa splash — las pantallas de formulario van sobre scaffold liso.)"
+    status: "ELIMINADO — degradado de plantilla; el splash Flutter pasó a scaffold liso + imagotipo real"
   app_brand_mark:
-    description: "Icono de marca (flama redondeada), 80px default, siempre on_brand_gradient sobre el backdrop. PROVISIONAL: será reemplazado por el isotipo Depredadog."
+    status: "ELIMINADO — la flama Material provisional fue reemplazada por el imagotipo real"
   app_launcher_icon:
-    description: "Ícono FIJO (decisión del usuario tras probar el modo-dual): isotipo_mascota negativa (tintas blancas) sobre plato #000000, igual en claro y oscuro. El modo-dual con calificadores mipmap-night-* se descartó — launchers/Settings cachean el ícono sin el modo en la clave, el usuario ve variantes stale ('no cambia nada'). Implementado: mipmap-{d} + values/ic_launcher_background=#000000 únicos. El splash nativo comparte la misma marca fija (plato negro + depredador blanco) sobre ventana por tema. Compartidos: monochrome=isotipo_blanco (themed icons) y playstore 512 en store_assets/. Pendiente: set iOS."
+    description: "Ícono launcher FIJO (decisión del usuario tras probar el modo-dual): isotipo tintas blancas como VectorDrawable (drawable/ic_launcher_foreground.xml, desde isotipo_mascota_.svg) sobre plato #000000, igual en claro y oscuro. El modo-dual se descartó — launchers/Settings cachean el ícono sin el modo ('no cambia nada'). El margen ~18%/lado (arte ~64% del lienzo) vive en el <group> del vector (viewport 3200², scale 3.48573, translate 575/736) — replica el lienzo de isotipo_icono_*. Compartidos: monochrome=silueta vectorial (themed icons), playstore 512 en store_assets/ y ic_launcher.png/round legacy (API<26, raster desde isotipo_icono_blanco). Pendiente: set iOS."
+  splash_native_icon:
+    description: "Splash nativo SIN ÍCONO (decisión final del usuario) — @drawable/splash_icon_empty, un VectorDrawable 240dp transparente (sin arte visible), solo para suprimir el fallback de Android 12+ que autocompone el ícono del launcher cuando no se declara windowSplashScreenAnimatedIcon. Solo queda el plato liso. Motivo medido en perfil de píxeles: tanto el PNG isotipo_icono_* como el VectorDrawable 1:1 del SVG oficial dieron el mismo blur en el borde — la Splash Screen API rasteriza el ícono a un Icon/bitmap internamente antes de la animación de reveal, independiente del formato/tamaño de la fuente (cambiar android:width/height 288→240dp no movió ni un byte). El primer logo nítido que ve el usuario es el del splash Flutter (Image.asset, Skia puro). MVP solo oscuro: el plato ya no es \"por tema\" — siempre #000000 (ver app_theme_mode)."
   brand_kit:
-    description: "Kit completo en Design/brand/: png/ por densidad (0.75x–4x), svg/ fuentes vectoriales, appicon-pack-mascota-color/ (pack previo, registro). Convención de nombres: _blanco = tinta blanca para fondos oscuros, _negro = tinta oscura para fondos claros, _mascota = full color, _mono_* = una tinta. Tagline oficial: 'HOT DOGS & MÁS'."
+    description: "Kit completo en Design/brand/: png/ por densidad (0.75x–4x), svg/ fuentes vectoriales, appicon-pack-mascota-color/ (pack previo, registro). Convención de nombres: _blanco = tinta blanca para fondos oscuros, _negro = tinta oscura para fondos claros, _mascota = full color, _mono_* = una tinta, isotipo_icono_* = isotipo con margen de compensación horneado (~64% del lienzo) — referencia de composición para el <group> de los VectorDrawable y fuente de los raster legacy/API<26. Los SVG isotipo_mascota_* son la fuente de los VectorDrawable de ícono/splash. Tagline oficial: 'HOT DOGS & MÁS'."
   brand_tagline:
     description: "Tagline oficial de la guía de marca: 'HOT DOGS & MÁS'."
   elevated_button_primary:
@@ -54,19 +62,64 @@ components:
   remember_row:
     description: "Fila bajo el campo contraseña: Checkbox 'Recuérdame' (compacto, tap en texto alterna) a la izquierda + link '¿Olvidaste tu contraseña?' (bodySmall primary w600) a la derecha. rememberMe decidirá en integración si el refresh token persiste entre sesiones."
   login_brand_header:
-    description: "Imagotipo vertical 148px + headline primary + subtítulo (bodyMedium onSurface 70%). Asset por tema: imagotipo_depredadog.png (=imagotipo_negro_*) en claro; imagotipo_depredadog_dark.png (=imagotipo__1*, trazos blancos + color) en oscuro. Densidades 1.5x–4x."
+    description: "Imagotipo vertical 148px (Hero tag HeroTags.brandImagotipo, vuela desde el splash) + headline primary + subtítulo (bodyMedium onSurface 70%). Asset por tema: imagotipo_depredadog.png (=imagotipo_negro_*) en claro; imagotipo_depredadog_dark.png (=imagotipo__1*, trazos blancos + color) en oscuro — con MVP solo oscuro (app_theme_mode) siempre resuelve a la variante dark. Densidades 1.5x–4x."
 
 screens:
   splash:
     route: "/"
-    spec: "AppBackdrop + AppBrandMark + appName (headline w800) + tagline sobre gradiente; AuthGuard decide: sin sesión → /login, con sesión → /home."
+    spec: "Scaffold liso (color por tema; MVP solo oscuro, ver app_theme_mode) + imagotipo centrado 220px en Hero(tag: HeroTags.brandImagotipo) — asset por tema: imagotipo_depredadog.png claro / _dark.png oscuro (mismos del login header). Navega a /login ~800ms DESPUÉS de que el imagotipo decodifica (precacheImage secuencial — el login hereda el ImageCache y el header pinta sin parpadeo; Future.wait se descartó porque pintaba y navegaba en el mismo frame). El Hero hace que el imagotipo vuele del centro (220px) al header del login (148px) en vez de que una pantalla reemplace a la otra en seco. Futuro: aquí vivirá el chequeo de sesión."
   login:
     route: "/login"
-    spec: "Scaffold liso + scroll. LoginBrandHeader, campos email/password (CustomTextField con AutofillGroup, error por campo que se limpia al editar), remember_row, ElevatedButton 'Iniciar sesión' (loading reemplaza el botón por spinner centrado), divider 'o continúa con', GoogleSignInButton, fila '¿No tienes cuenta? Regístrate'. Submit vacío → errores + snackbar + foco al primer inválido. PROVISIONAL: submit simulado 1.2s → snackbar demo; forgot/register/google sin endpoint."
+    spec: "Scaffold liso + scroll. LoginBrandHeader (imagotipo en el mismo Hero que el splash), campos email/password (CustomTextField con AutofillGroup, error por campo que se limpia al editar), remember_row, ElevatedButton 'Iniciar sesión' (loading reemplaza el botón por spinner centrado), divider 'o continúa con', GoogleSignInButton, fila '¿No tienes cuenta? Regístrate'. Submit vacío → errores + snackbar + foco al primer inválido. PROVISIONAL: submit simulado 1.2s → snackbar demo; forgot/register/google sin endpoint."
   welcome:
     status: "ELIMINADA (decisión del usuario) — splash va directo a /login para no autenticados"
 
 changelog:
+  - version: "1.7.0"
+    date: 2026-10-27
+    page: "app_theme_mode"
+    status: "completed"
+    changes:
+      - "MVP solo tema oscuro (decisión del usuario, con trade-offs presentados y elegidos explícitamente): MaterialApp.router pasa de themeMode: ThemeMode.system a ThemeMode.dark fijo (theme y darkTheme ambos AppTheme.dark()). AppTheme.light()/AppColors *Light quedan en el repo sin usarse (decisión: mantener código, no eliminar, para reactivar fácil más adelante)."
+      - "Splash nativo unificado a negro fijo para que no haya flash blanco→negro: values/styles.xml (LaunchTheme + NormalTheme) pasa de parent Theme.Light.NoTitleBar a Theme.Black.NoTitleBar, sin calificador -night. Eliminados values-night/styles.xml y drawable-night-v21/launch_background.xml por redundantes (drawable-v21/launch_background.xml ya resuelve ?android:colorBackground a negro vía el theme unificado)."
+      - "Usuario verificó visualmente el resultado en el emulador antes de documentar/commitear (convención screen-first-workflow)."
+  - version: "1.6.1"
+    date: 2026-10-27
+    page: "splash + login"
+    status: "completed"
+    changes:
+      - "Hero(tag: HeroTags.brandImagotipo) agregado entre el imagotipo del splash (220px) y el del login_brand_header (148px) — el logo vuela de una pantalla a otra en vez de que el login reemplace al splash en seco (pedido del usuario). Tag centralizado en lib/core/constants/hero_tags.dart para no duplicarlo entre core/ y features/auth/."
+      - "transitionDuration de CustomTransitions.slideUp sube de 300ms a 500ms — a 300ms el vuelo del Hero se sentía demasiado rápido para apreciarse (feedback del usuario); el Hero toma su duración de la transición de la página, no tiene timing propio. Afecta hoy solo a /login (única ruta que usa slideUp)."
+  - version: "1.6.0"
+    date: 2026-10-27
+    page: "splash_native_icon"
+    status: "completed"
+    changes:
+      - "Splash nativo pierde el ícono por decisión final del usuario: tanto el PNG isotipo_icono_* como el VectorDrawable 1:1 del SVG oficial produjeron el mismo blur medido en perfil de píxeles — confirma que es la Splash Screen API (windowSplashScreenAnimatedIcon rasteriza a Icon/bitmap antes del reveal) y no el recurso fuente. Se descartó también cambiar android:width/height del vector (288→240dp, el spec correcto para ícono con plato): el resultado fue byte-idéntico, sin mejora."
+      - "Nuevo drawable/splash_icon_empty.xml — VectorDrawable 240dp con un <path> fillColor transparente. Necesario explícitamente: omitir windowSplashScreenAnimatedIcon no deja la pantalla lisa (Android 12+ autocompone el ícono del launcher fijo como fallback); un vector de 1dp sin paths tampoco bastó (el sistema lo descarta y cae al mismo fallback)."
+      - "Eliminados: drawable{,-night}/splash_icon_foreground.xml y values{,-night}/splash_icon_background — ya no hay arte ni plato de color propios del splash; solo queda @drawable/launch_background (plato liso #FFFFFF/#000000 por tema)."
+      - "El primer logo nítido que ve el usuario pasa a ser el del splash Flutter (imagotipo PNG vía Image.asset, Skia) — sin cambios en esa pantalla, solo se adelanta en la secuencia perceptual."
+  - version: "1.5.0"
+    date: 2026-10-27
+    page: "app_launcher_icon + splash_native_icon"
+    status: "completed"
+    changes:
+      - "Foregrounds, monochrome y splash_icon_foreground pasan de PNG por densidad a VectorDrawable generados 1:1 desde los SVG oficiales (isotipo_mascota_negro.svg → drawable/splash; isotipo_mascota_.svg → drawable-night/splash + launcher foreground + monochrome como silueta). Motivo (feedback del usuario): el splash se veía borroso — el sistema downscalaba el PNG 3200px ~9× difuminando los bordes duros; el vector queda nítido a cualquier tamaño."
+      - "Margen de compensación migrado a la transformación del vector: viewport 3200×3200 + group translate(575,736) scale 3.48573 replica el lienzo de isotipo_icono_* (arte ~64%). Si el usuario re-edita el margen solo cambian scale/translate — el pathData del arte no se toca."
+      - "Eliminados: mipmap-{d}/ic_launcher_foreground.png, ic_launcher_monochrome.png, splash_icon_foreground.png y las carpetas mipmap-night-* (el -night del splash ahora vive en drawable-night/). Persisten: ic_launcher.png/round legacy por densidad (API<26) y playstore 512 — siguen siendo raster compuestos desde isotipo_icono_blanco."
+      - "Detalle técnico: los SVG usan clases .cls-N en <style> — mapear clase→fill declarado; los paths sin clase heredan el trazo de la variante (#030304 negro real del arte / #FFF). Escribir los XML con encoding UTF-8 explícito (cp1252 de Windows rompe aapt)."
+  - version: "1.4.0"
+    date: 2026-10-27
+    page: "splash"
+    status: "completed"
+    changes:
+      - "Splash Flutter rehecho con marca real (feedback del usuario): el AppBackdrop degradado y AppBrandMark (flama Material) de plantilla se eliminaron; ahora scaffold liso por tema + imagotipo real centrado 220px (variante claro/oscuro, mismo asset que el login header)."
+      - "Navegación tras ~800ms desde que el imagotipo decodifica (precache secuencial) — corrige carrera donde la imagen se pintaba y se navegaba en el mismo frame (splash en blanco/negro en emuladores lentos); de paso el login header hereda el ImageCache."
+      - "Splash nativo vuelve a seguir el tema (decisión del usuario): recursos separados splash_icon_foreground (mipmap-*/positivo, mipmap-night-*/negativo) + splash_icon_background (values #FFFFFF / values-night #000000); el ícono launcher queda FIJO — el -night solo aplica a splash porque el splash se re-resuelve cada apertura (sin el caché del launcher)."
+      - "Claves ARB: splashTagline eliminada (el tagline oficial vive en el arte del imagotipo); app_backdrop y app_brand_mark marcados ELIMINADO."
+      - "Nuevo drawable-night-v21/launch_background.xml negro — el base v21 era blanco fijo (flash blanco pre-frame en oscuro, API 21-30)."
+      - "Corrección de arte (feedback del usuario): splash_icon_foreground claro usaba por error el ic_launcher_foreground del pack viejo — variante con borde negro horneado NO oficial. Revertido a los PNGs originales: isotipo_mascota_negro{d} (claro) e isotipo_mascota_{d} (oscuro)."
+      - "Margen de compensación (edición del usuario): nuevos isotipo_icono_{negro,blanco}{d} en Design/brand/png/ con arte al ~64% del lienzo (margen ~18%/lado) — corrige el recorte de garras por máscara circular en splash y launcher. El inset 15% del splash se eliminó (ya no hace falta); launcher foreground, legacy, monochrome y playstore regenerados desde estos archivos."
   - version: "1.3.1"
     date: 2026-10-27
     page: "app_launcher_icon"

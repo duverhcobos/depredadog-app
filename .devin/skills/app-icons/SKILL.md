@@ -1,6 +1,6 @@
 ---
 name: app-icons
-description: Sistema de íconos y splash nativo de Depredadog — ícono FIJO (plato negro + depredador blanco; el modo-dual se descartó por caché de launchers), capas adaptativas, procedimiento de actualización y fuente del arte (Design/brand/)
+description: Sistema de íconos y splash nativo de Depredadog — ícono launcher FIJO (plato negro + depredador blanco; el modo-dual se descartó por caché de launchers), splash nativo SIN ÍCONO y NEGRO FIJO (MVP solo tema oscuro — la Splash Screen API rasteriza a blur independiente del recurso, y el plato ya no sigue el tema del sistema), capas adaptativas, procedimiento de actualización y fuente del arte (Design/brand/)
 triggers:
   - user
   - model
@@ -11,23 +11,81 @@ triggers:
 Guía de referencia para definir el ícono de Depredadog: qué archivos intervienen,
 para qué sirve cada uno y a dónde se copia.
 
-> **Estado actual:** ícono **FIJO** (decisión del usuario, tras probar el
-> modo-dual) — `isotipo_mascota` (versión negativa, tintas blancas) sobre
-> `ic_launcher_background` `#000000`, igual en claro y oscuro. Implementado
-> sin calificadores: `mipmap-{d}/` y `values/`→`#000000` únicos (los
-> `mipmap-night-{d}/` y `values-night/ic_launcher_background.xml` se
-> eliminaron). Compartidos: `ic_launcher_monochrome` (silueta de
-> `isotipo_blanco` — themed icons) y `store_assets/` playstore.
+> **Estado actual:** ícono launcher **FIJO** (decisión del usuario, tras
+> probar el modo-dual) — isotipo de tintas blancas como
+> `VectorDrawable` (`drawable/ic_launcher_foreground.xml`) sobre
+> `ic_launcher_background` `#000000`, igual en claro y oscuro.
+> Compartidos: `drawable/ic_launcher_monochrome.xml` (silueta —
+> themed icons) y `store_assets/` playstore.
 >
-> **Por qué fijo y no por modo:** los calificadores `-night` resuelven
-> bien, pero launchers y Settings cachean el ícono sin el modo en la clave
-> — el usuario ve una variante aleatoria cacheada que "no cambia nada".
-> Confirmado en pruebas del usuario: app-info mostraba el ícono night en
-> ambos modos. Android no soporta ícono por tema de forma confiable.
-> Generado con System.Drawing desde `Design/brand/png/4x/` — foreground
-> 70%, legacy 82%, playstore 86%. Manifest con `android:icon` +
-> `android:roundIcon`. El kit completo de marca vive en `Design/brand/`
-> (png por densidad + svg + pack previo `appicon-pack-mascota-color/`).
+> **Por qué el launcher es fijo y no por modo:** los calificadores `-night`
+> resuelven bien, pero launchers y Settings cachean el ícono sin el modo
+> en la clave — el usuario ve una variante aleatoria cacheada que "no
+> cambia nada". Confirmado en pruebas del usuario: app-info mostraba el
+> ícono night en ambos modos. Android no soporta ícono launcher por tema
+> de forma confiable.
+>
+> **El splash nativo NO tiene ícono** (decisión final del usuario, tras
+> comprobar que ni PNG grande ni `VectorDrawable` exacto evitan el blur):
+> `android:windowSplashScreenAnimatedIcon` apunta a
+> `drawable/splash_icon_empty.xml` (vector 240dp transparente, sin
+> paths visibles) — solo queda el plato liso de
+> `@drawable/launch_background`. **MVP solo tema oscuro** (decisión
+> posterior del usuario): el plato ya no es por tema — `values/styles.xml`
+> es el único `styles.xml` (se eliminó `values-night/`), con
+> `LaunchTheme`/`NormalTheme` partiendo de `Theme.Black.NoTitleBar` →
+> siempre `#000000`, sin depender del brightness del sistema. El primer
+> logo que ve el usuario es el del splash **Flutter** (imagotipo PNG vía
+> `Image.asset`, Skia puro, sin el pipeline de la Splash Screen
+> API). Ver sección "Splash nativo — por qué no tiene ícono".
+>
+> **Por qué se descartó el ícono del splash nativo (medido, no a ojo):**
+> `windowSplashScreenAnimatedIcon` convierte el recurso a un `Icon` y lo
+> rasteriza internamente a un bitmap antes de componer la animación de
+> reveal — eso produce un borde suavizado. Se midió el perfil de píxeles
+> de un mismo borde: PNG `isotipo_icono_*` y `VectorDrawable` 1:1 desde
+> el SVG oficial dieron **exactamente la misma transición** (`0→35→140→
+> 207→244→253→255`, 6 valores intermedios) vs. el splash Flutter sobre el
+> mismo borde (`0→4→59→238→254→255`, salto casi binario en 2px). Cambiar
+> el `android:width/height` declarado del vector (288dp→240dp, el spec
+> correcto para ícono con plato) no movió ni un byte del resultado — el
+> blur es del pipeline de la plataforma (API 31+), no de la resolución,
+> el formato ni el tamaño del recurso. No es arreglable desde los
+> assets.
+>
+> **Cuidado al forzar "sin ícono":** omitir
+> `windowSplashScreenAnimatedIcon` por completo NO deja la pantalla
+> lisa — Android 12+ autocompone el ícono del **launcher** (el fijo,
+> negro+blanco redondo) por defecto. Hay que declarar explícitamente un
+> drawable transparente (`splash_icon_empty.xml`, 240dp, un `<path>`
+> con `fillColor="#00000000"`) para suprimirlo; un vector de 1dp sin
+> paths no fue suficiente (el sistema lo descarta y cae al mismo
+> fallback del launcher).
+>
+> **Fuente del arte del launcher — el SVG oficial `Design/brand/svg/`:**
+> el foreground/monochrome del launcher usan `VectorDrawable`s generados
+> 1:1 desde `isotipo_mascota_.svg` (trazos blancos). El splash ya no usa
+> arte (ver arriba); los `isotipo_icono_*` de `Design/brand/png/` siguen
+> siendo la fuente de los raster legacy (`ic_launcher.png`/round API<26,
+> playstore 512).
+>
+> **El margen de compensación vive en el vector, no en el arte:** el
+> SVG oficial es full-bleed (viewBox 587.843×496.075). El
+> `VectorDrawable` del launcher usa viewport 3200×3200 con un `<group>`
+> que escala el arte ×3.48573 y lo traslada a (575,736) — replica exacta
+> del lienzo con margen ~18%/lado que el usuario diseñó para los PNG
+> `isotipo_icono_*`. Arte al ~64% del lienzo → entra sobrado en la zona
+> segura del launcher (~61%).
+>
+> **REGLA DE ARTE — solo PNGs oficiales de `Design/brand/`:** el pack
+> viejo `appicon-pack-mascota-color/` contiene una variante del isotipo
+> con **borde/contorno negro horneado** que NO es arte oficial (se usó por
+> error en el splash claro y el usuario lo revirtió). Nunca copiar
+> foregrounds del pack — instanciar siempre los `isotipo_*`/`imagotipo_*`
+> originales del kit.
+>
+> Manifest con `android:icon` + `android:roundIcon`. El kit completo de
+> marca vive en `Design/brand/` (png por densidad + svg + pack previo).
 > **Pendiente:** el set de iOS (ver sección "Pendiente — iOS") — ver
 > `pendientes/002-identidad-marca.md`.
 
@@ -46,8 +104,8 @@ combina y recorta según la forma del launcher (círculo, squircle, gota…):
 | Capa | Recurso | Qué es |
 |------|---------|--------|
 | `background` | `@color/ic_launcher_background` | Fondo — color plano de marca |
-| `foreground` | `@mipmap/ic_launcher_foreground` | El isotipo — PNG transparente dibujado más grande que el ícono final (la zona segura visible es ~el 66% central) |
-| `monochrome` | `@mipmap/ic_launcher_monochrome` | Variante monocromática (solo alfa) — Android 13+ la tiñe con el color del tema del usuario ("themed icons") |
+| `foreground` | `@drawable/ic_launcher_foreground` | El isotipo — `VectorDrawable` (nítido en toda densidad). La zona segura visible es ~el 66% central |
+| `monochrome` | `@drawable/ic_launcher_monochrome` | Variante monocromática (solo alfa) — Android 13+ la tiñe con el color del tema del usuario ("themed icons") |
 
 Los **descriptores** son XML en `res/mipmap-anydpi-v26/`:
 
@@ -66,10 +124,11 @@ adaptativos y necesitan el ícono ya renderizado:
   por densidad de pantalla.
 - `res/mipmap-{density}/ic_launcher_round.png` — variante redonda, usada por
   launchers circulares cuando el manifest declara `android:roundIcon`.
-- ~~`res/mipmap-night-{density}/`~~ — el ícono por modo se **descartó**
-  (ver nota de estado): los calificadores `night` resuelven en el recurso
-  pero launchers/Settings cachean el bitmap sin el modo — el usuario ve
-  variantes stale, no el cambio de tema.
+- `drawable-night/` **no existe** actualmente — el splash ya no tiene
+  arte por modo (sin ícono, ver sección del splash); el ícono launcher
+  por modo también se **descartó** (ver nota de estado): los
+  calificadores `night` resuelven en el recurso pero launchers/Settings
+  cachean el bitmap sin el modo — el usuario ve variantes stale.
 
 Densidades y tamaño del ícono de launcher:
 
@@ -81,9 +140,10 @@ Densidades y tamaño del ícono de launcher:
 | `mipmap-xxhdpi` | 3.0× | 144×144 px |
 | `mipmap-xxxhdpi` | 4.0× | 192×192 px |
 
-> Los PNGs de `foreground` y `monochrome` en cada `mipmap-*` son las **capas**
-> para los XML adaptativos — van más grandes que el ícono final (~108dp de lienzo,
-> ~72dp de contenido visible).
+> Las capas `foreground` y `monochrome` son `VectorDrawable` en `drawable/`
+> — sin copias por densidad (el vector escala nítido a cualquier tamaño).
+> El sistema las dibuja sobre un lienzo ~108dp donde el contenido visible
+> es ~72dp; el margen ya viene calculado en la transformación del grupo.
 
 ### 3. Referencias en el manifest
 
@@ -116,14 +176,18 @@ Pack generado (carpeta `isotipo_app/android/res/` o equivalente):
 | `mipmap-anydpi-v26/ic_launcher.xml` | `android/app/src/main/res/mipmap-anydpi-v26/` | Descriptor adaptativo estándar |
 | `mipmap-anydpi-v26/ic_launcher_round.xml` | `android/app/src/main/res/mipmap-anydpi-v26/` | Descriptor adaptativo redondo |
 | `values/ic_launcher_background.xml` | `android/app/src/main/res/values/` | Color de fondo del adaptativo (definir con la paleta de Depredadog) |
-| `mipmap-{d}/ic_launcher.png` | `res/mipmap-{d}/` | Ícono legacy cuadrado (API <26) |
-| `mipmap-{d}/ic_launcher_foreground.png` | `res/mipmap-{d}/` | Capa foreground del adaptativo |
-| `mipmap-{d}/ic_launcher_monochrome.png` | `res/mipmap-{d}/` | Capa monocromática (Android 13+ themed icons) |
+| `drawable/ic_launcher_foreground.xml` | `res/drawable/` | Capa foreground del adaptativo — `VectorDrawable` del isotipo blanco |
+| `drawable/ic_launcher_monochrome.xml` | `res/drawable/` | Capa monocromática (Android 13+ themed icons) — silueta vectorial |
+| `mipmap-{d}/ic_launcher.png` | `res/mipmap-{d}/` | Ícono legacy cuadrado (API <26) — único raster que queda |
 | `playstore-icon.png` | `store_assets/ic_launcher-playstore.png` | Ficha de Play Console (512×512) |
 
 `{d}` = `hdpi`, `mdpi`, `xhdpi`, `xxhdpi`, `xxxhdpi` (5 densidades). El
-ícono es fijo — una sola variante en `mipmap-{d}/` + `values/` (la fuente
-del arte está en `Design/brand/png/4x/`).
+ícono **launcher** es fijo — una sola variante `ic_launcher*` en
+`mipmap-{d}/` + `values/` + `drawable/` (la fuente del arte son los SVG
+oficiales de `Design/brand/svg/`). El splash **no tiene arte propio** —
+solo `drawable/splash_icon_empty.xml` (vector transparente, el mismo en
+ambos modos) para suprimir el fallback del launcher — ver la sección del
+splash.
 
 ### Excepciones del pack
 
@@ -137,17 +201,28 @@ del arte está en `Design/brand/png/4x/`).
 
 ## Procedimiento completo de actualización
 
-1. Generar el pack con la imagen fuente del isotipo (ej.
-   [appicon.ikit.app](https://appicon.ikit.app) o `flutter_launcher_icons` si se
-   prefiere vía pubspec), o componer manualmente con System.Drawing desde
-   `Design/brand/png/4x/` (arte actual: `isotipo_mascota`, negativa).
-2. Copiar todo el contenido de `<pack>/android/res/` dentro de
-   `android/app/src/main/res/` (merge + sobrescribir) — sin variantes
-   `-night` (ícono fijo).
-3. En cada `android/app/src/main/res/mipmap-{d}/`, duplicar
-   `ic_launcher.png` → `ic_launcher_round.png` si el pack no lo trae.
-4. Copiar `<pack>/android/res/playstore-icon.png` →
-   `store_assets/ic_launcher-playstore.png`.
+1. **Fuente de verdad: los SVG oficiales `Design/brand/svg/`** —
+   `isotipo_mascota_negro.svg` (positivo, trazos `#030304`) e
+   `isotipo_mascota_.svg` (negativo, trazos `#FFF`). Los 22 `pathData`
+   se copian 1:1 a cada `VectorDrawable`, mapeando las clases CSS del
+   `<style>` (`cls-N` → `fill` declarado; los paths sin clase heredan el
+   color de trazo de la variante). Viewport fijo 3200×3200 + grupo
+   `translateX/Y=575/736` `scaleX/Y=3.48573` — replica el lienzo con
+   margen que el usuario diseñó en los `isotipo_icono_*` (borrar el
+   grupo = arte full-bleed → la máscara recorta las garras).
+2. Escribir los XML: `drawable/ic_launcher_foreground.xml` (blanco) y
+   `drawable/ic_launcher_monochrome.xml` (mismos paths con `fillColor`
+   `#FFFFFF` — el sistema tiñe el canal alfa). El splash no usa arte
+   (`drawable/splash_icon_empty.xml` es fijo y no se regenera con el
+   procedimiento del isotipo).
+3. Los legacy `ic_launcher.png`/`ic_launcher_round.png` (`mipmap-{d}`,
+   API <26) se componen con PIL desde `isotipo_icono_blanco{d}`: fondo
+   `#000000` + arte a tamaño completo. Igual para
+   `store_assets/ic_launcher-playstore.png` (512).
+4. **Cuidado al escribir los XML desde scripts:** `open()` en Windows usa
+   cp1252 por defecto — los comentarios con acentos rompen el parse de
+   aapt ("Byte no válido de la secuencia UTF-8"). Escribir siempre con
+   `encoding='utf-8'`.
 5. Verificar `AndroidManifest.xml`: `android:label`, `android:icon`,
    `android:roundIcon` apuntando a los recursos correctos.
 6. Desinstalar la app del dispositivo y `flutter run` — el launcher cachea el
@@ -162,32 +237,67 @@ el mismo isotipo en el generador (exportar bundle iOS) o con
 `flutter_launcher_icons`. Cuando exista el pack iOS: reemplazar los PNGs del
 `AppIcon.appiconset` conservando el `Contents.json`.
 
-## Splash nativo por modo (claro/oscuro)
+## Splash nativo — por qué no tiene ícono, y por qué es negro fijo
 
 La pantalla de arranque (lo que se ve antes del primer frame de Flutter) está
-implementada por modo en `res/values{,-night}/styles.xml` → `LaunchTheme`:
+implementada en `res/values/styles.xml` → `LaunchTheme`. Dos decisiones del
+usuario se acumulan acá:
+
+1. **Sin ícono.** Se probaron dos generaciones de arte (PNG
+   `isotipo_icono_*` de hasta 3200px y `VectorDrawable` 1:1 desde los SVG
+   oficiales) y ambas dieron el **mismo resultado de blur**, medido en
+   perfil de píxeles — la causa es el pipeline de la Splash Screen API
+   (API 31+), no el recurso.
+2. **Negro fijo, no por tema** (decisión posterior, MVP solo oscuro — ver
+   `app_theme_mode` en `design-system.yaml`): se eliminó `values-night/` y
+   `drawable-night-v21/`; `values/styles.xml` es el único `styles.xml` y su
+   `LaunchTheme`/`NormalTheme` parten de `Theme.Black.NoTitleBar` en vez de
+   `Theme.Light.NoTitleBar` — así `?android:colorBackground` resuelve negro
+   siempre, sin depender del brightness del sistema. Evita un flash
+   blanco→negro justo antes de que Flutter (ahora `ThemeMode.dark` fijo)
+   pinte su primer frame.
 
 | Atributo (API 31+) | Valor | Qué hace |
 |--------------------|-------|----------|
-| `android:windowSplashScreenAnimatedIcon` | `@mipmap/ic_launcher_foreground` | Fuerza el **foreground transparente** (no el ícono legacy cuadrado) — ícono fijo: depredador blanco en ambos modos |
-| `android:windowSplashScreenIconBackgroundColor` | `@color/ic_launcher_background` | El "plato" circular del ícono — `#000000` fijo (igual que el launcher icon) |
-| `android:windowBackground` | `@drawable/launch_background` | Fondo de la ventana — blanco claro / `?colorBackground` (negro) oscuro |
+| `android:windowSplashScreenAnimatedIcon` | `@drawable/splash_icon_empty` | Vector 240dp **transparente** (un `<path>` con `fillColor="#00000000"`, sin arte visible) — necesario para suprimir el ícono; ver nota abajo |
+| `android:windowBackground` | `@drawable/launch_background` | Fondo de la ventana (plato liso) — `drawable-v21` resuelve `?android:colorBackground`, que ahora siempre es negro vía el `LaunchTheme` unificado |
 
-El resultado: la **ventana** del splash sí sigue el tema (clara u oscura),
-pero el **ícono + plato** son fijos (negro + depredador blanco), igual que
-el ícono de launcher — consistente en cualquier modo.
+El resultado: **ventana lisa negra** siempre, sin logo — el primer logo que
+ve el usuario es el del **splash Flutter** (imagotipo PNG vía
+`Image.asset`, renderizado con Skia, sin pasar por el pipeline de
+`Icon`/bitmap de la plataforma), que además vuela con un `Hero` hacia el
+header del login (ver `lib/core/constants/hero_tags.dart`).
 
-> **Por qué `windowSplashScreenAnimatedIcon` explícito:** sin él, el sistema
-> resuelve el ícono por densidad y puede dibujar el PNG **legacy** (cuadrado
-> opaco) dentro del plato — se veía como "círculo blanco con cuadrado negro".
-> Con el foreground transparente el plato queda detrás del arte y el resultado
-> es el isotipo limpio sobre el color de fondo en ambos modos.
+> **Por qué se descartó el ícono (evidencia, no intuición):** se midió el
+> perfil de píxeles de un mismo borde (la garra del isotipo) en tres
+> variantes: PNG `isotipo_icono_*` 3200px, `VectorDrawable` generado 1:1 del
+> SVG oficial, y la imagen del splash Flutter. Las dos primeras dieron
+> **exactamente la misma transición byte a byte** (`0→35→140→207→244→253→
+> 255`, 6 valores intermedios — blur real) mientras que el splash Flutter
+> dio un salto casi binario (`0→4→59→238→254→255`, 2px). Cambiar
+> `android:width/height` del vector (288dp→240dp, el valor correcto del
+> spec oficial para ícono con plato) no movió ni un byte del resultado —
+> descarta que fuera un problema de tamaño declarado. La causa es que
+> `windowSplashScreenAnimatedIcon` convierte el recurso a un `Icon` de
+> Android y lo rasteriza/escala internamente antes de la animación de
+> reveal, sin importar si la fuente es PNG o vector. Es una limitación de
+> la plataforma, no arreglable desde los assets.
+
+> **Por qué el drawable vacío tiene que ser de 240dp y no de 1dp:** omitir
+> `windowSplashScreenAnimatedIcon` por completo NO deja la pantalla lisa —
+> Android 12+ autocompone el ícono del **launcher** (fijo, negro+blanco
+> redondo) como fallback por defecto. Probar con un vector de 1dp sin paths
+> tampoco bastó — el sistema lo descarta por "inválido" y cae al mismo
+> fallback. Un vector de tamaño normal (240dp, viewport 240×240) con un
+> `<path>` de `fillColor` completamente transparente sí es aceptado como
+> ícono "real" (aunque invisible) y el sistema no sustituye nada.
 
 Nota de verificación: los launchers cachean íconos compuestos — si tras un
-cambio el ícono no se actualiza, es caché del launcher (no del recurso);
-basta reiniciar el launcher (en el emulador: `pm clear` al nexuslauncher)
-o desinstalar/reinstalar. Fue exactamente esta limitación la que descartó
-el ícono por modo.
+cambio al ícono del **launcher** no se actualiza, es caché del launcher (no
+del recurso); basta reiniciar el launcher (en el emulador: `pm clear` al
+nexuslauncher) o desinstalar/reinstalar. El splash no tiene ese problema:
+se re-resuelve en cada arranque (por eso la decisión "sin ícono" surte
+efecto inmediato sin depender de caché).
 
 ## Assets relacionados (por crear)
 

@@ -100,12 +100,6 @@ abstract class AppLocalizations {
   /// **'Depredadog'**
   String get appName;
 
-  /// No description provided for @splashTagline.
-  ///
-  /// In es, this message translates to:
-  /// **'Perros calientes que muerden de vuelta'**
-  String get splashTagline;
-
   /// No description provided for @loginHeadline.
   ///
   /// In es, this message translates to:

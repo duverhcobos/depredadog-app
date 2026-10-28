@@ -13,9 +13,6 @@ class AppLocalizationsEs extends AppLocalizations {
   String get appName => 'Depredadog';
 
   @override
-  String get splashTagline => 'Perros calientes que muerden de vuelta';
-
-  @override
   String get loginHeadline => 'VUELVE A LA MANADA';
 
   @override
