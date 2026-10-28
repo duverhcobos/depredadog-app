@@ -4,8 +4,8 @@
 
 meta:
   product: Depredadog
-  version: 1.7.0
-  updated: 2026-10-27
+  version: 1.8.0
+  updated: 2026-10-28
 
 palette:
   # Identidad Depredadog — "condimentos" (definida por el usuario, §001):
@@ -58,7 +58,11 @@ components:
   custom_text_field:
     description: "Campo de formulario con label externo arriba (labelLarge w600 onSurface), icono prefijo opcional, radius 14, fill surfaceContainerLowest, enabledBorder outlineVariant. Foco en onSurface 1.6px — el primario rojo se confundía con error (feedback usuario). Error en línea reservada con helperText ' ' para no re-fluir el formulario."
   google_sign_in_button:
-    description: "OutlinedButton ancho completo alto 52 radius 14, logo G oficial (assets/images/google_g.png) + texto. PROVISIONAL sin endpoint — snackbar 'Disponible próximamente'."
+    description: "OutlinedButton ancho completo alto 52 radius 14, logo G oficial (assets/images/google_g.png) + texto. PROVISIONAL sin endpoint — toast 'Disponible próximamente'."
+  app_toast:
+    description: "Feedback efímero ÚNICO canal: AppToast (lib/core/widgets/app_toast.dart) sobre fluttertoast — error (bg error / texto onError) o success (bg primary / texto onPrimary), gravity BOTTOM, LENGTH_LONG. Reemplaza el estándar SnackBar anterior por decisión del usuario — NUNCA ScaffoldMessenger.showSnackBar directo. Se dispara siempre desde BlocListener (un listener por efecto con su propio listenWhen — un solo listener con else-if encadenado produjo un toast falso de 'reenviado' en transiciones ajenas: bug detectado por revisor-ui)."
+  verify_email_code_input:
+    description: "OTP de 6 casillas 48×56, radius 14 (=radius del sistema), fill surfaceContainerLowest, borde 1px outline inactivo / 1.6px primary activa / 1.6px error en error, dígito titleLarge w600 onSurface. Implementación propia (pinput se descartó: v7 exige ancestro Material del paquete material_ui desacoplado, incompatible con el Scaffold clásico): un TextField INVISIBLE cubre la fila (Positioned.fill, texto transparente, showCursor off) y captura teclado/digitsOnly/max 6/autofillHints oneTimeCode — sus casillas son puro render AnimatedContainer. OJO técnico: el inputDecorationTheme global trae filled+bordes por estado — hay que anularlos explícito (filled:false + los 6 borders por estado en InputBorder.none) o pinta una barra encima de las casillas. Auto-submit al completar el 6to dígito; enabled=!isInProgress; borde 'activo' sigue al FocusNode vía ListenableBuilder; pegar habilitado (menú contextual — el formatter limita a 6). A11y: Semantics 'código de verificación, X de 6' en el grupo + casillas en ExcludeSemantics."
   remember_row:
     description: "Fila bajo el campo contraseña: Checkbox 'Recuérdame' (compacto, tap en texto alterna) a la izquierda + link '¿Olvidaste tu contraseña?' (bodySmall primary w600) a la derecha. rememberMe decidirá en integración si el refresh token persiste entre sesiones."
   login_brand_header:
@@ -70,11 +74,25 @@ screens:
     spec: "Scaffold liso (color por tema; MVP solo oscuro, ver app_theme_mode) + imagotipo centrado 220px en Hero(tag: HeroTags.brandImagotipo) — asset por tema: imagotipo_depredadog.png claro / _dark.png oscuro (mismos del login header). Navega a /login ~800ms DESPUÉS de que el imagotipo decodifica (precacheImage secuencial — el login hereda el ImageCache y el header pinta sin parpadeo; Future.wait se descartó porque pintaba y navegaba en el mismo frame). El Hero hace que el imagotipo vuele del centro (220px) al header del login (148px) en vez de que una pantalla reemplace a la otra en seco. Futuro: aquí vivirá el chequeo de sesión."
   login:
     route: "/login"
-    spec: "Scaffold liso + scroll. LoginBrandHeader (imagotipo en el mismo Hero que el splash), campos email/password (CustomTextField con AutofillGroup, error por campo que se limpia al editar), remember_row, ElevatedButton 'Iniciar sesión' (loading reemplaza el botón por spinner centrado), divider 'o continúa con', GoogleSignInButton, fila '¿No tienes cuenta? Regístrate'. Submit vacío → errores + snackbar + foco al primer inválido. PROVISIONAL: submit simulado 1.2s → snackbar demo; forgot/register/google sin endpoint."
+    spec: "Scaffold liso + scroll. LoginBrandHeader (imagotipo en el mismo Hero que el splash), campos email/password (CustomTextField con AutofillGroup, error por campo que se limpia al editar), remember_row, ElevatedButton 'Iniciar sesión' (loading reemplaza el botón por spinner centrado), divider 'o continúa con', GoogleSignInButton, fila '¿No tienes cuenta? Regístrate'. Submit vacío → errores + toast + foco al primer inválido. PROVISIONAL: submit simulado 1.2s → toast demo; forgot/register/google sin endpoint."
+  verify_email:
+    route: "/verify-email"
+    spec: "Se llega desde login cuando el backend responde 'correo no verificado' (o con email en extra). Scaffold liso + PopScope(canPop:false → _backToLogin): la flecha top-left FIJA (fuera del bloque centrado — antes flotaba dentro de la Column centrada, bug detectado) y el back nativo de Android ambos van a /login porque se llega con go() y no hay stack que pop. Contenido centrado+scroll: ícono de marca icono_verificar_correo.svg (80px, flutter_svg, elemento firma — ExcludeSemantics, el headline ya describe), headline primary + subtítulo con el email destino, casillas OTP (componente verify_email_code_input), CTA 'Verificar' (loading reemplaza el botón por spinner; campo y reenviar se bloquean en isInProgress), fila '¿No recibiste el código? Reenviar' con cooldown real 60s ('Reenviar en Ns', TextButton deshabilitado). Feedback por AppToast: error genérico 'Ingresa el código de 6 dígitos' (cubre vacío/parcial), 'Código reenviado', 'Verificación simulada'. resend() limpia código+error (el código viejo queda invalidado) y el TextField oculto se resincroniza por listener. PROVISIONAL: submit y reenvío simulados — sin endpoints todavía."
   welcome:
     status: "ELIMINADA (decisión del usuario) — splash va directo a /login para no autenticados"
 
 changelog:
+  - version: "1.8.0"
+    date: 2026-10-28
+    page: "verify_email + verify_email_code_input + app_toast"
+    status: "completed"
+    changes:
+      - "Nueva pantalla verify_email (presentación, §005): flecha back fija + back nativo → /login, ícono de marca SVG nuevo (icono_verificar_correo.svg, arte del usuario con colores oficiales — fills inlineados desde clases CSS para portabilidad, render vía flutter_svg ^2.3.0), 6 casillas OTP manuales, CTA + reenvío con cooldown 60s. Aprobada por el usuario tras crítica de diseño."
+      - "Nuevo componente verify_email_code_input (OTP): patrón TextField-invisible-cubre-fila-de-casillas. pinput se instaló y se eliminó — su v7 migra a material_ui (Material desacoplado) y exige ese Material como ancestro, incompatible con nuestro Scaffold clásico (bug 'No Material widget found' capturado por test nuevo antes de mostrar al usuario)."
+      - "Nueva convención app_toast: TODA la app migra de SnackBar a fluttertoast vía AppToast (decisión del usuario) — incluidos los 2 SnackBar que quedaban en login (success simulado y 'Disponible próximamente')."
+      - "Convención nueva de gate: subagente revisor-ui critica diseño (código + capturas adb) antes de la revisión visual del usuario (skill ui-design-critique). Su primer ciclo encontró y verificó corrección de: barra fantasma del TextField invisible (inputDecorationTheme global), toast falso de reenvío en transiciones ajenas (resendTick evaluado como estado en vez de cambio), inputs activos durante isInProgress, copy de error, limpieza de código en resend, contraste de casillas (outlineVariant→outline), radius 12→14, pegar habilitado, Semantics/ExcludeSemantics."
+      - "Test nuevo verify_email_screen_test (3 casos: render sin excepciones, flecha fija arriba, cooldown) + login_screen_test migrado a verificar toasts por MethodChannel('PonnamKarthik/fluttertoast') — los toasts no pintan en el árbol de widgets."
+      - "Routing temporal de previsualización (splash→verify-email) revertido: splash vuelve a /login — verify-email se alcanza solo cuando login responde 'correo no verificado' al integrarse /auth/login."
   - version: "1.7.0"
     date: 2026-10-27
     page: "app_theme_mode"

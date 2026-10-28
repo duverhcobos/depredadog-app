@@ -2,7 +2,7 @@
 
 El detalle de convenciones, arquitectura y workflows de este proyecto vive en skills bajo `.devin/skills/`, no en este archivo — cada skill cubre una sola responsabilidad y se invoca solo cuando es relevante, para no cargar contexto innecesario en cada sesión.
 
-> Estado actual: bootstrap del core implementado (environment, DI, network, storage, router+guard, tema condimentos, i18n) — propuesta 001-app-bootstrap. Pantalla de **login** en presentación aprobada visualmente (§003) — welcome eliminado, splash redirige a /login sin sesión, imagotipo con Hero entre splash y login. **MVP solo tema oscuro** (decisión del usuario): `ThemeMode.dark` fijo, splash nativo negro fijo sin seguir el sistema — código light queda sin usar en el repo. Siguiente: integración de `/auth/login` contra `../pcalientes_backend` (screen-first: un endpoint por ciclo).
+> Estado actual: bootstrap del core implementado (environment, DI, network, storage, router+guard, tema condimentos, i18n) — propuesta 001-app-bootstrap. Pantallas aprobadas en presentación: **login** (§003) y **verify-email** (§005 — 6 casillas OTP, cooldown de reenvío, ícono de marca SVG; submit/reenvío aún simulados). Welcome eliminado; splash → /login sin sesión; imagotipo con Hero splash→login. **MVP solo tema oscuro** (`ThemeMode.dark` fijo). **Feedback efímero = `AppToast`/fluttertoast en toda la app** (SnackBar retirado — decisión del usuario). **Gate de diseño**: subagente `revisor-ui` critica cada pantalla (código + capturas) antes de la revisión visual del usuario. Siguiente: integración de `/auth/login` contra `../pcalientes_backend` (screen-first: un endpoint por ciclo).
 
 ## Reglas mínimas siempre vigentes
 
@@ -39,17 +39,19 @@ El detalle de convenciones, arquitectura y workflows de este proyecto vive en sk
 | `screen-first-workflow` | **Workflow de desarrollo por pantallas** — fase 1: solo presentación sin conectar (aprobación visual); fase 2: integración un endpoint a la vez (pruebas → aprobación → commit → siguiente) |
 | `token-saving-tools-policy` | Al explorar el código — cuándo leer directo vs. usar el grafo codebase-memory, batching |
 | `app-icons` | Al tocar íconos de launcher o el splash nativo — ícono por modo, capas adaptativas, `mipmap-night-*`, procedimiento de actualización |
+| `ui-design-critique` | Tras implementar una pantalla/widget, **antes** de mostrarla al usuario — rúbrica de crítica de diseño estricta que ejecuta el agente `revisor-ui` (código + capturas) |
 
 Si una instrucción parece faltar acá, buscarla primero en `.devin/skills/` antes de asumir que no existe. En la raíz solo viven los esenciales: `AGENTS.md` y `README.md`.
 
 ## Flujo de desarrollo con subagentes
 
-El proyecto tiene dos subagentes custom en `.devin/agents/`. **Usarlos siempre que aplique** — no implementar propuestas ni auditar código directamente en la sesión principal:
+El proyecto tiene tres subagentes custom en `.devin/agents/`. **Usarlos siempre que aplique** — no implementar propuestas ni auditar código directamente en la sesión principal:
 
 | Subagente | Rol | Cuándo delegarle |
 |-----------|-----|------------------|
 | `implementador` | Aplica propuestas aprobadas al pie de la letra + `flutter analyze` + `flutter test` | Después de que la sesión principal redacte y el usuario apruebe una propuesta |
 | `revisor` | Audita SOLID/convenciones — solo lee, no edita | Después de implementar, para verificar calidad del código resultante |
+| `revisor-ui` | Critica el DISEÑO de pantallas (jerarquía, espaciado, estados, consistencia) leyendo código + capturas del emulador — solo reporta | Tras implementar una pantalla/widget, **antes** de la aprobación visual del usuario (ver `ui-design-critique`) |
 
 ### Flujo estándar para cambios no triviales
 
@@ -69,14 +71,16 @@ construyen en dos fases — primero solo la capa de presentación (aprobación
 visual del usuario), luego la integración domain/data **un endpoint a la vez**
 (probar → aprobar → commit → siguiente endpoint).
 
-### Cambios visuales/UX: el usuario ve antes de verificar
+### Cambios visuales/UX: crítica de diseño → usuario ve → verificar
 
 Cuando el cambio es de UI visible (cards, pantallas, formularios), el orden es:
 
 ```
 1. Propuesta + implementación
-2. Se deja la app corriendo en el emulador para que el usuario LA VEA
-3. SOLO cuando el usuario aprueba lo que ve → flutter analyze, flutter test,
+2. Subagente "revisor-ui" critica el diseño (código + capturas, skill
+   ui-design-critique) → sesión corrige CRITICO/IMPORTANTE y re-critica
+3. Se deja la app corriendo en el emulador para que el usuario LA VEA
+4. SOLO cuando el usuario aprueba lo que ve → flutter analyze, flutter test,
    design-system yaml, commits
 ```
 

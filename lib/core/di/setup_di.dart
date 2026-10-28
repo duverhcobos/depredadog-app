@@ -2,6 +2,7 @@ import 'package:get_it/get_it.dart';
 import 'package:internet_connection_checker/internet_connection_checker.dart';
 
 import '../../features/auth/presentation/cubit/login_cubit.dart';
+import '../../features/auth/presentation/cubit/verify_email_cubit.dart';
 import '../logging/implementations/debug_logger_service_impl.dart';
 import '../logging/interfaces/i_logger_service.dart';
 import '../network/implementations/dio_network_service_impl.dart';
@@ -45,6 +46,9 @@ void setupDI() {
   // --- Cubits ---
   // PROVISIONAL (presentación): sin use cases reales todavía.
   locator.registerFactory<LoginCubit>(() => LoginCubit());
+  locator.registerFactoryParam<VerifyEmailCubit, String, void>(
+    (email, _) => VerifyEmailCubit(email: email),
+  );
 
   // --- Router ---
   // PROVISIONAL: isAuthenticated siempre false — 002-app-auth conecta el

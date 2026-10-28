@@ -231,6 +231,72 @@ abstract class AppLocalizations {
   /// In es, this message translates to:
   /// **'Disponible próximamente'**
   String get comingSoon;
+
+  /// No description provided for @commonBack.
+  ///
+  /// In es, this message translates to:
+  /// **'Volver'**
+  String get commonBack;
+
+  /// No description provided for @verifyEmailHeadline.
+  ///
+  /// In es, this message translates to:
+  /// **'Verifica tu correo'**
+  String get verifyEmailHeadline;
+
+  /// No description provided for @verifyEmailSubtitle.
+  ///
+  /// In es, this message translates to:
+  /// **'Enviamos un código de 6 dígitos a {email}'**
+  String verifyEmailSubtitle(String email);
+
+  /// No description provided for @verifyEmailButton.
+  ///
+  /// In es, this message translates to:
+  /// **'Verificar'**
+  String get verifyEmailButton;
+
+  /// No description provided for @verifyEmailFormInvalid.
+  ///
+  /// In es, this message translates to:
+  /// **'Ingresa el código de 6 dígitos'**
+  String get verifyEmailFormInvalid;
+
+  /// No description provided for @verifyEmailCodeSemantics.
+  ///
+  /// In es, this message translates to:
+  /// **'Código de verificación, {filled} de 6 dígitos'**
+  String verifyEmailCodeSemantics(int filled);
+
+  /// No description provided for @verifyEmailResendQuestion.
+  ///
+  /// In es, this message translates to:
+  /// **'¿No recibiste el código? '**
+  String get verifyEmailResendQuestion;
+
+  /// No description provided for @verifyEmailResend.
+  ///
+  /// In es, this message translates to:
+  /// **'Reenviar'**
+  String get verifyEmailResend;
+
+  /// No description provided for @verifyEmailResendIn.
+  ///
+  /// In es, this message translates to:
+  /// **'Reenviar en {seconds}s'**
+  String verifyEmailResendIn(int seconds);
+
+  /// No description provided for @verifyEmailResendSuccess.
+  ///
+  /// In es, this message translates to:
+  /// **'Código reenviado — revisa tu correo'**
+  String get verifyEmailResendSuccess;
+
+  /// No description provided for @verifyEmailDemoSuccess.
+  ///
+  /// In es, this message translates to:
+  /// **'Verificación simulada — sin backend todavía'**
+  String get verifyEmailDemoSuccess;
 }
 
 class _AppLocalizationsDelegate

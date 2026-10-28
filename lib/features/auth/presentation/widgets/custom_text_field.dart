@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 
 /// SOLID (SRP): campo de formulario del proyecto — label externo arriba,
 /// icono prefijo, error reservado abajo (helperText ' ' para que el error
@@ -17,6 +18,8 @@ class CustomTextField extends StatelessWidget {
     this.textInputAction,
     this.autofillHints,
     this.errorText,
+    this.maxLength,
+    this.inputFormatters,
     this.onChanged,
     this.onFieldSubmitted,
   });
@@ -32,6 +35,8 @@ class CustomTextField extends StatelessWidget {
   final TextInputAction? textInputAction;
   final Iterable<String>? autofillHints;
   final String? errorText;
+  final int? maxLength;
+  final List<TextInputFormatter>? inputFormatters;
   final ValueChanged<String>? onChanged;
   final ValueChanged<String>? onFieldSubmitted;
 
@@ -56,6 +61,8 @@ class CustomTextField extends StatelessWidget {
           keyboardType: keyboardType,
           textInputAction: textInputAction,
           autofillHints: autofillHints,
+          maxLength: maxLength,
+          inputFormatters: inputFormatters,
           onChanged: onChanged,
           onFieldSubmitted: onFieldSubmitted,
           // Reserva espacio: errorText o helper ' ' ocupan la misma línea.

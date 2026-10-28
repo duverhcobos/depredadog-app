@@ -23,6 +23,11 @@ pasada.
 - La propuesta de esta fase solo cubre presentation — en una feature nueva la
   estructura `domain/`/`data/` puede quedar solo con los contratos/ports si el
   diseño los exige, pero sin implementación conectada.
+- **Gate de crítica de diseño**: antes de mostrar la pantalla al usuario, el
+  subagente `revisor-ui` la critica (código + capturas del emulador) con la
+  rúbrica del skill `ui-design-critique`. La sesión corrige hallazgos
+  CRITICO/IMPORTANTE y re-critica lo corregido; MENOR/INFO se reportan al
+  usuario junto con la pantalla.
 - **Gate**: el usuario aprueba lo que ve en el emulador **antes** de pasar a
   integración. No se construye domain/data hasta ese visto bueno.
 
@@ -46,7 +51,9 @@ pasada.
 - Una propuesta de integración puede ser el siguiente número libre aunque otras
   pantallas de presentación ya se aprobaron en medio.
 - El ciclo de subagentes no cambia: propuesta → implementador → revisor →
-  usuario — solo que cada ciclo es más pequeño (una fase o un endpoint).
+  usuario — solo que cada ciclo es más pequeño (una fase o un endpoint), y en
+  fase presentación se suma `revisor-ui` como gate antes de la revisión del
+  usuario.
 - Los pendientes/workarounds que deje una fase (ej. botón sin endpoint real) se
   marcan `// PROVISIONAL` y si bloquean producción van a `pendientes/`
   (ver `pendientes-produccion`).

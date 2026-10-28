@@ -3,6 +3,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
 import '../../../../core/di/setup_di.dart';
+import '../../../../core/widgets/app_toast.dart';
 import '../../../../l10n/app_localizations.dart';
 import '../cubit/login_cubit.dart';
 import '../cubit/login_state.dart';
@@ -64,8 +65,7 @@ class _LoginViewState extends State<_LoginView> {
           listener: (context, state) {
             if (state.status == LoginStatus.success) {
               TextInput.finishAutofillContext(shouldSave: true);
-              ScaffoldMessenger.of(context)
-                  .showSnackBar(SnackBar(content: Text(l10n.loginDemoSuccess)));
+              AppToast.success(context, l10n.loginDemoSuccess);
             } else if (state.status == LoginStatus.failure) {
               // Foco al primer campo inválido en orden visual (forms skill).
               if (state.email.isNotValid) {
@@ -73,12 +73,7 @@ class _LoginViewState extends State<_LoginView> {
               } else {
                 _passwordFocus.requestFocus();
               }
-              ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(
-                  content: Text(l10n.loginFormInvalid),
-                  backgroundColor: theme.colorScheme.error,
-                ),
-              );
+              AppToast.error(context, l10n.loginFormInvalid);
             }
           },
           child: Center(
@@ -147,9 +142,7 @@ class _LoginViewState extends State<_LoginView> {
                                   onTap: () {
                                     // PROVISIONAL: /register llega en su
                                     // propia pantalla — por ahora aviso.
-                                    ScaffoldMessenger.of(context).showSnackBar(
-                                      SnackBar(content: Text(l10n.comingSoon)),
-                                    );
+                                    AppToast.success(context, l10n.comingSoon);
                                   },
                                   child: Text(
                                     l10n.loginRegisterLink,

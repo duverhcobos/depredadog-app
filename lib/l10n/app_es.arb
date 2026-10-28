@@ -22,5 +22,37 @@
   "loginNoAccount": "¿No tienes cuenta? ",
   "loginRegisterLink": "Regístrate",
   "loginDemoSuccess": "Inicio de sesión simulado — sin backend todavía",
-  "comingSoon": "Disponible próximamente"
+  "comingSoon": "Disponible próximamente",
+  "commonBack": "Volver",
+  "verifyEmailHeadline": "Verifica tu correo",
+  "verifyEmailSubtitle": "Enviamos un código de 6 dígitos a {email}",
+  "@verifyEmailSubtitle": {
+    "placeholders": {
+      "email": {
+        "type": "String"
+      }
+    }
+  },
+  "verifyEmailButton": "Verificar",
+  "verifyEmailFormInvalid": "Ingresa el código de 6 dígitos",
+  "verifyEmailCodeSemantics": "Código de verificación, {filled} de 6 dígitos",
+  "@verifyEmailCodeSemantics": {
+    "placeholders": {
+      "filled": {
+        "type": "int"
+      }
+    }
+  },
+  "verifyEmailResendQuestion": "¿No recibiste el código? ",
+  "verifyEmailResend": "Reenviar",
+  "verifyEmailResendIn": "Reenviar en {seconds}s",
+  "@verifyEmailResendIn": {
+    "placeholders": {
+      "seconds": {
+        "type": "int"
+      }
+    }
+  },
+  "verifyEmailResendSuccess": "Código reenviado — revisa tu correo",
+  "verifyEmailDemoSuccess": "Verificación simulada — sin backend todavía"
 }

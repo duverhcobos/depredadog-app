@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:get_it/get_it.dart';
@@ -58,7 +59,24 @@ void main() {
     expect(find.text('Ingresa tu contraseña'), findsOneWidget);
   });
 
-  testWidgets('submit válido: loading → snackbar demo', (tester) async {
+  testWidgets('submit válido: loading → toast demo', (tester) async {
+    // fluttertoast no pinta en el árbol de widgets — va por MethodChannel;
+    // se intercepta el canal y se verifica el mensaje real.
+    const channel = MethodChannel('PonnamKarthik/fluttertoast');
+    final calls = <MethodCall>[];
+    tester.binding.defaultBinaryMessenger.setMockMethodCallHandler(channel, (
+      call,
+    ) async {
+      calls.add(call);
+      return true;
+    });
+    addTearDown(
+      () => tester.binding.defaultBinaryMessenger.setMockMethodCallHandler(
+        channel,
+        null,
+      ),
+    );
+
     await pumpLogin(tester);
 
     await tester.enterText(
@@ -72,11 +90,18 @@ void main() {
     expect(find.byType(CircularProgressIndicator), findsOneWidget);
 
     await tester.pump(const Duration(milliseconds: 1300));
-    await tester.pump(); // frame del snackbar
+    await tester.pump(); // frame posterior al toast
 
+    expect(calls, hasLength(1));
+    expect(calls.single.method, 'showToast');
     expect(
-      find.text('Inicio de sesión simulado — sin backend todavía'),
-      findsOneWidget,
+      calls.single.arguments['msg'],
+      'Inicio de sesión simulado — sin backend todavía',
     );
+
+    // fluttertoast agenda un Future.delayed interno para reactivar su flag
+    // isCurrentlyShowingToast — se deja expirar para no terminar con
+    // timers pendientes.
+    await tester.pump(const Duration(seconds: 2));
   });
 }

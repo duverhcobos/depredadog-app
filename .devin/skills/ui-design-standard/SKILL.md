@@ -79,9 +79,12 @@ class _XView extends StatelessWidget {
 - **Estado de carga en botones:** mientras `status.isInProgress`, reemplazar la columna de botones
   completa por un único `CircularProgressIndicator()` centrado — no deshabilitar el botón dejándolo
   visible con un spinner adentro.
-- **Feedback de éxito/error:** `ScaffoldMessenger.of(context).showSnackBar(SnackBar(content:
-  Text(...), backgroundColor: Theme.of(context).colorScheme.error/primary))`, siempre disparado
-  desde un `BlocListener` (nunca desde dentro del `build` condicional).
+- **Feedback de éxito/error:** `AppToast` (`lib/core/widgets/app_toast.dart`, sobre fluttertoast) —
+  `AppToast.error(context, l10n.clave)` / `AppToast.success(context, l10n.clave)`, siempre disparado
+  desde un `BlocListener` (nunca desde dentro del `build` condicional). **Nunca** `ScaffoldMessenger`
+  /`SnackBar` directo — decisión del usuario (§005): el toast es el único canal de feedback efímero
+  de la app. OJO: los toasts no pintan en el árbol de widgets — en tests se verifica interceptando el
+  `MethodChannel('PonnamKarthik/fluttertoast')` (ver `login_screen_test.dart`).
 - **Botón "volver arriba" en listados largos:** usar `AppScrollTopButton`
   (`lib/core/widgets/app_scroll_top_button.dart`) — círculo de marca 44px + `arrow_upward_rounded`
   blanco, aparece con fade+scale al pasar ~600px de scroll, `animateTo(0)` al tap, tooltip
@@ -109,8 +112,10 @@ paginación (`loadMore` cerca del fondo) y para el botón "volver arriba".
 - `BlocBuilder` con `buildWhen` acotado al campo específico que le interesa a ese widget (ej.
   `previous.email != current.email` para el campo de email), no un `BlocBuilder` genérico que
   reconstruya todo ante cualquier cambio de estado.
-- `BlocListener`/`MultiBlocListener` con `listenWhen` acotado al cambio de `status`, para no
-  disparar SnackBars repetidos en cada rebuild.
+- `BlocListener`/`MultiBlocListener` con `listenWhen` acotado al cambio de `status` (o al tick del
+  efecto concreto), para no disparar toasts repetidos — o peor, toasts falsos en transiciones
+  ajenas (bug §005: `state.tick > 0` disparaba en cualquier transición; lo correcto es
+  `prev.tick != curr.tick` por listener).
 - Antes de una acción que dispara un submit, hacer `FocusScope.of(context).unfocus()` para cerrar
   el teclado.
 

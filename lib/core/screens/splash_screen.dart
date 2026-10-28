@@ -42,7 +42,11 @@ class _SplashScreenState extends State<SplashScreen> {
       context,
     ).catchError((_) {});
     await Future<void>.delayed(const Duration(milliseconds: 800));
-    if (mounted) context.go(AuthGuard.loginRoute);
+    // PROVISIONAL: sin chequeo de sesión todavía — siempre al login. Cuando
+    // exista sesión persistida, esta pantalla decide login vs home.
+    if (mounted) {
+      context.go(AuthGuard.loginRoute);
+    }
   }
 
   @override

@@ -79,4 +79,44 @@ class AppLocalizationsEs extends AppLocalizations {
 
   @override
   String get comingSoon => 'Disponible próximamente';
+
+  @override
+  String get commonBack => 'Volver';
+
+  @override
+  String get verifyEmailHeadline => 'Verifica tu correo';
+
+  @override
+  String verifyEmailSubtitle(String email) {
+    return 'Enviamos un código de 6 dígitos a $email';
+  }
+
+  @override
+  String get verifyEmailButton => 'Verificar';
+
+  @override
+  String get verifyEmailFormInvalid => 'Ingresa el código de 6 dígitos';
+
+  @override
+  String verifyEmailCodeSemantics(int filled) {
+    return 'Código de verificación, $filled de 6 dígitos';
+  }
+
+  @override
+  String get verifyEmailResendQuestion => '¿No recibiste el código? ';
+
+  @override
+  String get verifyEmailResend => 'Reenviar';
+
+  @override
+  String verifyEmailResendIn(int seconds) {
+    return 'Reenviar en ${seconds}s';
+  }
+
+  @override
+  String get verifyEmailResendSuccess => 'Código reenviado — revisa tu correo';
+
+  @override
+  String get verifyEmailDemoSuccess =>
+      'Verificación simulada — sin backend todavía';
 }
