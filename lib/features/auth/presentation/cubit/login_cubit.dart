@@ -1,13 +1,16 @@
 import 'package:flutter_bloc/flutter_bloc.dart';
 
+import '../../../../core/auth/auth_session.dart';
+import '../../domain/use_cases/login_use_case.dart';
 import '../inputs/login_inputs.dart';
 import 'login_state.dart';
 
-/// PROVISIONAL (fase presentación): el submit simula la llamada al backend
-/// con un delay y emite `success` — la integración real de /auth/login
-/// reemplaza este método en la propuesta de integración.
 class LoginCubit extends Cubit<LoginState> {
-  LoginCubit() : super(const LoginState());
+  LoginCubit({required this._loginUseCase, required this._authSession})
+    : super(const LoginState());
+
+  final LoginUseCase _loginUseCase;
+  final AuthSession _authSession;
 
   /// Al escribir se limpia el error de ESE campo — la alerta desaparece
   /// en cuanto el usuario empieza a corregir.
@@ -47,9 +50,22 @@ class LoginCubit extends Cubit<LoginState> {
       return;
     }
     emit(state.copyWith(status: LoginStatus.inProgress));
-    // PROVISIONAL: sin endpoint todavía — delay para mostrar el loading.
-    await Future<void>.delayed(const Duration(milliseconds: 1200));
+    final result = await _loginUseCase(
+      email: state.email.value,
+      password: state.password.value,
+    );
     if (isClosed) return;
-    emit(state.copyWith(status: LoginStatus.success));
+    result.fold(
+      (failure) {
+        emit(
+          state.copyWith(status: LoginStatus.authError, authFailure: failure),
+        );
+        emit(state.copyWith(status: LoginStatus.initial));
+      },
+      (_) {
+        _authSession.markAuthenticated();
+        emit(state.copyWith(status: LoginStatus.success));
+      },
+    );
   }
 }

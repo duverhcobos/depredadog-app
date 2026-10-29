@@ -1,17 +1,20 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:go_router/go_router.dart';
 
 import '../../../../core/di/setup_di.dart';
+import '../../../../core/routes/auth_guard.dart';
 import '../../../../core/widgets/app_toast.dart';
 import '../../../../l10n/app_localizations.dart';
+import '../../domain/failures/auth_failure.dart';
 import '../cubit/login_cubit.dart';
 import '../cubit/login_state.dart';
 import '../widgets/google_sign_in_button.dart';
 import '../widgets/login_brand_header.dart';
 import '../widgets/login_form_fields.dart';
 
-/// Pantalla de login — primera de la feature auth (fase presentación).
+/// Pantalla de login — primera de la feature auth.
 /// Patrón dos clases: `LoginScreen` provee el cubit local vía locator,
 /// `_LoginView` renderiza; los campos viven en `LoginFormFields`.
 class LoginScreen extends StatelessWidget {
@@ -54,6 +57,19 @@ class _LoginViewState extends State<_LoginView> {
     context.read<LoginCubit>().submit();
   }
 
+  /// La UI nunca muestra el texto crudo del backend — cada AuthFailure
+  /// mapea a su copy en español (i18n-workflow). EmailNotVerifiedFailure
+  /// no tiene toast: navega a /verify-email (la pantalla se explica sola).
+  String _authErrorMessage(AppLocalizations l10n, AuthFailure failure) =>
+      switch (failure) {
+        InvalidCredentialsFailure() => l10n.loginErrorInvalidCredentials,
+        EmailNotVerifiedFailure() => l10n.loginErrorEmailNotVerified,
+        AccountSuspendedFailure() => l10n.loginErrorAccountSuspended,
+        TooManyAttemptsFailure() => l10n.loginErrorTooManyAttempts,
+        NoConnectionFailure() => l10n.loginErrorNoConnection,
+        UnknownAuthFailure() => l10n.loginErrorGeneric,
+      };
+
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
@@ -65,7 +81,7 @@ class _LoginViewState extends State<_LoginView> {
           listener: (context, state) {
             if (state.status == LoginStatus.success) {
               TextInput.finishAutofillContext(shouldSave: true);
-              AppToast.success(context, l10n.loginDemoSuccess);
+              context.go(AuthGuard.homeRoute);
             } else if (state.status == LoginStatus.failure) {
               // Foco al primer campo inválido en orden visual (forms skill).
               if (state.email.isNotValid) {
@@ -74,6 +90,29 @@ class _LoginViewState extends State<_LoginView> {
                 _passwordFocus.requestFocus();
               }
               AppToast.error(context, l10n.loginFormInvalid);
+            } else if (state.status == LoginStatus.authError &&
+                state.authFailure != null) {
+              if (state.authFailure is EmailNotVerifiedFailure) {
+                // El login no se completó: cerramos el contexto de
+                // autofill SIN guardar — si la sesión queda abierta, al
+                // navegar Android la "commitea" y GMS dispara el modal
+                // "¿Guardar contraseña?" que compite con el teclado del
+                // OTP (los dos se cierran mutuamente — bug del usuario).
+                // Mismo patrón para cualquier otra salida del login que
+                // no sea éxito (p. ej. /register cuando exista).
+                TextInput.finishAutofillContext(shouldSave: false);
+                // El usuario quedó a mitad del flujo de registro — lo
+                // mandamos a verificar con su email ya escrito.
+                context.go(
+                  AuthGuard.verifyEmailRoute,
+                  extra: state.email.value,
+                );
+              } else {
+                AppToast.error(
+                  context,
+                  _authErrorMessage(l10n, state.authFailure!),
+                );
+              }
             }
           },
           child: Center(
@@ -94,23 +133,36 @@ class _LoginViewState extends State<_LoginView> {
                       onSubmit: _submit,
                     ),
                     const SizedBox(height: 16),
-                    // ui-design-standard: en loading se reemplaza el grupo
-                    // completo de acciones por un único spinner centrado.
+                    // ui-design-standard: el estado busy vive DENTRO del
+                    // botón primario (spinner en lugar del texto) y el resto
+                    // de controles interactivos queda bloqueado — nunca se
+                    // reemplaza el grupo de acciones por un spinner suelto.
                     BlocBuilder<LoginCubit, LoginState>(
                       buildWhen: (p, c) => p.status != c.status,
                       builder: (context, state) {
-                        if (state.isInProgress) {
-                          return const Padding(
-                            padding: EdgeInsets.symmetric(vertical: 24),
-                            child: Center(child: CircularProgressIndicator()),
-                          );
-                        }
+                        final inProgress = state.isInProgress;
                         return Column(
                           crossAxisAlignment: CrossAxisAlignment.stretch,
                           children: [
                             ElevatedButton(
-                              onPressed: _submit,
-                              child: Text(l10n.loginButton),
+                              // Sigue "enabled" (color de marca intacto): el
+                              // busy se comunica con el spinner interno y el
+                              // cubit ignora re-entradas — deshabilitarlo lo
+                              // atenuaría a gris M3.
+                              onPressed: inProgress ? () {} : _submit,
+                              child: inProgress
+                                  ? SizedBox(
+                                      height: 22,
+                                      width: 22,
+                                      child: CircularProgressIndicator(
+                                        strokeWidth: 2.5,
+                                        // onPrimary (negro) sobre mostaza —
+                                        // el default `primary` sería
+                                        // invisible en este botón.
+                                        color: theme.colorScheme.onPrimary,
+                                      ),
+                                    )
+                                  : Text(l10n.loginButton),
                             ),
                             const SizedBox(height: 24),
                             Row(
@@ -129,30 +181,47 @@ class _LoginViewState extends State<_LoginView> {
                               ],
                             ),
                             const SizedBox(height: 24),
-                            const GoogleSignInButton(),
-                            const SizedBox(height: 32),
-                            Row(
-                              mainAxisAlignment: MainAxisAlignment.center,
-                              children: [
-                                Text(
-                                  l10n.loginNoAccount,
-                                  style: theme.textTheme.bodyMedium,
-                                ),
-                                GestureDetector(
-                                  onTap: () {
-                                    // PROVISIONAL: /register llega en su
-                                    // propia pantalla — por ahora aviso.
-                                    AppToast.success(context, l10n.comingSoon);
-                                  },
-                                  child: Text(
-                                    l10n.loginRegisterLink,
-                                    style: theme.textTheme.bodyMedium?.copyWith(
-                                      color: theme.colorScheme.primary,
-                                      fontWeight: FontWeight.w700,
-                                    ),
+                            // Misma convención que el formulario: bloqueo por
+                            // IgnorePointer — apariencia intacta, solo se
+                            // ignoran los toques mientras la petición resuelve.
+                            IgnorePointer(
+                              ignoring: inProgress,
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.stretch,
+                                children: [
+                                  const GoogleSignInButton(),
+                                  const SizedBox(height: 32),
+                                  Row(
+                                    mainAxisAlignment: MainAxisAlignment.center,
+                                    children: [
+                                      Text(
+                                        l10n.loginNoAccount,
+                                        style: theme.textTheme.bodyMedium,
+                                      ),
+                                      GestureDetector(
+                                        onTap: () {
+                                          // PROVISIONAL: /register llega en
+                                          // su propia pantalla — por ahora
+                                          // aviso.
+                                          AppToast.success(
+                                            context,
+                                            l10n.comingSoon,
+                                          );
+                                        },
+                                        child: Text(
+                                          l10n.loginRegisterLink,
+                                          style: theme.textTheme.bodyMedium
+                                              ?.copyWith(
+                                                color:
+                                                    theme.colorScheme.primary,
+                                                fontWeight: FontWeight.w700,
+                                              ),
+                                        ),
+                                      ),
+                                    ],
                                   ),
-                                ),
-                              ],
+                                ],
+                              ),
                             ),
                           ],
                         );

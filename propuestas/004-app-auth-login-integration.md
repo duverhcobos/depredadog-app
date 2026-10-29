@@ -12,6 +12,15 @@ Decisiones ya confirmadas con el usuario:
 | Device fingerprint | **Se agrega** `device_info_plus` — login manda `platform` + `deviceFingerprint` reales |
 | Interceptor de auth | **Se agrega ahora**, solo adjunta `Authorization: Bearer` — el refresh-on-401 queda para el ciclo de `/auth/refresh` |
 | Restaurar sesión al abrir la app | **Diferido explícitamente** — queda anotado en `pendientes/` (se resuelve junto con `/auth/me`) |
+| 403 "Email is not verified" | **Navega a `/verify-email`** con el email como `extra` — la pantalla ya existe (propuesta 005 aprobada); NO se muestra como toast |
+| Feedback de errores | **`AppToast`** (convención §005 — SnackBar retirado de toda la app) |
+
+Contrato verificado contra `documentacion/api/auth/004-post-login.md` y
+`UserResponseDto` del backend: 200 → `{accessToken, refreshToken, user}`;
+401 → `Invalid credentials` (anti-enumeración); 403 → `Email is not verified`
+o `Account is suspended`; 429 → rate limit (5 req/min). El `ServerException`
+de la app ya propaga `message` del backend, así que el mapping 403 funciona
+por texto exacto.
 
 Hallazgo de seguridad encontrado al diseñar esta propuesta (se corrige en el mismo
 cambio): `LogInterceptor` (activo solo en dev) tiene `requestHeader`/`responseHeader`
@@ -45,9 +54,11 @@ imprimiría en la consola de debug. Se desactivan ambos explícitamente.
 | `lib/core/di/setup_di.dart` | Actualizar — registrar todo lo nuevo, `AuthGuard` lee `AuthSession` real |
 | `lib/features/auth/presentation/cubit/login_state.dart` | Actualizar — nuevo status `authError` + campo `authFailure` |
 | `lib/features/auth/presentation/cubit/login_cubit.dart` | Actualizar — `submit()` real contra el use case |
-| `lib/features/auth/presentation/screens/login_screen.dart` | Actualizar — listener mapea `authFailure` a mensaje; éxito navega a `/home` |
+| `lib/features/auth/presentation/screens/login_screen.dart` | Actualizar — listener: éxito → `/home`; email no verificado → `/verify-email`; resto → `AppToast` |
+| `lib/features/auth/presentation/screens/verify_email_screen.dart` | Actualizar — guard: `email` vacío en `extra` → redirect a `/login` (cierra hallazgo INFO de revisor-ui) |
 | `lib/l10n/app_es.arb` + `flutter gen-l10n` | Actualizar — claves de error nuevas, se quita `loginDemoSuccess` |
-| `pendientes/00X-restaurar-sesion.md` | Nuevo — pendiente explícito de la sesión diferida |
+| `test/features/auth/presentation/cubit/login_cubit_test.dart` | **Nuevo** — no existía (mocktail ya en dev deps) |
+| `pendientes/007-restaurar-sesion.md` | Nuevo — pendiente explícito de la sesión diferida (siguiente número libre) |
 
 ---
 
@@ -1105,13 +1116,14 @@ class LoginCubit extends Cubit<LoginState> {
 
 **Ruta:** `lib/features/auth/presentation/screens/login_screen.dart`
 
-**Antes:**
+**Antes** (post-§005 — el feedback ya es `AppToast`, no SnackBar):
 ```dart
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
 import '../../../../core/di/setup_di.dart';
+import '../../../../core/widgets/app_toast.dart';
 import '../../../../l10n/app_localizations.dart';
 import '../cubit/login_cubit.dart';
 import '../cubit/login_state.dart';
@@ -1120,17 +1132,10 @@ import '../widgets/login_brand_header.dart';
 import '../widgets/login_form_fields.dart';
 ```
 ```dart
-  void _submit() {
-    FocusScope.of(context).unfocus();
-    context.read<LoginCubit>().submit();
-  }
-```
-```dart
           listener: (context, state) {
             if (state.status == LoginStatus.success) {
               TextInput.finishAutofillContext(shouldSave: true);
-              ScaffoldMessenger.of(context)
-                  .showSnackBar(SnackBar(content: Text(l10n.loginDemoSuccess)));
+              AppToast.success(context, l10n.loginDemoSuccess);
             } else if (state.status == LoginStatus.failure) {
               // Foco al primer campo inválido en orden visual (forms skill).
               if (state.email.isNotValid) {
@@ -1138,12 +1143,7 @@ import '../widgets/login_form_fields.dart';
               } else {
                 _passwordFocus.requestFocus();
               }
-              ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(
-                  content: Text(l10n.loginFormInvalid),
-                  backgroundColor: theme.colorScheme.error,
-                ),
-              );
+              AppToast.error(context, l10n.loginFormInvalid);
             }
           },
 ```
@@ -1157,6 +1157,7 @@ import 'package:go_router/go_router.dart';
 
 import '../../../../core/di/setup_di.dart';
 import '../../../../core/routes/auth_guard.dart';
+import '../../../../core/widgets/app_toast.dart';
 import '../../../../l10n/app_localizations.dart';
 import '../../domain/failures/auth_failure.dart';
 import '../cubit/login_cubit.dart';
@@ -1166,13 +1167,9 @@ import '../widgets/login_brand_header.dart';
 import '../widgets/login_form_fields.dart';
 ```
 ```dart
-  void _submit() {
-    FocusScope.of(context).unfocus();
-    context.read<LoginCubit>().submit();
-  }
-
   /// La UI nunca muestra el texto crudo del backend — cada AuthFailure
-  /// mapea a su copy en español (i18n-workflow).
+  /// mapea a su copy en español (i18n-workflow). EmailNotVerifiedFailure
+  /// no tiene toast: navega a /verify-email (la pantalla se explica sola).
   String _authErrorMessage(AppLocalizations l10n, AuthFailure failure) =>
       switch (failure) {
         InvalidCredentialsFailure() => l10n.loginErrorInvalidCredentials,
@@ -1195,20 +1192,22 @@ import '../widgets/login_form_fields.dart';
               } else {
                 _passwordFocus.requestFocus();
               }
-              ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(
-                  content: Text(l10n.loginFormInvalid),
-                  backgroundColor: theme.colorScheme.error,
-                ),
-              );
+              AppToast.error(context, l10n.loginFormInvalid);
             } else if (state.status == LoginStatus.authError &&
                 state.authFailure != null) {
-              ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(
-                  content: Text(_authErrorMessage(l10n, state.authFailure!)),
-                  backgroundColor: theme.colorScheme.error,
-                ),
-              );
+              if (state.authFailure is EmailNotVerifiedFailure) {
+                // El usuario quedó a mitad del flujo de registro — lo
+                // mandamos a verificar con su email ya escrito.
+                context.go(
+                  AuthGuard.verifyEmailRoute,
+                  extra: state.email.value,
+                );
+              } else {
+                AppToast.error(
+                  context,
+                  _authErrorMessage(l10n, state.authFailure!),
+                );
+              }
             }
           },
 ```
@@ -1241,9 +1240,37 @@ Ejecutar `flutter gen-l10n` después de este cambio (nunca escribir a mano
 
 ---
 
-## 22. Pendiente — restaurar sesión al abrir la app
+## 22. VerifyEmailScreen — guard de email vacío
 
-**Ruta:** `pendientes/004-restaurar-sesion.md` (nuevo, formato de `pendientes-produccion`)
+**Ruta:** `lib/features/auth/presentation/screens/verify_email_screen.dart`
+
+Hallazgo INFO de revisor-ui: si la ruta se alcanza con `extra` ausente/vacío
+(deep link directo, no desde login), el subtítulo queda "…a " colgando. Guard
+barato en `_VerifyEmailViewState.initState` — el email llega por DI al cubit:
+
+```dart
+  @override
+  void initState() {
+    super.initState();
+    // Sin email no hay destinatario del código — la ruta solo se alcanza
+    // legítimamente desde login (403 EmailNotVerifiedFailure); cualquier
+    // acceso directo con extra vacío devuelve al login.
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted && context.read<VerifyEmailCubit>().state.email.isEmpty) {
+        context.go(AuthGuard.loginRoute);
+      }
+    });
+  }
+```
+
+La pantalla solo cambia de `StatelessWidget` de shell — la firma pública
+`VerifyEmailScreen(email:)` se mantiene igual.
+
+---
+
+## 23. Pendiente — restaurar sesión al abrir la app
+
+**Ruta:** `pendientes/007-restaurar-sesion.md` (nuevo, formato de `pendientes-produccion`)
 
 ```markdown
 # Pendiente: Restaurar sesión al abrir la app
@@ -1307,9 +1334,10 @@ o revocado (logout desde otro dispositivo). Esa validación es
 20. `lib/features/auth/presentation/cubit/login_cubit.dart` (actualizar)
 21. `lib/l10n/app_es.arb` (actualizar) + `flutter gen-l10n`
 22. `lib/features/auth/presentation/screens/login_screen.dart` (actualizar)
-23. `pendientes/004-restaurar-sesion.md`
-24. Tests (ver siguiente sección) + `flutter analyze` + `flutter test`
-25. Verificación manual contra el backend real (`pcalientes_backend` en `:3000`)
+23. `lib/features/auth/presentation/screens/verify_email_screen.dart` (guard)
+24. `pendientes/007-restaurar-sesion.md`
+25. Tests (ver siguiente sección) + `flutter analyze` + `flutter test`
+26. Verificación manual contra el backend real (`pcalientes_backend` en `:3000`)
 
 ## Tests a agregar (testing-workflow)
 
@@ -1318,8 +1346,9 @@ o revocado (logout desde otro dispositivo). Esa validación es
   casos: éxito guarda sesión, sin conexión, 401→InvalidCredentials, 403 ambos
   mensajes, 429, error desconocido.
 - `test/features/auth/domain/use_cases/login_use_case_test.dart` — passthrough simple.
-- `test/features/auth/presentation/cubit/login_cubit_test.dart` — actualizar los
-  tests existentes de `submit()` (ya no hay delay fijo) + nuevos casos con
-  `LoginUseCase` mockeado devolviendo `Left`/`Right` → estados `authError`/`success`.
+- `test/features/auth/presentation/cubit/login_cubit_test.dart` — **nuevo** (no
+  existe hoy): `submit()` inválido → `failure`+errores; `LoginUseCase` mockeado
+  (mocktail, ya en dev deps) devolviendo `Left` → `authError`+`authFailure`;
+  `Right` → `success`+`markAuthenticated()` sobre `AuthSession`.
 - `test/core/network/interceptors/auth_interceptor_test.dart` — adjunta el header
   solo si hay token guardado.

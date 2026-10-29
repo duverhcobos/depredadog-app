@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:get_it/get_it.dart';
+import 'package:go_router/go_router.dart';
+import 'package:depredadog_app/core/routes/auth_guard.dart';
 import 'package:depredadog_app/core/theme/app_theme.dart';
 import 'package:depredadog_app/features/auth/presentation/cubit/verify_email_cubit.dart';
 import 'package:depredadog_app/features/auth/presentation/screens/verify_email_screen.dart';
@@ -87,5 +89,43 @@ void main() {
     await tester.pump(const Duration(seconds: 58));
     await tester.pump();
     expect(find.text('Reenviar'), findsOneWidget);
+  });
+
+  testWidgets('email vacío en extra redirige a /login', (tester) async {
+    // La ruta solo se alcanza legítimamente desde login con el email como
+    // extra — un acceso directo sin email devuelve al login (guard §004).
+    final router = GoRouter(
+      initialLocation: AuthGuard.verifyEmailRoute,
+      routes: [
+        GoRoute(
+          path: AuthGuard.verifyEmailRoute,
+          builder: (context, state) =>
+              VerifyEmailScreen(email: (state.extra as String?) ?? ''),
+        ),
+        GoRoute(
+          path: AuthGuard.loginRoute,
+          builder: (context, state) =>
+              const Scaffold(body: Text('PANTALLA LOGIN')),
+        ),
+      ],
+    );
+    await tester.pumpWidget(
+      MaterialApp.router(
+        theme: AppTheme.dark(),
+        routerConfig: router,
+        localizationsDelegates: const [
+          AppLocalizations.delegate,
+          GlobalMaterialLocalizations.delegate,
+          GlobalWidgetsLocalizations.delegate,
+          GlobalCupertinoLocalizations.delegate,
+        ],
+        supportedLocales: AppLocalizations.supportedLocales,
+        locale: const Locale('es'),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.text('PANTALLA LOGIN'), findsOneWidget);
+    expect(find.text('Verifica tu correo'), findsNothing);
   });
 }

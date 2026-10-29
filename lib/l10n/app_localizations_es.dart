@@ -74,8 +74,24 @@ class AppLocalizationsEs extends AppLocalizations {
   String get loginRegisterLink => 'Regístrate';
 
   @override
-  String get loginDemoSuccess =>
-      'Inicio de sesión simulado — sin backend todavía';
+  String get loginErrorInvalidCredentials => 'Correo o contraseña incorrectos';
+
+  @override
+  String get loginErrorEmailNotVerified =>
+      'Verifica tu correo antes de iniciar sesión';
+
+  @override
+  String get loginErrorAccountSuspended => 'Tu cuenta está suspendida';
+
+  @override
+  String get loginErrorTooManyAttempts =>
+      'Demasiados intentos — espera un momento';
+
+  @override
+  String get loginErrorNoConnection => 'Sin conexión a internet';
+
+  @override
+  String get loginErrorGeneric => 'No se pudo iniciar sesión, intenta de nuevo';
 
   @override
   String get comingSoon => 'Disponible próximamente';

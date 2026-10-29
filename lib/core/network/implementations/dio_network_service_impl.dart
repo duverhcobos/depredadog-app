@@ -8,31 +8,41 @@ import '../interfaces/i_network_service.dart';
 /// Implementación Dio del puerto HTTP. Centraliza baseUrl, timeouts,
 /// mapeo DioException → NetworkException y logging de requests en dev.
 class DioNetworkServiceImpl implements INetworkService {
-  DioNetworkServiceImpl({required this._logger})
-    : _dio = Dio(
-        BaseOptions(
-          baseUrl: Environment.apiBaseUrl,
-          connectTimeout: const Duration(seconds: 10),
-          receiveTimeout: const Duration(seconds: 15),
-          sendTimeout: const Duration(seconds: 15),
-          headers: {'Content-Type': 'application/json'},
-        ),
-      ) {
+  DioNetworkServiceImpl({
+    required this._logger,
+    List<Interceptor> extraInterceptors = const [],
+  }) : _dio = Dio(
+         BaseOptions(
+           baseUrl: Environment.apiBaseUrl,
+           connectTimeout: const Duration(seconds: 10),
+           receiveTimeout: const Duration(seconds: 15),
+           sendTimeout: const Duration(seconds: 15),
+           headers: {'Content-Type': 'application/json'},
+         ),
+       ) {
+    // Interceptores propios de cada feature (ej. AuthInterceptor) primero,
+    // para que si el LogInterceptor llegara a reactivar el log de headers
+    // más adelante, siga viendo la request ya completa (orden recomendado
+    // por la doc de LogInterceptor: "debe ser el último agregado").
+    _dio.interceptors.addAll(extraInterceptors);
     if (Environment.isDev) {
       _dio.interceptors.add(
-        // PROVISIONAL: logging de red solo en dev; el AuthInterceptor
-        // (bearer + refresh-on-401) se agrega en la propuesta 002-app-auth.
-        LogInterceptor(requestBody: false, responseBody: false),
+        // SEGURIDAD: requestHeader/responseHeader se fuerzan a false —
+        // por defecto Dio los deja en `true`; con el AuthInterceptor
+        // mandando "Authorization: Bearer <token>" eso imprimiría el
+        // token en la consola de debug. Nunca loguear tokens.
+        LogInterceptor(
+          requestBody: false,
+          responseBody: false,
+          requestHeader: false,
+          responseHeader: false,
+        ),
       );
     }
   }
 
   final Dio _dio;
   final ILoggerService _logger;
-
-  /// Expone el Dio para que futuras capas (002-auth) agreguen interceptores
-  /// sin reemplazar el servicio.
-  Dio get client => _dio;
 
   @override
   Future<dynamic> get(

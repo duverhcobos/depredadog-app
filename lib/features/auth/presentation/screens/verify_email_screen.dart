@@ -39,6 +39,19 @@ class _VerifyEmailViewState extends State<_VerifyEmailView> {
   late final FocusNode _codeFocus = FocusNode();
 
   @override
+  void initState() {
+    super.initState();
+    // Sin email no hay destinatario del código — la ruta solo se alcanza
+    // legítimamente desde login (403 EmailNotVerifiedFailure); cualquier
+    // acceso directo con extra vacío devuelve al login.
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted && context.read<VerifyEmailCubit>().state.email.isEmpty) {
+        context.go(AuthGuard.loginRoute);
+      }
+    });
+  }
+
+  @override
   void dispose() {
     _codeFocus.dispose();
     super.dispose();
@@ -159,19 +172,23 @@ class _VerifyEmailViewState extends State<_VerifyEmailView> {
                           BlocBuilder<VerifyEmailCubit, VerifyEmailState>(
                             buildWhen: (p, c) => p.status != c.status,
                             builder: (context, state) {
-                              if (state.isInProgress) {
-                                return const Padding(
-                                  padding: EdgeInsets.symmetric(vertical: 24),
-                                  child: Center(
-                                    child: CircularProgressIndicator(),
-                                  ),
-                                );
-                              }
                               // La Column padre ya es CrossAxisAlignment
                               // .stretch — el botón ocupa todo el ancho solo.
+                              // Convención loading: spinner DENTRO del botón
+                              // (color onPrimary), el resto de controles ya
+                              // queda bloqueado por sus propios `enabled`.
                               return ElevatedButton(
-                                onPressed: _submit,
-                                child: Text(l10n.verifyEmailButton),
+                                onPressed: state.isInProgress ? () {} : _submit,
+                                child: state.isInProgress
+                                    ? SizedBox(
+                                        height: 22,
+                                        width: 22,
+                                        child: CircularProgressIndicator(
+                                          strokeWidth: 2.5,
+                                          color: theme.colorScheme.onPrimary,
+                                        ),
+                                      )
+                                    : Text(l10n.verifyEmailButton),
                               );
                             },
                           ),
@@ -182,31 +199,34 @@ class _VerifyEmailViewState extends State<_VerifyEmailView> {
                                 p.isResending != c.isResending ||
                                 p.isInProgress != c.isInProgress,
                             builder: (context, state) {
-                              return Row(
-                                mainAxisAlignment: MainAxisAlignment.center,
-                                children: [
-                                  Text(
-                                    l10n.verifyEmailResendQuestion,
-                                    style: theme.textTheme.bodyMedium,
-                                  ),
-                                  TextButton(
-                                    // canResend ya excluye cooldown/resending;
-                                    // isInProgress bloquea mientras se verifica
-                                    onPressed:
-                                        state.canResend && !state.isInProgress
-                                        ? () => context
-                                              .read<VerifyEmailCubit>()
-                                              .resend()
-                                        : null,
-                                    child: Text(
-                                      state.resendCooldown > 0
-                                          ? l10n.verifyEmailResendIn(
-                                              state.resendCooldown,
-                                            )
-                                          : l10n.verifyEmailResend,
+                              // Loading: IgnorePointer bloquea sin atenuar
+                              // (convención). El disabled visible queda solo
+                              // para el cooldown — es su estado semántico.
+                              return IgnorePointer(
+                                ignoring: state.isInProgress,
+                                child: Row(
+                                  mainAxisAlignment: MainAxisAlignment.center,
+                                  children: [
+                                    Text(
+                                      l10n.verifyEmailResendQuestion,
+                                      style: theme.textTheme.bodyMedium,
                                     ),
-                                  ),
-                                ],
+                                    TextButton(
+                                      onPressed: state.canResend
+                                          ? () => context
+                                                .read<VerifyEmailCubit>()
+                                                .resend()
+                                          : null,
+                                      child: Text(
+                                        state.resendCooldown > 0
+                                            ? l10n.verifyEmailResendIn(
+                                                state.resendCooldown,
+                                              )
+                                            : l10n.verifyEmailResend,
+                                      ),
+                                    ),
+                                  ],
+                                ),
                               );
                             },
                           ),

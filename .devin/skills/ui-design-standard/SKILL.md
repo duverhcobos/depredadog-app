@@ -76,9 +76,20 @@ class _XView extends StatelessWidget {
   el widget.
 - **Botón de acción primaria:** `SizedBox(width: double.infinity, child: ElevatedButton(...))`.
 - **Acción secundaria (ej. login alternativo):** `OutlinedButton.icon(icon: ..., label: ...)`.
-- **Estado de carga en botones:** mientras `status.isInProgress`, reemplazar la columna de botones
-  completa por un único `CircularProgressIndicator()` centrado — no deshabilitar el botón dejándolo
-  visible con un spinner adentro.
+- **Estado de carga en botones:** mientras `status.isInProgress`, el spinner vive **DENTRO del botón
+  primario** — `SizedBox(22×22, CircularProgressIndicator(strokeWidth: 2.5, color:
+  colorScheme.onPrimary))` reemplaza solo el `Text` del label (nunca `primary`: sería invisible sobre
+  el botón mostaza). El botón se mantiene "enabled" (color de marca intacto) con `onPressed: () {}`
+  inerte — el cubit ya ignora re-entradas; ponerlo `null` lo atenuaría a gris M3.
+- **Bloqueo durante la petición:** mientras una acción de pantalla resuelve, TODOS los demás
+  controles interactivos quedan bloqueados con **`IgnorePointer(ignoring: isInProgress)`**
+  envolviendo el grupo — la apariencia se conserva intacta, **nada se atenúa** (decisión del
+  usuario: rechazó el `enabled: false`/`onPressed: null` porque opaca los controles). El
+  submit hace `unfocus()` antes de la petición, así que ningún campo puede recibir IME ni
+  re-enfocarse. Excepción: el disabled VISUAL sí aplica cuando es el estado semántico propio
+  del control (ej. cooldown de "Reenviar en Ns" en verify_email). Nunca reemplazar el grupo
+  de acciones por un spinner suelto (regla §login — cambio pedido por el usuario tras la
+  primera integración).
 - **Feedback de éxito/error:** `AppToast` (`lib/core/widgets/app_toast.dart`, sobre fluttertoast) —
   `AppToast.error(context, l10n.clave)` / `AppToast.success(context, l10n.clave)`, siempre disparado
   desde un `BlocListener` (nunca desde dentro del `build` condicional). **Nunca** `ScaffoldMessenger`

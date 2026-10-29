@@ -1,9 +1,13 @@
 import 'package:equatable/equatable.dart';
 import 'package:formz/formz.dart';
 
+import '../../domain/failures/auth_failure.dart';
 import '../inputs/login_inputs.dart';
 
-enum LoginStatus { initial, inProgress, success, failure }
+/// `failure` = validación local (campos vacíos/inválidos) — ya existía.
+/// `authError` = el backend rechazó el login (credenciales, cuenta, rate
+/// limit, sin conexión) — nuevo, trae `authFailure` con el motivo exacto.
+enum LoginStatus { initial, inProgress, success, failure, authError }
 
 /// Estado de la pantalla de login. `showEmailError`/`showPasswordError` se
 /// activan al submit fallido y se limpian por campo al escribir de nuevo —
@@ -17,6 +21,7 @@ class LoginState extends Equatable {
     this.showEmailError = false,
     this.showPasswordError = false,
     this.rememberMe = false,
+    this.authFailure,
   });
 
   final EmailInput email;
@@ -26,9 +31,12 @@ class LoginState extends Equatable {
   final bool showEmailError;
   final bool showPasswordError;
 
-  /// En la integración decidirá si el refresh token se persiste entre
-  /// sesiones (secure storage) o la sesión muere al cerrar la app.
+  /// Reservado a futuro (ej. recordar el correo) — la sesión siempre
+  /// persiste en secure storage independientemente de este flag.
   final bool rememberMe;
+
+  /// Solo tiene valor cuando status == authError.
+  final AuthFailure? authFailure;
 
   bool get isValid => Formz.validate([email, password]);
   bool get isInProgress => status == LoginStatus.inProgress;
@@ -48,6 +56,7 @@ class LoginState extends Equatable {
     bool? showEmailError,
     bool? showPasswordError,
     bool? rememberMe,
+    AuthFailure? authFailure,
   }) {
     return LoginState(
       email: email ?? this.email,
@@ -57,6 +66,11 @@ class LoginState extends Equatable {
       showEmailError: showEmailError ?? this.showEmailError,
       showPasswordError: showPasswordError ?? this.showPasswordError,
       rememberMe: rememberMe ?? this.rememberMe,
+      // authFailure se limpia explícitamente pasando el nuevo status,
+      // nunca se arrastra entre intentos (null por defecto en cada submit).
+      authFailure: status == LoginStatus.authError
+          ? (authFailure ?? this.authFailure)
+          : null,
     );
   }
 
@@ -69,5 +83,6 @@ class LoginState extends Equatable {
     showEmailError,
     showPasswordError,
     rememberMe,
+    authFailure,
   ];
 }

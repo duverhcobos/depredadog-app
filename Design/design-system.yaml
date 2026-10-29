@@ -4,8 +4,8 @@
 
 meta:
   product: Depredadog
-  version: 1.8.0
-  updated: 2026-10-28
+  version: 1.10.0
+  updated: 2026-10-29
 
 palette:
   # Identidad Depredadog — "condimentos" (definida por el usuario, §001):
@@ -54,7 +54,7 @@ components:
   brand_tagline:
     description: "Tagline oficial de la guía de marca: 'HOT DOGS & MÁS'."
   elevated_button_primary:
-    description: "Ancho completo, alto 52, radius 14, fondo sólido primary + texto onPrimary w600 16px (override del tonal M3 — la marca pide el primario sólido). En dark: mostaza sólida con texto negro rico."
+    description: "Ancho completo, alto 52, radius 14, fondo sólido primary + texto onPrimary w600 16px (override del tonal M3 — la marca pide el primario sólido). En dark: mostaza sólida con texto negro rico. Loading: spinner 22px strokeWidth 2.5 color onPrimary DENTRO del botón (reemplaza solo el texto, sin deshabilitar ni atenuar el fondo — decisión del usuario: el botón sigue mostaza y onPressed queda inerte; el cubit ignora re-entradas). Durante su petición, TODOS los demás controles interactivos de la pantalla se bloquean con IgnorePointer(ignoring: isInProgress) — apariencia intacta, nada se atenúa (el usuario rechazó el disabled visible; el disabled solo pinta cuando es el estado semántico propio del control, ej. cooldown de reenvío)."
   custom_text_field:
     description: "Campo de formulario con label externo arriba (labelLarge w600 onSurface), icono prefijo opcional, radius 14, fill surfaceContainerLowest, enabledBorder outlineVariant. Foco en onSurface 1.6px — el primario rojo se confundía con error (feedback usuario). Error en línea reservada con helperText ' ' para no re-fluir el formulario."
   google_sign_in_button:
@@ -62,7 +62,7 @@ components:
   app_toast:
     description: "Feedback efímero ÚNICO canal: AppToast (lib/core/widgets/app_toast.dart) sobre fluttertoast — error (bg error / texto onError) o success (bg primary / texto onPrimary), gravity BOTTOM, LENGTH_LONG. Reemplaza el estándar SnackBar anterior por decisión del usuario — NUNCA ScaffoldMessenger.showSnackBar directo. Se dispara siempre desde BlocListener (un listener por efecto con su propio listenWhen — un solo listener con else-if encadenado produjo un toast falso de 'reenviado' en transiciones ajenas: bug detectado por revisor-ui)."
   verify_email_code_input:
-    description: "OTP de 6 casillas 48×56, radius 14 (=radius del sistema), fill surfaceContainerLowest, borde 1px outline inactivo / 1.6px primary activa / 1.6px error en error, dígito titleLarge w600 onSurface. Implementación propia (pinput se descartó: v7 exige ancestro Material del paquete material_ui desacoplado, incompatible con el Scaffold clásico): un TextField INVISIBLE cubre la fila (Positioned.fill, texto transparente, showCursor off) y captura teclado/digitsOnly/max 6/autofillHints oneTimeCode — sus casillas son puro render AnimatedContainer. OJO técnico: el inputDecorationTheme global trae filled+bordes por estado — hay que anularlos explícito (filled:false + los 6 borders por estado en InputBorder.none) o pinta una barra encima de las casillas. Auto-submit al completar el 6to dígito; enabled=!isInProgress; borde 'activo' sigue al FocusNode vía ListenableBuilder; pegar habilitado (menú contextual — el formatter limita a 6). A11y: Semantics 'código de verificación, X de 6' en el grupo + casillas en ExcludeSemantics."
+    description: "OTP de 6 casillas 48×56, radius 14 (=radius del sistema), fill surfaceContainerLowest, borde 1px outline inactivo / 1.6px primary activa / 1.6px error en error, dígito titleLarge w600 onSurface. Implementación propia (pinput se descartó: v7 exige ancestro Material del paquete material_ui desacoplado, incompatible con el Scaffold clásico): un TextField INVISIBLE cubre la fila (Positioned.fill, texto transparente, showCursor off) y captura teclado/digitsOnly/max 6/autofillHints oneTimeCode — sus casillas son puro render AnimatedContainer. OJO técnico: el inputDecorationTheme global trae filled+bordes por estado — hay que anularlos explícito (filled:false + los 6 borders por estado en InputBorder.none) o pinta una barra encima de las casillas. Auto-submit al completar el 6to dígito; bloqueo por IgnorePointer en isInProgress (sin atenuar); borde 'activo' sigue al FocusNode vía ListenableBuilder; pegar habilitado (menú contextual — el formatter limita a 6). A11y: Semantics 'código de verificación, X de 6' en el grupo + casillas en ExcludeSemantics."
   remember_row:
     description: "Fila bajo el campo contraseña: Checkbox 'Recuérdame' (compacto, tap en texto alterna) a la izquierda + link '¿Olvidaste tu contraseña?' (bodySmall primary w600) a la derecha. rememberMe decidirá en integración si el refresh token persiste entre sesiones."
   login_brand_header:
@@ -74,14 +74,32 @@ screens:
     spec: "Scaffold liso (color por tema; MVP solo oscuro, ver app_theme_mode) + imagotipo centrado 220px en Hero(tag: HeroTags.brandImagotipo) — asset por tema: imagotipo_depredadog.png claro / _dark.png oscuro (mismos del login header). Navega a /login ~800ms DESPUÉS de que el imagotipo decodifica (precacheImage secuencial — el login hereda el ImageCache y el header pinta sin parpadeo; Future.wait se descartó porque pintaba y navegaba en el mismo frame). El Hero hace que el imagotipo vuele del centro (220px) al header del login (148px) en vez de que una pantalla reemplace a la otra en seco. Futuro: aquí vivirá el chequeo de sesión."
   login:
     route: "/login"
-    spec: "Scaffold liso + scroll. LoginBrandHeader (imagotipo en el mismo Hero que el splash), campos email/password (CustomTextField con AutofillGroup, error por campo que se limpia al editar), remember_row, ElevatedButton 'Iniciar sesión' (loading reemplaza el botón por spinner centrado), divider 'o continúa con', GoogleSignInButton, fila '¿No tienes cuenta? Regístrate'. Submit vacío → errores + toast + foco al primer inválido. PROVISIONAL: submit simulado 1.2s → toast demo; forgot/register/google sin endpoint."
+    spec: "Scaffold liso + scroll. LoginBrandHeader (imagotipo en el mismo Hero que el splash), campos email/password (CustomTextField con AutofillGroup, error por campo que se limpia al editar), remember_row, ElevatedButton 'Iniciar sesión' (loading: spinner DENTRO del botón, ver elevated_button_primary), divider 'o continúa con', GoogleSignInButton, fila '¿No tienes cuenta? Regístrate'. Submit vacío → errores + toast + foco al primer inválido. Durante la petición todo lo interactivo se bloquea por IgnorePointer sin atenuar (campos, ojo, checkbox, Google, links). PROVISIONAL: submit simulado 1.2s → toast demo; forgot/register/google sin endpoint."
   verify_email:
     route: "/verify-email"
-    spec: "Se llega desde login cuando el backend responde 'correo no verificado' (o con email en extra). Scaffold liso + PopScope(canPop:false → _backToLogin): la flecha top-left FIJA (fuera del bloque centrado — antes flotaba dentro de la Column centrada, bug detectado) y el back nativo de Android ambos van a /login porque se llega con go() y no hay stack que pop. Contenido centrado+scroll: ícono de marca icono_verificar_correo.svg (80px, flutter_svg, elemento firma — ExcludeSemantics, el headline ya describe), headline primary + subtítulo con el email destino, casillas OTP (componente verify_email_code_input), CTA 'Verificar' (loading reemplaza el botón por spinner; campo y reenviar se bloquean en isInProgress), fila '¿No recibiste el código? Reenviar' con cooldown real 60s ('Reenviar en Ns', TextButton deshabilitado). Feedback por AppToast: error genérico 'Ingresa el código de 6 dígitos' (cubre vacío/parcial), 'Código reenviado', 'Verificación simulada'. resend() limpia código+error (el código viejo queda invalidado) y el TextField oculto se resincroniza por listener. PROVISIONAL: submit y reenvío simulados — sin endpoints todavía."
+    spec: "Se llega desde login cuando el backend responde 'correo no verificado' (o con email en extra). Scaffold liso + PopScope(canPop:false → _backToLogin): la flecha top-left FIJA (fuera del bloque centrado — antes flotaba dentro de la Column centrada, bug detectado) y el back nativo de Android ambos van a /login porque se llega con go() y no hay stack que pop. Contenido centrado+scroll: ícono de marca icono_verificar_correo.svg (80px, flutter_svg, elemento firma — ExcludeSemantics, el headline ya describe), headline primary + subtítulo con el email destino, casillas OTP (componente verify_email_code_input), CTA 'Verificar' (loading: spinner DENTRO del botón, ver elevated_button_primary; campo y reenviar se bloquean por IgnorePointer en isInProgress), fila '¿No recibiste el código? Reenviar' con cooldown real 60s ('Reenviar en Ns', TextButton deshabilitado — el disabled visible del cooldown sí pinta: es su estado semántico, no un bloqueo de loading). Feedback por AppToast: error genérico 'Ingresa el código de 6 dígitos' (cubre vacío/parcial), 'Código reenviado', 'Verificación simulada'. resend() limpia código+error (el código viejo queda invalidado) y el TextField oculto se resincroniza por listener. PROVISIONAL: submit y reenvío simulados — sin endpoints todavía."
   welcome:
     status: "ELIMINADA (decisión del usuario) — splash va directo a /login para no autenticados"
 
 changelog:
+  - version: "1.10.0"
+    date: 2026-10-29
+    page: "elevated_button_primary (loading) + login + verify_email"
+    status: "completed"
+    changes:
+      - "Refinamiento de la convención de bloqueo durante la petición (pedido del usuario tras probarla): los controles YA NO se atenúan — se bloquean con IgnorePointer(ignoring: isInProgress) envolviendo el grupo, conservando su apariencia normal."
+      - "Retirados los params enabled de CustomTextField y GoogleSignInButton (quedaban muertos con IgnorePointer — API de vuelta a su forma original)."
+      - "El submit hace unfocus() antes de la petición → ningún campo puede recibir IME ni re-enfocarse mientras resuelve; IgnorePointer bloquea toques en ojo, checkbox, links, Google y registro."
+      - "Excepción documentada: el disabled VISIBLE solo pinta cuando es el estado semántico propio del control (cooldown 'Reenviar en Ns' en verify_email), no como efecto del loading."
+  - version: "1.9.0"
+    date: 2026-10-28
+    page: "elevated_button_primary (loading) + login + verify_email"
+    status: "completed"
+    changes:
+      - "Nueva convención de estado busy (pedido del usuario al probar /auth/login): el spinner vive DENTRO del botón primario (22px, strokeWidth 2.5, onPrimary — nunca primary, sería invisible sobre mostaza) y el botón conserva su color de marca con onPressed inerte en vez del gris disabled de M3."
+      - "Durante la petición se bloquean TODOS los demás controles: campos enabled:false (nuevo param en CustomTextField), ojo de contraseña onPressed:null, checkbox Recuérdame, GoogleSignInButton (nuevo param enabled), links de forgot/registro (onTap:null + texto en theme.disabledColor)."
+      - "Aplicado en login y verify_email — antes el grupo completo de acciones se reemplazaba por un spinner suelto centrado (patrón anterior, descartado por el usuario: el spinner 'mejor en el boton')."
+      - "LoginFormFields: un BlocBuilder externo sobre isInProgress alimenta `enabled` a todos los hijos — los builders internos por campo conservan su buildWhen estrecho."
   - version: "1.8.0"
     date: 2026-10-28
     page: "verify_email + verify_email_code_input + app_toast"

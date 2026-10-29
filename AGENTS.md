@@ -39,6 +39,7 @@ El detalle de convenciones, arquitectura y workflows de este proyecto vive en sk
 | `screen-first-workflow` | **Workflow de desarrollo por pantallas** — fase 1: solo presentación sin conectar (aprobación visual); fase 2: integración un endpoint a la vez (pruebas → aprobación → commit → siguiente) |
 | `token-saving-tools-policy` | Al explorar el código — cuándo leer directo vs. usar el grafo codebase-memory, batching |
 | `app-icons` | Al tocar íconos de launcher o el splash nativo — ícono por modo, capas adaptativas, `mipmap-night-*`, procedimiento de actualización |
+| `emulator-health` | Cuando el emulador va lento/congelado, la app no levanta o `adb` no responde — diagnóstico de RAM del host, daemon Gradle, aceleración WHPX y cold boot sin snapshot |
 | `ui-design-critique` | Tras implementar una pantalla/widget, **antes** de mostrarla al usuario — rúbrica de crítica de diseño estricta que ejecuta el agente `revisor-ui` (código + capturas) |
 
 Si una instrucción parece faltar acá, buscarla primero en `.devin/skills/` antes de asumir que no existe. En la raíz solo viven los esenciales: `AGENTS.md` y `README.md`.

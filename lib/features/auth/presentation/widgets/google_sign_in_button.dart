@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../../../../core/widgets/app_toast.dart';
 import '../../../../l10n/app_localizations.dart';
 
 /// PROVISIONAL: botón de Google sin endpoint — muestra un aviso hasta que
@@ -14,10 +15,7 @@ class GoogleSignInButton extends StatelessWidget {
     return SizedBox(
       width: double.infinity,
       child: OutlinedButton(
-        onPressed: () {
-          ScaffoldMessenger.of(context)
-              .showSnackBar(SnackBar(content: Text(l10n.comingSoon)));
-        },
+        onPressed: () => AppToast.success(context, l10n.comingSoon),
         // Alto/radius vienen del outlinedButtonTheme del tema.
         child: Row(
           mainAxisAlignment: MainAxisAlignment.center,

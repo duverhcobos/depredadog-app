@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
+import '../../../../core/widgets/app_toast.dart';
 import '../../../../l10n/app_localizations.dart';
 import '../cubit/login_cubit.dart';
 import '../cubit/login_state.dart';
@@ -31,119 +32,132 @@ class LoginFormFields extends StatelessWidget {
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
     final theme = Theme.of(context);
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: [
-        BlocBuilder<LoginCubit, LoginState>(
-          buildWhen: (p, c) =>
-              p.email != c.email || p.showEmailError != c.showEmailError,
-          builder: (context, state) {
-            return CustomTextField(
-              key: const ValueKey('login_email'),
-              label: l10n.loginEmailLabel,
-              controller: emailController,
-              focusNode: emailFocus,
-              hintText: l10n.loginEmailHint,
-              prefixIcon: const Icon(Icons.mail_outline),
-              keyboardType: TextInputType.emailAddress,
-              textInputAction: TextInputAction.next,
-              autofillHints: const [AutofillHints.email],
-              errorText: switch (state.emailErrorKey()) {
-                'empty' => l10n.loginEmailRequired,
-                'invalid' => l10n.loginEmailError,
-                _ => null,
-              },
-              onChanged: (v) => context.read<LoginCubit>().emailChanged(v),
-            );
-          },
-        ),
-        const SizedBox(height: 8),
-        BlocBuilder<LoginCubit, LoginState>(
-          buildWhen: (p, c) =>
-              p.password != c.password ||
-              p.obscurePassword != c.obscurePassword ||
-              p.showPasswordError != c.showPasswordError,
-          builder: (context, state) {
-            return CustomTextField(
-              key: const ValueKey('login_password'),
-              label: l10n.loginPasswordLabel,
-              controller: passwordController,
-              focusNode: passwordFocus,
-              obscureText: state.obscurePassword,
-              hintText: l10n.loginPasswordHint,
-              prefixIcon: const Icon(Icons.lock_outline),
-              suffixIcon: IconButton(
-                tooltip: state.obscurePassword
-                    ? l10n.loginShowPassword
-                    : l10n.loginHidePassword,
-                icon: Icon(
-                  state.obscurePassword
-                      ? Icons.visibility_outlined
-                      : Icons.visibility_off_outlined,
-                ),
-                onPressed: () =>
-                    context.read<LoginCubit>().togglePasswordVisibility(),
+    // Convención de loading (ui-design-standard): mientras el submit
+    // resuelve, TODO lo interactivo del formulario queda BLOQUEADO con
+    // IgnorePointer — conserva su apariencia normal, no se atenúa
+    // (decisión del usuario). _submit() ya hizo unfocus, así que ningún
+    // campo puede re-enfocarse ni recibir IME durante la petición.
+    return BlocBuilder<LoginCubit, LoginState>(
+      buildWhen: (p, c) => p.isInProgress != c.isInProgress,
+      builder: (context, progressState) {
+        return IgnorePointer(
+          ignoring: progressState.isInProgress,
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              BlocBuilder<LoginCubit, LoginState>(
+                buildWhen: (p, c) =>
+                    p.email != c.email || p.showEmailError != c.showEmailError,
+                builder: (context, state) {
+                  return CustomTextField(
+                    key: const ValueKey('login_email'),
+                    label: l10n.loginEmailLabel,
+                    controller: emailController,
+                    focusNode: emailFocus,
+                    hintText: l10n.loginEmailHint,
+                    prefixIcon: const Icon(Icons.mail_outline),
+                    keyboardType: TextInputType.emailAddress,
+                    textInputAction: TextInputAction.next,
+                    autofillHints: const [AutofillHints.email],
+                    errorText: switch (state.emailErrorKey()) {
+                      'empty' => l10n.loginEmailRequired,
+                      'invalid' => l10n.loginEmailError,
+                      _ => null,
+                    },
+                    onChanged: (v) =>
+                        context.read<LoginCubit>().emailChanged(v),
+                  );
+                },
               ),
-              keyboardType: TextInputType.visiblePassword,
-              textInputAction: TextInputAction.done,
-              autofillHints: const [AutofillHints.password],
-              errorText: switch (state.passwordErrorKey()) {
-                'empty' => l10n.loginPasswordRequired,
-                'tooShort' => l10n.loginPasswordError,
-                _ => null,
-              },
-              onChanged: (v) => context.read<LoginCubit>().passwordChanged(v),
-              onFieldSubmitted: (_) => onSubmit(),
-            );
-          },
-        ),
-        Row(
-          children: [
-            BlocBuilder<LoginCubit, LoginState>(
-              buildWhen: (p, c) => p.rememberMe != c.rememberMe,
-              builder: (context, state) {
-                return GestureDetector(
-                  onTap: () => context
-                      .read<LoginCubit>()
-                      .rememberMeChanged(!state.rememberMe),
-                  child: Row(
-                    children: [
-                      Checkbox(
-                        value: state.rememberMe,
-                        onChanged: (v) => context
+              const SizedBox(height: 8),
+              BlocBuilder<LoginCubit, LoginState>(
+                buildWhen: (p, c) =>
+                    p.password != c.password ||
+                    p.obscurePassword != c.obscurePassword ||
+                    p.showPasswordError != c.showPasswordError,
+                builder: (context, state) {
+                  return CustomTextField(
+                    key: const ValueKey('login_password'),
+                    label: l10n.loginPasswordLabel,
+                    controller: passwordController,
+                    focusNode: passwordFocus,
+                    obscureText: state.obscurePassword,
+                    hintText: l10n.loginPasswordHint,
+                    prefixIcon: const Icon(Icons.lock_outline),
+                    suffixIcon: IconButton(
+                      tooltip: state.obscurePassword
+                          ? l10n.loginShowPassword
+                          : l10n.loginHidePassword,
+                      icon: Icon(
+                        state.obscurePassword
+                            ? Icons.visibility_outlined
+                            : Icons.visibility_off_outlined,
+                      ),
+                      onPressed: () =>
+                          context.read<LoginCubit>().togglePasswordVisibility(),
+                    ),
+                    keyboardType: TextInputType.visiblePassword,
+                    textInputAction: TextInputAction.done,
+                    autofillHints: const [AutofillHints.password],
+                    errorText: switch (state.passwordErrorKey()) {
+                      'empty' => l10n.loginPasswordRequired,
+                      'tooShort' => l10n.loginPasswordError,
+                      _ => null,
+                    },
+                    onChanged: (v) =>
+                        context.read<LoginCubit>().passwordChanged(v),
+                    onFieldSubmitted: (_) => onSubmit(),
+                  );
+                },
+              ),
+              Row(
+                children: [
+                  BlocBuilder<LoginCubit, LoginState>(
+                    buildWhen: (p, c) => p.rememberMe != c.rememberMe,
+                    builder: (context, state) {
+                      return GestureDetector(
+                        onTap: () => context
                             .read<LoginCubit>()
-                            .rememberMeChanged(v ?? false),
-                        visualDensity: VisualDensity.compact,
-                      ),
-                      Text(
-                        l10n.loginRememberMe,
-                        style: theme.textTheme.bodySmall,
-                      ),
-                    ],
+                            .rememberMeChanged(!state.rememberMe),
+                        child: Row(
+                          children: [
+                            Checkbox(
+                              value: state.rememberMe,
+                              onChanged: (v) => context
+                                  .read<LoginCubit>()
+                                  .rememberMeChanged(v ?? false),
+                              visualDensity: VisualDensity.compact,
+                            ),
+                            Text(
+                              l10n.loginRememberMe,
+                              style: theme.textTheme.bodySmall,
+                            ),
+                          ],
+                        ),
+                      );
+                    },
                   ),
-                );
-              },
-            ),
-            const Spacer(),
-            GestureDetector(
-              onTap: () {
-                // PROVISIONAL: /forgot-password llega en su propia
-                // pantalla — por ahora aviso.
-                ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(content: Text(l10n.comingSoon)),
-                );
-              },
-              child: Text(
-                l10n.loginForgotPassword,
-                style: theme.textTheme.bodySmall?.copyWith(
-                  color: theme.colorScheme.primary,
-                  fontWeight: FontWeight.w600,
-                ),
+                  const Spacer(),
+                  GestureDetector(
+                    onTap: () {
+                      // PROVISIONAL: /forgot-password llega en su propia
+                      // pantalla — por ahora aviso.
+                      AppToast.success(context, l10n.comingSoon);
+                    },
+                    child: Text(
+                      l10n.loginForgotPassword,
+                      style: theme.textTheme.bodySmall?.copyWith(
+                        color: theme.colorScheme.primary,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ),
+                ],
               ),
-            ),
-          ],
-        ),
-      ],
+            ],
+          ),
+        );
+      },
     );
   }
 }

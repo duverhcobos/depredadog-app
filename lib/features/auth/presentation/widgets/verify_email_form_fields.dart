@@ -70,75 +70,80 @@ class _VerifyEmailFormFieldsState extends State<VerifyEmailFormFields> {
             final code = state.code.value;
             final hasError = state.showCodeError && state.code.isNotValid;
             final isFocused = widget.codeFocus.hasFocus;
-            return SizedBox(
-              height: _kCellHeight,
-              child: Stack(
-                alignment: Alignment.center,
-                children: [
-                  // Semántica para TalkBack: el grupo se anuncia como "código
-                  // de verificación, X de 6" — las casillas solas no dicen nada.
-                  Semantics(
-                    label: AppLocalizations.of(context)!
-                        .verifyEmailCodeSemantics(code.length),
-                    child: ExcludeSemantics(
-                      child: Row(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: List.generate(_kCodeLength, (i) {
-                          final isActive =
-                              isFocused &&
-                              i == code.length.clamp(0, _kCodeLength - 1);
-                          return Padding(
-                            padding: EdgeInsets.only(left: i == 0 ? 0 : 8),
-                            child: _PinCell(
-                              digit: i < code.length ? code[i] : '',
-                              isActive: isActive,
-                              hasError: hasError,
-                              theme: theme,
-                            ),
-                          );
-                        }),
+            // Convención loading: bloqueo por IgnorePointer — las casillas
+            // conservan su apariencia (no se atenúan); _submit() ya hizo
+            // unfocus así que el campo oculto no puede recibir IME.
+            return IgnorePointer(
+              ignoring: state.isInProgress,
+              child: SizedBox(
+                height: _kCellHeight,
+                child: Stack(
+                  alignment: Alignment.center,
+                  children: [
+                    // Semántica para TalkBack: el grupo se anuncia como "código
+                    // de verificación, X de 6" — las casillas solas no dicen nada.
+                    Semantics(
+                      label: AppLocalizations.of(context)!
+                          .verifyEmailCodeSemantics(code.length),
+                      child: ExcludeSemantics(
+                        child: Row(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: List.generate(_kCodeLength, (i) {
+                            final isActive =
+                                isFocused &&
+                                i == code.length.clamp(0, _kCodeLength - 1);
+                            return Padding(
+                              padding: EdgeInsets.only(left: i == 0 ? 0 : 8),
+                              child: _PinCell(
+                                digit: i < code.length ? code[i] : '',
+                                isActive: isActive,
+                                hasError: hasError,
+                                theme: theme,
+                              ),
+                            );
+                          }),
+                        ),
                       ),
                     ),
-                  ),
-                  Positioned.fill(
-                    // TextField invisible: captura teclado/autofill; el texto
-                    // transparente no se pinta — las casillas hacen el render.
-                    // OJO: el inputDecorationTheme global trae filled+bordes
-                    // por estado — hay que anularlos EXPLÍCITAMENTE o pinta
-                    // una barra encima de las casillas (InputBorder.none solo
-                    // en `border` no basta; bug encontrado por revisor-ui).
-                    child: TextField(
-                      controller: _controller,
-                      focusNode: widget.codeFocus,
-                      autofocus: true,
-                      enabled: !state.isInProgress,
-                      keyboardType: TextInputType.number,
-                      inputFormatters: [
-                        FilteringTextInputFormatter.digitsOnly,
-                        LengthLimitingTextInputFormatter(_kCodeLength),
-                      ],
-                      autofillHints: const [AutofillHints.oneTimeCode],
-                      showCursor: false,
-                      // enableInteractiveSelection queda en true (default):
-                      // el menú contextual permite PEGAR un código copiado —
-                      // el formatter igual lo limita a 6 dígitos (revisor-ui).
-                      style: const TextStyle(color: Colors.transparent),
-                      decoration: const InputDecoration(
-                        filled: false,
-                        border: InputBorder.none,
-                        enabledBorder: InputBorder.none,
-                        focusedBorder: InputBorder.none,
-                        disabledBorder: InputBorder.none,
-                        errorBorder: InputBorder.none,
-                        focusedErrorBorder: InputBorder.none,
-                        isCollapsed: true,
-                        contentPadding: EdgeInsets.zero,
+                    Positioned.fill(
+                      // TextField invisible: captura teclado/autofill; el texto
+                      // transparente no se pinta — las casillas hacen el render.
+                      // OJO: el inputDecorationTheme global trae filled+bordes
+                      // por estado — hay que anularlos EXPLÍCITAMENTE o pinta
+                      // una barra encima de las casillas (InputBorder.none solo
+                      // en `border` no basta; bug encontrado por revisor-ui).
+                      child: TextField(
+                        controller: _controller,
+                        focusNode: widget.codeFocus,
+                        autofocus: true,
+                        keyboardType: TextInputType.number,
+                        inputFormatters: [
+                          FilteringTextInputFormatter.digitsOnly,
+                          LengthLimitingTextInputFormatter(_kCodeLength),
+                        ],
+                        autofillHints: const [AutofillHints.oneTimeCode],
+                        showCursor: false,
+                        // enableInteractiveSelection queda en true (default):
+                        // el menú contextual permite PEGAR un código copiado —
+                        // el formatter igual lo limita a 6 dígitos (revisor-ui).
+                        style: const TextStyle(color: Colors.transparent),
+                        decoration: const InputDecoration(
+                          filled: false,
+                          border: InputBorder.none,
+                          enabledBorder: InputBorder.none,
+                          focusedBorder: InputBorder.none,
+                          disabledBorder: InputBorder.none,
+                          errorBorder: InputBorder.none,
+                          focusedErrorBorder: InputBorder.none,
+                          isCollapsed: true,
+                          contentPadding: EdgeInsets.zero,
+                        ),
+                        onChanged: _onChanged,
+                        onSubmitted: (_) => widget.onSubmit(),
                       ),
-                      onChanged: _onChanged,
-                      onSubmitted: (_) => widget.onSubmit(),
                     ),
-                  ),
-                ],
+                  ],
+                ),
               ),
             );
           },

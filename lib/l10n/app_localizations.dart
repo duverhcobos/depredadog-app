@@ -220,11 +220,41 @@ abstract class AppLocalizations {
   /// **'Regístrate'**
   String get loginRegisterLink;
 
-  /// No description provided for @loginDemoSuccess.
+  /// No description provided for @loginErrorInvalidCredentials.
   ///
   /// In es, this message translates to:
-  /// **'Inicio de sesión simulado — sin backend todavía'**
-  String get loginDemoSuccess;
+  /// **'Correo o contraseña incorrectos'**
+  String get loginErrorInvalidCredentials;
+
+  /// No description provided for @loginErrorEmailNotVerified.
+  ///
+  /// In es, this message translates to:
+  /// **'Verifica tu correo antes de iniciar sesión'**
+  String get loginErrorEmailNotVerified;
+
+  /// No description provided for @loginErrorAccountSuspended.
+  ///
+  /// In es, this message translates to:
+  /// **'Tu cuenta está suspendida'**
+  String get loginErrorAccountSuspended;
+
+  /// No description provided for @loginErrorTooManyAttempts.
+  ///
+  /// In es, this message translates to:
+  /// **'Demasiados intentos — espera un momento'**
+  String get loginErrorTooManyAttempts;
+
+  /// No description provided for @loginErrorNoConnection.
+  ///
+  /// In es, this message translates to:
+  /// **'Sin conexión a internet'**
+  String get loginErrorNoConnection;
+
+  /// No description provided for @loginErrorGeneric.
+  ///
+  /// In es, this message translates to:
+  /// **'No se pudo iniciar sesión, intenta de nuevo'**
+  String get loginErrorGeneric;
 
   /// No description provided for @comingSoon.
   ///
