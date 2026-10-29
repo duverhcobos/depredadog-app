@@ -51,10 +51,33 @@ void main() {
 
   void stubRemoteThrows(NetworkException e) => stubRemoteLogin(() => throw e);
 
-  Future<Object> callLogin() => repository.login(
-    email: 'test@depredadog.com',
-    password: 'secreto1',
-  );
+  Future<Object> callLogin() =>
+      repository.login(email: 'test@depredadog.com', password: 'secreto1');
+
+  void stubRemoteVerify(Future<LoginResult> Function() answer) => when(
+    () => remote.verifyEmail(
+      email: any(named: 'email'),
+      code: any(named: 'code'),
+      deviceFingerprint: any(named: 'deviceFingerprint'),
+      platform: any(named: 'platform'),
+    ),
+  ).thenAnswer((_) => answer());
+
+  void stubRemoteVerifyThrows(NetworkException e) =>
+      stubRemoteVerify(() => throw e);
+
+  Future<Object> callVerify() =>
+      repository.verifyEmail(email: 'test@depredadog.com', code: '123456');
+
+  void stubRemoteResend(Future<void> Function() answer) =>
+      when(() => remote.resendVerification(email: any(named: 'email')))
+          .thenAnswer((_) => answer());
+
+  void stubRemoteResendThrows(NetworkException e) =>
+      stubRemoteResend(() => throw e);
+
+  Future<Object> callResend() =>
+      repository.resendVerification(email: 'test@depredadog.com');
 
   setUp(() {
     remote = MockRemoteDataSource();
@@ -170,10 +193,7 @@ void main() {
 
       final result = await callLogin();
 
-      expect(
-        result,
-        const Left<AuthFailure, Object>(TooManyAttemptsFailure()),
-      );
+      expect(result, const Left<AuthFailure, Object>(TooManyAttemptsFailure()));
     });
 
     test('error desconocido → UnknownAuthFailure con el mensaje', () async {
@@ -193,6 +213,137 @@ void main() {
       final result = await callLogin();
 
       expect(result, const Left<AuthFailure, Object>(NoConnectionFailure()));
+    });
+  });
+
+  group('AuthRepositoryImpl.verifyEmail', () {
+    test(
+      'éxito: guarda la sesión y devuelve el usuario (auto-login)',
+      () async {
+        stubRemoteVerify(() async => loginResult);
+
+        final result = await repository.verifyEmail(
+          email: 'test@depredadog.com',
+          code: '123456',
+        );
+
+        expect(result, const Right<AuthFailure, UserModel>(user));
+        verify(
+          () => remote.verifyEmail(
+            email: 'test@depredadog.com',
+            code: '123456',
+            deviceFingerprint: 'fp-123',
+            platform: 'android',
+          ),
+        ).called(1);
+        verify(
+          () => local.saveSession(
+            accessToken: 'access-token',
+            refreshToken: 'refresh-token',
+          ),
+        ).called(1);
+      },
+    );
+
+    test('sin conexión: NoConnectionFailure sin tocar el datasource', () async {
+      when(() => networkInfo.isConnected).thenAnswer((_) async => false);
+
+      final result = await callVerify();
+
+      expect(result, const Left<AuthFailure, Object>(NoConnectionFailure()));
+      verifyNever(
+        () => remote.verifyEmail(
+          email: any(named: 'email'),
+          code: any(named: 'code'),
+          deviceFingerprint: any(named: 'deviceFingerprint'),
+          platform: any(named: 'platform'),
+        ),
+      );
+    });
+
+    test('400 "Invalid or expired code" → InvalidCodeFailure', () async {
+      stubRemoteVerifyThrows(
+        const ServerException('Invalid or expired code', statusCode: 400),
+      );
+
+      final result = await callVerify();
+
+      expect(result, const Left<AuthFailure, Object>(InvalidCodeFailure()));
+      verifyNever(
+        () => local.saveSession(
+          accessToken: any(named: 'accessToken'),
+          refreshToken: any(named: 'refreshToken'),
+        ),
+      );
+    });
+
+    test('429 → TooManyAttemptsFailure', () async {
+      stubRemoteVerifyThrows(
+        const ServerException('Too many requests', statusCode: 429),
+      );
+
+      final result = await callVerify();
+
+      expect(result, const Left<AuthFailure, Object>(TooManyAttemptsFailure()));
+    });
+
+    test(
+      'respuesta malformada (cast del datasource) → UnknownAuthFailure',
+      () async {
+        // Un 200 sin la forma esperada revienta en el `as String` del
+        // datasource — no es NetworkException: el catch genérico lo traduce
+        // a Unknown en vez de dejarlo escapar al cubit.
+        stubRemoteVerify(() => throw const FormatException('unexpected body'));
+
+        final result = await callVerify();
+
+        expect(
+          result,
+          const Left<AuthFailure, Object>(
+            UnknownAuthFailure('FormatException: unexpected body'),
+          ),
+        );
+      },
+    );
+  });
+
+  group('AuthRepositoryImpl.resendVerification', () {
+    test('éxito: Right(null) — el backend responde 200 siempre', () async {
+      stubRemoteResend(() async {});
+
+      final result = await repository.resendVerification(
+        email: 'test@depredadog.com',
+      );
+
+      expect(result, const Right<AuthFailure, void>(null));
+      verify(() => remote.resendVerification(email: 'test@depredadog.com'))
+          .called(1);
+      // Resend nunca toca la sesión — no emite tokens.
+      verifyNever(
+        () => local.saveSession(
+          accessToken: any(named: 'accessToken'),
+          refreshToken: any(named: 'refreshToken'),
+        ),
+      );
+    });
+
+    test('sin conexión: NoConnectionFailure sin tocar el datasource', () async {
+      when(() => networkInfo.isConnected).thenAnswer((_) async => false);
+
+      final result = await callResend();
+
+      expect(result, const Left<AuthFailure, Object>(NoConnectionFailure()));
+      verifyNever(() => remote.resendVerification(email: any(named: 'email')));
+    });
+
+    test('429 → TooManyAttemptsFailure', () async {
+      stubRemoteResendThrows(
+        const ServerException('Too many requests', statusCode: 429),
+      );
+
+      final result = await callResend();
+
+      expect(result, const Left<AuthFailure, Object>(TooManyAttemptsFailure()));
     });
   });
 }

@@ -57,11 +57,63 @@ class AuthRepositoryImpl implements IAuthRepository {
     }
   }
 
+  @override
+  Future<Either<AuthFailure, User>> verifyEmail({
+    required String email,
+    required String code,
+  }) async {
+    if (!await _networkInfo.isConnected) {
+      return const Left(NoConnectionFailure());
+    }
+    try {
+      final fingerprint = await _deviceInfoProvider.fingerprint();
+      final result = await _remoteDataSource.verifyEmail(
+        email: email,
+        code: code,
+        deviceFingerprint: fingerprint,
+        platform: _deviceInfoProvider.platform,
+      );
+      await _localDataSource.saveSession(
+        accessToken: result.accessToken,
+        refreshToken: result.refreshToken,
+      );
+      return Right(result.user);
+    } on NetworkException catch (e) {
+      return Left(_mapFailure(e));
+    } catch (e) {
+      return Left(UnknownAuthFailure(e.toString()));
+    }
+  }
+
+  @override
+  Future<Either<AuthFailure, void>> resendVerification({
+    required String email,
+  }) async {
+    if (!await _networkInfo.isConnected) {
+      return const Left(NoConnectionFailure());
+    }
+    try {
+      await _remoteDataSource.resendVerification(email: email);
+      return const Right(null);
+    } on NetworkException catch (e) {
+      return Left(_mapFailure(e));
+    } catch (e) {
+      return Left(UnknownAuthFailure(e.toString()));
+    }
+  }
+
   AuthFailure _mapFailure(NetworkException e) {
     if (e is NoConnectionException) return const NoConnectionFailure();
     // 401 en /auth/login solo significa credenciales inválidas (no sesión
     // expirada — este repositorio nunca llama endpoints autenticados).
     if (e is UnauthorizedException) return const InvalidCredentialsFailure();
+    // 400 "Invalid or expired code" cubre código errado, expirado y cuenta
+    // no pendiente (el backend no los distingue — anti-enumeración). Otros
+    // 400 (validación de DTO) caen a Unknown — la UI ya impide formatos
+    // inválidos, así que un 400 ajeno al código es un bug, no un caso UX.
+    if (e.statusCode == 400 && e.message == 'Invalid or expired code') {
+      return const InvalidCodeFailure();
+    }
     if (e.statusCode == 403) {
       if (e.message == 'Email is not verified') {
         return const EmailNotVerifiedFailure();

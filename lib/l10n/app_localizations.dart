@@ -322,11 +322,11 @@ abstract class AppLocalizations {
   /// **'Código reenviado — revisa tu correo'**
   String get verifyEmailResendSuccess;
 
-  /// No description provided for @verifyEmailDemoSuccess.
+  /// No description provided for @verifyEmailErrorInvalidCode.
   ///
   /// In es, this message translates to:
-  /// **'Verificación simulada — sin backend todavía'**
-  String get verifyEmailDemoSuccess;
+  /// **'El código es incorrecto o ya expiró — pide uno nuevo.'**
+  String get verifyEmailErrorInvalidCode;
 }
 
 class _AppLocalizationsDelegate

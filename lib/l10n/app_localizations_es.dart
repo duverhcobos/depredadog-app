@@ -133,6 +133,6 @@ class AppLocalizationsEs extends AppLocalizations {
   String get verifyEmailResendSuccess => 'Código reenviado — revisa tu correo';
 
   @override
-  String get verifyEmailDemoSuccess =>
-      'Verificación simulada — sin backend todavía';
+  String get verifyEmailErrorInvalidCode =>
+      'El código es incorrecto o ya expiró — pide uno nuevo.';
 }

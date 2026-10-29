@@ -1,8 +1,13 @@
 import 'package:equatable/equatable.dart';
 
+import '../../domain/failures/auth_failure.dart';
 import '../inputs/verify_email_inputs.dart';
 
-enum VerifyEmailStatus { initial, inProgress, success, failure }
+/// `failure` = validación local (código vacío/formato) — ya existía.
+/// `authError` = el backend rechazó verify o resend (código inválido, rate
+/// limit, sin conexión) — trae `authFailure` con el motivo (mismo patrón
+/// que LoginState §004).
+enum VerifyEmailStatus { initial, inProgress, success, failure, authError }
 
 /// `resendTick` incrementa en cada reenvío completado — BlocListener lo usa
 /// para disparar el toast de éxito sin boolean "de un solo uso" propenso a
@@ -16,6 +21,7 @@ class VerifyEmailState extends Equatable {
     this.resendCooldown = 0,
     this.isResending = false,
     this.resendTick = 0,
+    this.authFailure,
   });
 
   final String email;
@@ -28,8 +34,13 @@ class VerifyEmailState extends Equatable {
   final bool isResending;
   final int resendTick;
 
+  /// Solo tiene valor cuando status == authError.
+  final AuthFailure? authFailure;
+
   bool get isInProgress => status == VerifyEmailStatus.inProgress;
-  bool get canResend => resendCooldown == 0 && !isResending;
+  // !isInProgress: un resend durante la verificación invalidaría el código
+  // que el submit tiene en vuelo (misma carrera que submit-durante-resend).
+  bool get canResend => resendCooldown == 0 && !isResending && !isInProgress;
 
   VerifyEmailState copyWith({
     CodeInput? code,
@@ -38,6 +49,7 @@ class VerifyEmailState extends Equatable {
     int? resendCooldown,
     bool? isResending,
     int? resendTick,
+    AuthFailure? authFailure,
   }) {
     return VerifyEmailState(
       email: email,
@@ -47,6 +59,9 @@ class VerifyEmailState extends Equatable {
       resendCooldown: resendCooldown ?? this.resendCooldown,
       isResending: isResending ?? this.isResending,
       resendTick: resendTick ?? this.resendTick,
+      authFailure: status == VerifyEmailStatus.authError
+          ? (authFailure ?? this.authFailure)
+          : null,
     );
   }
 
@@ -59,5 +74,6 @@ class VerifyEmailState extends Equatable {
     resendCooldown,
     isResending,
     resendTick,
+    authFailure,
   ];
 }

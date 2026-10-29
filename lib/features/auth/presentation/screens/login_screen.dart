@@ -64,6 +64,9 @@ class _LoginViewState extends State<_LoginView> {
       switch (failure) {
         InvalidCredentialsFailure() => l10n.loginErrorInvalidCredentials,
         EmailNotVerifiedFailure() => l10n.loginErrorEmailNotVerified,
+        // InvalidCodeFailure solo lo produce /auth/verify-email — acá es
+        // inalcanzable; cae al genérico por exhaustividad del sealed.
+        InvalidCodeFailure() => l10n.loginErrorGeneric,
         AccountSuspendedFailure() => l10n.loginErrorAccountSuspended,
         TooManyAttemptsFailure() => l10n.loginErrorTooManyAttempts,
         NoConnectionFailure() => l10n.loginErrorNoConnection,

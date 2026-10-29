@@ -3,6 +3,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
 import '../../../../l10n/app_localizations.dart';
+import '../../domain/failures/auth_failure.dart';
 import '../cubit/verify_email_cubit.dart';
 import '../cubit/verify_email_state.dart';
 
@@ -65,16 +66,25 @@ class _VerifyEmailFormFieldsState extends State<VerifyEmailFormFields> {
           buildWhen: (p, c) =>
               p.code != c.code ||
               p.showCodeError != c.showCodeError ||
-              p.isInProgress != c.isInProgress,
+              p.isInProgress != c.isInProgress ||
+              p.isResending != c.isResending ||
+              p.authFailure != c.authFailure,
           builder: (context, state) {
             final code = state.code.value;
-            final hasError = state.showCodeError && state.code.isNotValid;
+            // Rojo en validación local O cuando el backend rechazó el
+            // código (InvalidCodeFailure) — un código de 6 dígitos errado
+            // es formz-válido, así que el flag local no basta.
+            final hasError =
+                (state.showCodeError && state.code.isNotValid) ||
+                state.authFailure is InvalidCodeFailure;
             final isFocused = widget.codeFocus.hasFocus;
             // Convención loading: bloqueo por IgnorePointer — las casillas
             // conservan su apariencia (no se atenúan); _submit() ya hizo
             // unfocus así que el campo oculto no puede recibir IME.
+            // isResending también bloquea: teclear durante el reenvío sería
+            // texto que el éxito de ese resend borra en unos segundos.
             return IgnorePointer(
-              ignoring: state.isInProgress,
+              ignoring: state.isInProgress || state.isResending,
               child: SizedBox(
                 height: _kCellHeight,
                 child: Stack(

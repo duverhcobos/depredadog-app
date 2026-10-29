@@ -27,7 +27,14 @@ class AccountSuspendedFailure extends AuthFailure {
   const AccountSuspendedFailure();
 }
 
-/// 429 — rate limit del endpoint (5 req/min en el backend).
+/// 400 en /auth/verify-email — código errado, expirado o cuenta que ya no
+/// está pendiente (el backend da el mismo mensaje a todos — anti-enumeración).
+class InvalidCodeFailure extends AuthFailure {
+  const InvalidCodeFailure();
+}
+
+/// 429 — rate limit del endpoint (throttle del backend: 5/min en login y
+/// verify-email, 3/min en resend-verification).
 class TooManyAttemptsFailure extends AuthFailure {
   const TooManyAttemptsFailure();
 }

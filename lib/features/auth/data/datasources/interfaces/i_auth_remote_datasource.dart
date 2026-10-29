@@ -1,7 +1,8 @@
 import '../../models/user_model.dart';
 
-/// Resultado crudo de /auth/login — el repository decide qué hacer con
-/// cada token (dónde persistirlos); el datasource solo parsea la respuesta.
+/// Resultado crudo de los endpoints que emiten sesión (/auth/login,
+/// /auth/verify-email) — el repository decide qué hacer con cada token
+/// (dónde persistirlos); el datasource solo parsea la respuesta.
 class LoginResult {
   const LoginResult({
     required this.accessToken,
@@ -21,4 +22,15 @@ abstract class IAuthRemoteDataSource {
     String? deviceFingerprint,
     String? platform,
   });
+
+  /// /auth/verify-email devuelve la misma IssuedSession que login —
+  /// se reutiliza LoginResult.
+  Future<LoginResult> verifyEmail({
+    required String email,
+    required String code,
+    String? deviceFingerprint,
+    String? platform,
+  });
+
+  Future<void> resendVerification({required String email});
 }

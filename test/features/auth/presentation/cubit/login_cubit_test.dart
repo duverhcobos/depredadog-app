@@ -93,10 +93,7 @@ void main() {
       ],
       verify: (_) {
         verify(
-          () => useCase(
-            email: 'test@depredadog.com',
-            password: 'secreto1',
-          ),
+          () => useCase(email: 'test@depredadog.com', password: 'secreto1'),
         ).called(1);
         expect(authSession.isAuthenticated, isTrue);
       },

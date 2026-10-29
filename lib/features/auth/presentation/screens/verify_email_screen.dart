@@ -8,6 +8,7 @@ import '../../../../core/di/setup_di.dart';
 import '../../../../core/routes/auth_guard.dart';
 import '../../../../core/widgets/app_toast.dart';
 import '../../../../l10n/app_localizations.dart';
+import '../../domain/failures/auth_failure.dart';
 import '../cubit/verify_email_cubit.dart';
 import '../cubit/verify_email_state.dart';
 import '../widgets/verify_email_form_fields.dart';
@@ -64,6 +65,17 @@ class _VerifyEmailViewState extends State<_VerifyEmailView> {
 
   void _backToLogin() => context.go(AuthGuard.loginRoute);
 
+  /// La UI nunca muestra el texto crudo del backend (i18n-workflow) —
+  /// cada AuthFailure mapea a su copy; las claves loginError* se reusan
+  /// porque el texto es el mismo concepto (rate limit, sin red, genérico).
+  String _authErrorMessage(AppLocalizations l10n, AuthFailure failure) =>
+      switch (failure) {
+        InvalidCodeFailure() => l10n.verifyEmailErrorInvalidCode,
+        TooManyAttemptsFailure() => l10n.loginErrorTooManyAttempts,
+        NoConnectionFailure() => l10n.loginErrorNoConnection,
+        _ => l10n.loginErrorGeneric,
+      };
+
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
@@ -105,13 +117,24 @@ class _VerifyEmailViewState extends State<_VerifyEmailView> {
                       listener: (context, state) {
                         if (state.status == VerifyEmailStatus.success) {
                           TextInput.finishAutofillContext();
-                          AppToast.success(
-                            context,
-                            l10n.verifyEmailDemoSuccess,
-                          );
+                          // Verificar emite sesión (auto-login) — directo
+                          // a /home, sin re-pedir credenciales.
+                          context.go(AuthGuard.homeRoute);
                         } else if (state.status == VerifyEmailStatus.failure) {
                           _codeFocus.requestFocus();
                           AppToast.error(context, l10n.verifyEmailFormInvalid);
+                        } else if (state.status ==
+                                VerifyEmailStatus.authError &&
+                            state.authFailure != null) {
+                          // Refocus solo si el problema es el código — un
+                          // 429 o sin red no tienen nada que corregir ahí.
+                          if (state.authFailure is InvalidCodeFailure) {
+                            _codeFocus.requestFocus();
+                          }
+                          AppToast.error(
+                            context,
+                            _authErrorMessage(l10n, state.authFailure!),
+                          );
                         }
                       },
                     ),
@@ -170,15 +193,22 @@ class _VerifyEmailViewState extends State<_VerifyEmailView> {
                           ),
                           const SizedBox(height: 16),
                           BlocBuilder<VerifyEmailCubit, VerifyEmailState>(
-                            buildWhen: (p, c) => p.status != c.status,
+                            buildWhen: (p, c) =>
+                                p.status != c.status ||
+                                p.isResending != c.isResending,
                             builder: (context, state) {
                               // La Column padre ya es CrossAxisAlignment
                               // .stretch — el botón ocupa todo el ancho solo.
                               // Convención loading: spinner DENTRO del botón
                               // (color onPrimary), el resto de controles ya
                               // queda bloqueado por sus propios `enabled`.
+                              // Inerte durante isResending también: el
+                              // reenvío invalida el código en el server.
                               return ElevatedButton(
-                                onPressed: state.isInProgress ? () {} : _submit,
+                                onPressed:
+                                    (state.isInProgress || state.isResending)
+                                    ? () {}
+                                    : _submit,
                                 child: state.isInProgress
                                     ? SizedBox(
                                         height: 22,

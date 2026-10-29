@@ -8,6 +8,8 @@ import '../../features/auth/data/datasources/interfaces/i_auth_remote_datasource
 import '../../features/auth/data/repositories/auth_repository_impl.dart';
 import '../../features/auth/domain/repositories/i_auth_repository.dart';
 import '../../features/auth/domain/use_cases/login_use_case.dart';
+import '../../features/auth/domain/use_cases/resend_verification_use_case.dart';
+import '../../features/auth/domain/use_cases/verify_email_use_case.dart';
 import '../../features/auth/presentation/cubit/login_cubit.dart';
 import '../../features/auth/presentation/cubit/verify_email_cubit.dart';
 import '../auth/auth_session.dart';
@@ -89,6 +91,12 @@ void setupDI() {
   locator.registerLazySingleton<LoginUseCase>(
     () => LoginUseCase(locator<IAuthRepository>()),
   );
+  locator.registerLazySingleton<VerifyEmailUseCase>(
+    () => VerifyEmailUseCase(locator<IAuthRepository>()),
+  );
+  locator.registerLazySingleton<ResendVerificationUseCase>(
+    () => ResendVerificationUseCase(locator<IAuthRepository>()),
+  );
 
   // --- Cubits ---
   locator.registerFactory<LoginCubit>(
@@ -98,7 +106,12 @@ void setupDI() {
     ),
   );
   locator.registerFactoryParam<VerifyEmailCubit, String, void>(
-    (email, _) => VerifyEmailCubit(email: email),
+    (email, _) => VerifyEmailCubit(
+      email: email,
+      verifyEmailUseCase: locator<VerifyEmailUseCase>(),
+      resendVerificationUseCase: locator<ResendVerificationUseCase>(),
+      authSession: locator<AuthSession>(),
+    ),
   );
 
   // --- Router ---

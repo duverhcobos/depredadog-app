@@ -13,4 +13,14 @@ abstract class IAuthRepository {
     required String email,
     required String password,
   });
+
+  /// Verifica el correo con el código de 6 dígitos. Éxito = sesión ya
+  /// persistida (el backend emite IssuedSession igual que login).
+  Future<Either<AuthFailure, User>> verifyEmail({
+    required String email,
+    required String code,
+  });
+
+  /// Reenvía el código. El backend responde 200 siempre (anti-enumeración).
+  Future<Either<AuthFailure, void>> resendVerification({required String email});
 }
