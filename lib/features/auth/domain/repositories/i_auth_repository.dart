@@ -23,4 +23,11 @@ abstract class IAuthRepository {
 
   /// Reenvía el código. El backend responde 200 siempre (anti-enumeración).
   Future<Either<AuthFailure, void>> resendVerification({required String email});
+
+  /// Valida la sesión guardada contra el backend. Solo el splash la usa
+  /// (decidir login vs home al abrir). Semántica por resultado:
+  /// Right(user) = sesión válida; SessionExpiredFailure = 401, tokens ya
+  /// borrados; NoStoredSessionFailure = sin token local; NoConnection/
+  /// Unknown = no pudo validarse, tokens se conservan.
+  Future<Either<AuthFailure, User>> restoreSession();
 }

@@ -102,10 +102,47 @@ class AuthRepositoryImpl implements IAuthRepository {
     }
   }
 
+  @override
+  Future<Either<AuthFailure, User>> restoreSession() async {
+    try {
+      // Fast path: sin token guardado ni siquiera tocamos red ni
+      // conectividad — el splash resuelve a /login de inmediato.
+      final token = await _localDataSource.readAccessToken();
+      if (token == null || token.isEmpty) {
+        return const Left(NoStoredSessionFailure());
+      }
+      if (!await _networkInfo.isConnected) {
+        // Conservar tokens: la sesión puede seguir válida; el próximo
+        // arranque restaura. No es un "logout".
+        return const Left(NoConnectionFailure());
+      }
+      final user = await _remoteDataSource.getMe();
+      return Right(user);
+    } on NetworkException catch (e) {
+      if (e.statusCode == 401) {
+        // El server declaró la sesión inválida — los tokens locales son
+        // basura (también cubre sesión revocada y cuenta suspendida).
+        // El borrado va protegido: si el storage falla igual se reporta
+        // expirada — el próximo arranque reintenta el 401 de todas formas.
+        try {
+          await _localDataSource.clearSession();
+        } catch (_) {}
+        return const Left(SessionExpiredFailure());
+      }
+      // 429/5xx/timeout: transitorio — conservar tokens.
+      return Left(_mapFailure(e));
+    } catch (e) {
+      // PlatformException de secure storage (keystore dañado), errores de
+      // parseo, etc. — reportar genérico; una excepción cruda acá dejaba
+      // la app congelada en el splash (hallazgo del revisor).
+      return Left(UnknownAuthFailure(e.toString()));
+    }
+  }
+
   AuthFailure _mapFailure(NetworkException e) {
     if (e is NoConnectionException) return const NoConnectionFailure();
-    // 401 en /auth/login solo significa credenciales inválidas (no sesión
-    // expirada — este repositorio nunca llama endpoints autenticados).
+    // 401 en /auth/login solo significa credenciales inválidas — el 401 de
+    // /auth/me se intercepta en restoreSession antes de llegar acá.
     if (e is UnauthorizedException) return const InvalidCredentialsFailure();
     // 400 "Invalid or expired code" cubre código errado, expirado y cuenta
     // no pendiente (el backend no los distingue — anti-enumeración). Otros

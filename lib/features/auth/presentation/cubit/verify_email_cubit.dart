@@ -69,7 +69,7 @@ class VerifyEmailCubit extends Cubit<VerifyEmailState> {
       // el repositorio — acá solo marcamos la sesión en memoria (guard →
       // /home) y reportamos éxito.
       (user) {
-        _authSession.markAuthenticated();
+        _authSession.markAuthenticated(user);
         emit(state.copyWith(status: VerifyEmailStatus.success));
       },
     );

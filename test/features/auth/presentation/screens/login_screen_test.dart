@@ -135,6 +135,7 @@ void main() {
 
     expect(find.text('PANTALLA HOME'), findsOneWidget);
     expect(authSession.isAuthenticated, isTrue);
+    expect(authSession.currentUser, user);
     verify(
       () => loginUseCase(email: 'test@depredadog.com', password: 'secreto1'),
     ).called(1);

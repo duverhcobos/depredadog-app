@@ -96,6 +96,7 @@ void main() {
           () => useCase(email: 'test@depredadog.com', password: 'secreto1'),
         ).called(1);
         expect(authSession.isAuthenticated, isTrue);
+        expect(authSession.currentUser, user);
       },
     );
 

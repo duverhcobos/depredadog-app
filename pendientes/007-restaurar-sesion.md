@@ -1,6 +1,6 @@
 # Pendiente: Restaurar sesión al abrir la app
 
-> **Estado: � PENDIENTE** — diferido por decisión explícita del usuario (propuesta 004)
+> **Estado: 🟢 RESUELTO** — implementado en propuesta 007-auth-me-session-restore
 > **Producto:** frontend
 > **Bloqueo:** recomendado (no bloquea el login en sí; si se lanza así, cada
 > apertura de la app pide login aunque haya sesión guardada)
@@ -31,3 +31,13 @@ o revocado (logout desde otro dispositivo). Esa validación es
 - Cerrar y reabrir la app con sesión previa válida lleva a `/home` sin
   pedir login de nuevo.
 - Un token vencido/revocado limpia la sesión local y pide login.
+
+## Resolución (propuesta 007)
+
+`GET /auth/me` integrado: `IAuthRemoteDataSource.getMe` →
+`AuthRepositoryImpl.restoreSession` (sin token → `NoStoredSessionFailure`
+sin tocar red; 401 → `clearSession` + `SessionExpiredFailure`; offline/5xx
+→ tokens intactos) → `RestoreSessionUseCase` → `SplashCubit`. El splash
+corre el restore en paralelo con la marca mínima de 800 ms y navega a
+`/home` (restored) o `/login` (guest). `AuthSession.markAuthenticated(user)`
+guarda además el usuario en `currentUser` para las pantallas autenticadas.

@@ -62,8 +62,8 @@ class LoginCubit extends Cubit<LoginState> {
         );
         emit(state.copyWith(status: LoginStatus.initial));
       },
-      (_) {
-        _authSession.markAuthenticated();
+      (user) {
+        _authSession.markAuthenticated(user);
         emit(state.copyWith(status: LoginStatus.success));
       },
     );

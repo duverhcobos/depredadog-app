@@ -33,4 +33,8 @@ abstract class IAuthRemoteDataSource {
   });
 
   Future<void> resendVerification({required String email});
+
+  /// GET /auth/me — el AuthInterceptor adjunta el Bearer guardado; acá no
+  /// se arman headers. Devuelve el usuario crudo (UserResponseDto).
+  Future<UserModel> getMe();
 }

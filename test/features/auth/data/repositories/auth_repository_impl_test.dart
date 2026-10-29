@@ -99,6 +99,7 @@ void main() {
         refreshToken: any(named: 'refreshToken'),
       ),
     ).thenAnswer((_) async {});
+    when(() => local.clearSession()).thenAnswer((_) async {});
   });
 
   group('AuthRepositoryImpl.login', () {
@@ -345,5 +346,121 @@ void main() {
 
       expect(result, const Left<AuthFailure, Object>(TooManyAttemptsFailure()));
     });
+  });
+
+  group('AuthRepositoryImpl.restoreSession', () {
+    void stubToken(String? token) =>
+        when(() => local.readAccessToken()).thenAnswer((_) async => token);
+
+    void stubRemoteGetMe(Future<UserModel> Function() answer) =>
+        when(() => remote.getMe()).thenAnswer((_) => answer());
+
+    test(
+      'sin token guardado: NoStoredSessionFailure sin tocar red ni remoto',
+      () async {
+        stubToken(null);
+
+        final result = await repository.restoreSession();
+
+        expect(
+          result,
+          const Left<AuthFailure, Object>(NoStoredSessionFailure()),
+        );
+        verifyNever(() => networkInfo.isConnected);
+        verifyNever(() => remote.getMe());
+      },
+    );
+
+    test(
+      'token vacío: igual que sin token — fast path a NoStoredSession',
+      () async {
+        stubToken('');
+
+        final result = await repository.restoreSession();
+
+        expect(
+          result,
+          const Left<AuthFailure, Object>(NoStoredSessionFailure()),
+        );
+        verifyNever(() => remote.getMe());
+      },
+    );
+
+    test(
+      'offline: NoConnectionFailure conservando los tokens (no es logout)',
+      () async {
+        stubToken('access-token');
+        when(() => networkInfo.isConnected).thenAnswer((_) async => false);
+
+        final result = await repository.restoreSession();
+
+        expect(result, const Left<AuthFailure, Object>(NoConnectionFailure()));
+        verifyNever(() => remote.getMe());
+        verifyNever(() => local.clearSession());
+      },
+    );
+
+    test('200 → Right(user): la sesión guardada sigue válida', () async {
+      stubToken('access-token');
+      stubRemoteGetMe(() async => user);
+
+      final result = await repository.restoreSession();
+
+      expect(result, const Right<AuthFailure, UserModel>(user));
+      verify(() => remote.getMe()).called(1);
+      // El restore nunca reescribe ni borra la sesión cuando es válida.
+      verifyNever(() => local.clearSession());
+      verifyNever(
+        () => local.saveSession(
+          accessToken: any(named: 'accessToken'),
+          refreshToken: any(named: 'refreshToken'),
+        ),
+      );
+    });
+
+    test(
+      '401 → SessionExpiredFailure y limpia los tokens (sesión muerta)',
+      () async {
+        stubToken('access-token');
+        stubRemoteGetMe(() => throw const UnauthorizedException());
+
+        final result = await repository.restoreSession();
+
+        expect(
+          result,
+          const Left<AuthFailure, Object>(SessionExpiredFailure()),
+        );
+        verify(() => local.clearSession()).called(1);
+      },
+    );
+
+    test('getMe lanza NoConnectionException (timeout con checker online): '
+        'NoConnectionFailure conservando los tokens', () async {
+      stubToken('access-token');
+      stubRemoteGetMe(() => throw const NoConnectionException());
+
+      final result = await repository.restoreSession();
+
+      expect(result, const Left<AuthFailure, Object>(NoConnectionFailure()));
+      verifyNever(() => local.clearSession());
+    });
+
+    test(
+      '500 → UnknownAuthFailure conservando los tokens (error transitorio)',
+      () async {
+        stubToken('access-token');
+        stubRemoteGetMe(
+          () => throw const ServerException('Boom', statusCode: 500),
+        );
+
+        final result = await repository.restoreSession();
+
+        expect(
+          result,
+          const Left<AuthFailure, Object>(UnknownAuthFailure('Boom')),
+        );
+        verifyNever(() => local.clearSession());
+      },
+    );
   });
 }

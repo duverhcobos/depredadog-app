@@ -108,6 +108,7 @@ void main() {
       verify: (_) {
         verify(() => verifyUseCase(email: email, code: '123456')).called(1);
         expect(authSession.isAuthenticated, isTrue);
+        expect(authSession.currentUser, user);
       },
     );
 

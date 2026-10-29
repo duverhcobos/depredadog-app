@@ -3,8 +3,10 @@ import '../../models/user_model.dart';
 import '../interfaces/i_auth_remote_datasource.dart';
 
 /// SOLID (SRP): solo construye el body y parsea la respuesta de los
-/// endpoints públicos de auth (/auth/login, /auth/verify-email,
-/// /auth/resend-verification). Nunca loguea email/password ni los tokens.
+/// endpoints de auth — públicos (/auth/login, /auth/verify-email,
+/// /auth/resend-verification) y autenticados (/auth/me — el Bearer lo
+/// adjunta el AuthInterceptor, acá no se arman headers). Nunca loguea
+/// email/password ni los tokens.
 class AuthRemoteDataSourceImpl implements IAuthRemoteDataSource {
   const AuthRemoteDataSourceImpl({required this._networkService});
 
@@ -64,5 +66,11 @@ class AuthRemoteDataSourceImpl implements IAuthRemoteDataSource {
       '/auth/resend-verification',
       body: {'email': email},
     );
+  }
+
+  @override
+  Future<UserModel> getMe() async {
+    final response = await _networkService.get('/auth/me');
+    return UserModel.fromJson(response as Map<String, dynamic>);
   }
 }

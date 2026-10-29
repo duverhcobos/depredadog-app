@@ -39,6 +39,19 @@ class TooManyAttemptsFailure extends AuthFailure {
   const TooManyAttemptsFailure();
 }
 
+/// 401 en /auth/me — token vencido/inválido, sesión revocada o cuenta que
+/// ya no está ACTIVE (el backend no distingue — SessionNotFoundException).
+/// El repositorio ya borró los tokens locales cuando emite esto.
+class SessionExpiredFailure extends AuthFailure {
+  const SessionExpiredFailure();
+}
+
+/// No hay tokens en secure storage — ni siquiera se intenta la red.
+/// Resultado normal del primer arranque, no un error visible al usuario.
+class NoStoredSessionFailure extends AuthFailure {
+  const NoStoredSessionFailure();
+}
+
 /// Sin conectividad (INetworkInfo o timeout de conexión).
 class NoConnectionFailure extends AuthFailure {
   const NoConnectionFailure();

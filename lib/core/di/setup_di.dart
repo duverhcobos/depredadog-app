@@ -9,8 +9,10 @@ import '../../features/auth/data/repositories/auth_repository_impl.dart';
 import '../../features/auth/domain/repositories/i_auth_repository.dart';
 import '../../features/auth/domain/use_cases/login_use_case.dart';
 import '../../features/auth/domain/use_cases/resend_verification_use_case.dart';
+import '../../features/auth/domain/use_cases/restore_session_use_case.dart';
 import '../../features/auth/domain/use_cases/verify_email_use_case.dart';
 import '../../features/auth/presentation/cubit/login_cubit.dart';
+import '../../features/auth/presentation/cubit/splash_cubit.dart';
 import '../../features/auth/presentation/cubit/verify_email_cubit.dart';
 import '../auth/auth_session.dart';
 import '../device/implementations/device_info_provider_impl.dart';
@@ -97,8 +99,17 @@ void setupDI() {
   locator.registerLazySingleton<ResendVerificationUseCase>(
     () => ResendVerificationUseCase(locator<IAuthRepository>()),
   );
+  locator.registerLazySingleton<RestoreSessionUseCase>(
+    () => RestoreSessionUseCase(locator<IAuthRepository>()),
+  );
 
   // --- Cubits ---
+  locator.registerFactory<SplashCubit>(
+    () => SplashCubit(
+      restoreSessionUseCase: locator<RestoreSessionUseCase>(),
+      authSession: locator<AuthSession>(),
+    ),
+  );
   locator.registerFactory<LoginCubit>(
     () => LoginCubit(
       loginUseCase: locator<LoginUseCase>(),
@@ -115,9 +126,8 @@ void setupDI() {
   );
 
   // --- Router ---
-  // AuthGuard lee la sesión real en memoria — login la marca al tener
-  // éxito; restaurarla leyendo el token guardado al abrir la app queda
-  // diferido (pendientes/ — junto con /auth/me).
+  // AuthGuard lee la sesión real en memoria — login/verify la marcan al
+  // tener éxito y el splash la restaura vía /auth/me al abrir la app.
   locator.registerLazySingleton<AuthGuard>(
     () => AuthGuard(
       isAuthenticated: () => locator<AuthSession>().isAuthenticated,
