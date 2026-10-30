@@ -59,5 +59,81 @@
     }
   },
   "verifyEmailResendSuccess": "Código reenviado — revisa tu correo",
-  "verifyEmailErrorInvalidCode": "El código es incorrecto o ya expiró — pide uno nuevo."
+  "verifyEmailErrorInvalidCode": "El código es incorrecto o ya expiró — pide uno nuevo.",
+  "registerStepDataLabel": "Datos",
+  "registerStepAccountLabel": "Cuenta",
+  "registerStepReviewLabel": "Revisión",
+  "registerStep1Title": "Cuéntanos quién eres",
+  "registerStep1Subtitle": "Empecemos por tus datos personales.",
+  "registerStep2Title": "Tu correo y tu llave",
+  "registerStep2Subtitle": "Con estos datos entrarás a tu cuenta.",
+  "registerStep3Title": "Todo listo, {name}",
+  "@registerStep3Title": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "registerStep3Subtitle": "Revisa que todo esté bien.",
+  "registerStepProgress": "Paso {current} de {total}",
+  "@registerStepProgress": {
+    "placeholders": {
+      "current": {
+        "type": "int"
+      },
+      "total": {
+        "type": "int"
+      }
+    }
+  },
+  "registerStepItemLabel": "Paso {number}: {label}, {status}",
+  "@registerStepItemLabel": {
+    "placeholders": {
+      "number": {
+        "type": "int"
+      },
+      "label": {
+        "type": "String"
+      },
+      "status": {
+        "type": "String"
+      }
+    }
+  },
+  "registerStepStatusCompleted": "completado",
+  "registerStepStatusCurrent": "actual",
+  "registerStepStatusPending": "pendiente",
+  "registerContinue": "Continuar",
+  "registerBackStep": "Atrás",
+  "registerReviewName": "Nombre",
+  "registerReviewEmail": "Correo",
+  "registerReviewPhone": "Teléfono",
+  "registerReviewNoPhone": "Sin teléfono",
+  "registerFirstNameLabel": "Primer nombre *",
+  "registerFirstNameHint": "Ej: Ana",
+  "registerSecondNameLabel": "Segundo nombre (opcional)",
+  "registerLastNameLabel": "Primer apellido *",
+  "registerLastNameHint": "Ej: Pérez",
+  "registerSecondLastNameLabel": "Segundo apellido (opcional)",
+  "registerEmailLabel": "Correo electrónico *",
+  "registerPhoneLabel": "Teléfono (opcional)",
+  "registerPhoneHint": "Ej: 300 123 4567",
+  "registerPasswordLabel": "Contraseña *",
+  "registerPasswordHint": "Mínimo 8 caracteres",
+  "registerConfirmPasswordLabel": "Confirmar contraseña *",
+  "registerConfirmPasswordHint": "Repite tu contraseña",
+  "registerNameRequired": "Ingresa tu nombre",
+  "registerNameInvalid": "Nombre incorrecto",
+  "registerLastNameRequired": "Ingresa tu apellido",
+  "registerLastNameInvalid": "Apellido incorrecto",
+  "registerPhoneInvalid": "Teléfono incorrecto",
+  "registerEmailInvalid": "Correo incorrecto",
+  "registerPasswordRequired": "Ingresa una contraseña",
+  "registerPasswordInvalid": "Contraseña incorrecta",
+  "registerConfirmRequired": "Confirma tu contraseña",
+  "registerConfirmMismatch": "Las contraseñas no coinciden",
+  "registerButton": "Crear cuenta",
+  "registerHasAccount": "¿Ya tienes cuenta? ",
+  "registerLoginLink": "Inicia sesión"
 }

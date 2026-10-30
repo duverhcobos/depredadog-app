@@ -327,6 +327,282 @@ abstract class AppLocalizations {
   /// In es, this message translates to:
   /// **'El código es incorrecto o ya expiró — pide uno nuevo.'**
   String get verifyEmailErrorInvalidCode;
+
+  /// No description provided for @registerStepDataLabel.
+  ///
+  /// In es, this message translates to:
+  /// **'Datos'**
+  String get registerStepDataLabel;
+
+  /// No description provided for @registerStepAccountLabel.
+  ///
+  /// In es, this message translates to:
+  /// **'Cuenta'**
+  String get registerStepAccountLabel;
+
+  /// No description provided for @registerStepReviewLabel.
+  ///
+  /// In es, this message translates to:
+  /// **'Revisión'**
+  String get registerStepReviewLabel;
+
+  /// No description provided for @registerStep1Title.
+  ///
+  /// In es, this message translates to:
+  /// **'Cuéntanos quién eres'**
+  String get registerStep1Title;
+
+  /// No description provided for @registerStep1Subtitle.
+  ///
+  /// In es, this message translates to:
+  /// **'Empecemos por tus datos personales.'**
+  String get registerStep1Subtitle;
+
+  /// No description provided for @registerStep2Title.
+  ///
+  /// In es, this message translates to:
+  /// **'Tu correo y tu llave'**
+  String get registerStep2Title;
+
+  /// No description provided for @registerStep2Subtitle.
+  ///
+  /// In es, this message translates to:
+  /// **'Con estos datos entrarás a tu cuenta.'**
+  String get registerStep2Subtitle;
+
+  /// No description provided for @registerStep3Title.
+  ///
+  /// In es, this message translates to:
+  /// **'Todo listo, {name}'**
+  String registerStep3Title(String name);
+
+  /// No description provided for @registerStep3Subtitle.
+  ///
+  /// In es, this message translates to:
+  /// **'Revisa que todo esté bien.'**
+  String get registerStep3Subtitle;
+
+  /// No description provided for @registerStepProgress.
+  ///
+  /// In es, this message translates to:
+  /// **'Paso {current} de {total}'**
+  String registerStepProgress(int current, int total);
+
+  /// No description provided for @registerStepItemLabel.
+  ///
+  /// In es, this message translates to:
+  /// **'Paso {number}: {label}, {status}'**
+  String registerStepItemLabel(int number, String label, String status);
+
+  /// No description provided for @registerStepStatusCompleted.
+  ///
+  /// In es, this message translates to:
+  /// **'completado'**
+  String get registerStepStatusCompleted;
+
+  /// No description provided for @registerStepStatusCurrent.
+  ///
+  /// In es, this message translates to:
+  /// **'actual'**
+  String get registerStepStatusCurrent;
+
+  /// No description provided for @registerStepStatusPending.
+  ///
+  /// In es, this message translates to:
+  /// **'pendiente'**
+  String get registerStepStatusPending;
+
+  /// No description provided for @registerContinue.
+  ///
+  /// In es, this message translates to:
+  /// **'Continuar'**
+  String get registerContinue;
+
+  /// No description provided for @registerBackStep.
+  ///
+  /// In es, this message translates to:
+  /// **'Atrás'**
+  String get registerBackStep;
+
+  /// No description provided for @registerReviewName.
+  ///
+  /// In es, this message translates to:
+  /// **'Nombre'**
+  String get registerReviewName;
+
+  /// No description provided for @registerReviewEmail.
+  ///
+  /// In es, this message translates to:
+  /// **'Correo'**
+  String get registerReviewEmail;
+
+  /// No description provided for @registerReviewPhone.
+  ///
+  /// In es, this message translates to:
+  /// **'Teléfono'**
+  String get registerReviewPhone;
+
+  /// No description provided for @registerReviewNoPhone.
+  ///
+  /// In es, this message translates to:
+  /// **'Sin teléfono'**
+  String get registerReviewNoPhone;
+
+  /// No description provided for @registerFirstNameLabel.
+  ///
+  /// In es, this message translates to:
+  /// **'Primer nombre *'**
+  String get registerFirstNameLabel;
+
+  /// No description provided for @registerFirstNameHint.
+  ///
+  /// In es, this message translates to:
+  /// **'Ej: Ana'**
+  String get registerFirstNameHint;
+
+  /// No description provided for @registerSecondNameLabel.
+  ///
+  /// In es, this message translates to:
+  /// **'Segundo nombre (opcional)'**
+  String get registerSecondNameLabel;
+
+  /// No description provided for @registerLastNameLabel.
+  ///
+  /// In es, this message translates to:
+  /// **'Primer apellido *'**
+  String get registerLastNameLabel;
+
+  /// No description provided for @registerLastNameHint.
+  ///
+  /// In es, this message translates to:
+  /// **'Ej: Pérez'**
+  String get registerLastNameHint;
+
+  /// No description provided for @registerSecondLastNameLabel.
+  ///
+  /// In es, this message translates to:
+  /// **'Segundo apellido (opcional)'**
+  String get registerSecondLastNameLabel;
+
+  /// No description provided for @registerEmailLabel.
+  ///
+  /// In es, this message translates to:
+  /// **'Correo electrónico *'**
+  String get registerEmailLabel;
+
+  /// No description provided for @registerPhoneLabel.
+  ///
+  /// In es, this message translates to:
+  /// **'Teléfono (opcional)'**
+  String get registerPhoneLabel;
+
+  /// No description provided for @registerPhoneHint.
+  ///
+  /// In es, this message translates to:
+  /// **'Ej: 300 123 4567'**
+  String get registerPhoneHint;
+
+  /// No description provided for @registerPasswordLabel.
+  ///
+  /// In es, this message translates to:
+  /// **'Contraseña *'**
+  String get registerPasswordLabel;
+
+  /// No description provided for @registerPasswordHint.
+  ///
+  /// In es, this message translates to:
+  /// **'Mínimo 8 caracteres'**
+  String get registerPasswordHint;
+
+  /// No description provided for @registerConfirmPasswordLabel.
+  ///
+  /// In es, this message translates to:
+  /// **'Confirmar contraseña *'**
+  String get registerConfirmPasswordLabel;
+
+  /// No description provided for @registerConfirmPasswordHint.
+  ///
+  /// In es, this message translates to:
+  /// **'Repite tu contraseña'**
+  String get registerConfirmPasswordHint;
+
+  /// No description provided for @registerNameRequired.
+  ///
+  /// In es, this message translates to:
+  /// **'Ingresa tu nombre'**
+  String get registerNameRequired;
+
+  /// No description provided for @registerNameInvalid.
+  ///
+  /// In es, this message translates to:
+  /// **'Nombre incorrecto'**
+  String get registerNameInvalid;
+
+  /// No description provided for @registerLastNameRequired.
+  ///
+  /// In es, this message translates to:
+  /// **'Ingresa tu apellido'**
+  String get registerLastNameRequired;
+
+  /// No description provided for @registerLastNameInvalid.
+  ///
+  /// In es, this message translates to:
+  /// **'Apellido incorrecto'**
+  String get registerLastNameInvalid;
+
+  /// No description provided for @registerPhoneInvalid.
+  ///
+  /// In es, this message translates to:
+  /// **'Teléfono incorrecto'**
+  String get registerPhoneInvalid;
+
+  /// No description provided for @registerEmailInvalid.
+  ///
+  /// In es, this message translates to:
+  /// **'Correo incorrecto'**
+  String get registerEmailInvalid;
+
+  /// No description provided for @registerPasswordRequired.
+  ///
+  /// In es, this message translates to:
+  /// **'Ingresa una contraseña'**
+  String get registerPasswordRequired;
+
+  /// No description provided for @registerPasswordInvalid.
+  ///
+  /// In es, this message translates to:
+  /// **'Contraseña incorrecta'**
+  String get registerPasswordInvalid;
+
+  /// No description provided for @registerConfirmRequired.
+  ///
+  /// In es, this message translates to:
+  /// **'Confirma tu contraseña'**
+  String get registerConfirmRequired;
+
+  /// No description provided for @registerConfirmMismatch.
+  ///
+  /// In es, this message translates to:
+  /// **'Las contraseñas no coinciden'**
+  String get registerConfirmMismatch;
+
+  /// No description provided for @registerButton.
+  ///
+  /// In es, this message translates to:
+  /// **'Crear cuenta'**
+  String get registerButton;
+
+  /// No description provided for @registerHasAccount.
+  ///
+  /// In es, this message translates to:
+  /// **'¿Ya tienes cuenta? '**
+  String get registerHasAccount;
+
+  /// No description provided for @registerLoginLink.
+  ///
+  /// In es, this message translates to:
+  /// **'Inicia sesión'**
+  String get registerLoginLink;
 }
 
 class _AppLocalizationsDelegate

@@ -63,7 +63,13 @@ class _VerifyEmailViewState extends State<_VerifyEmailView> {
     context.read<VerifyEmailCubit>().submit();
   }
 
-  void _backToLogin() => context.go(AuthGuard.loginRoute);
+  void _backToLogin() {
+    // Submit o reenvío en vuelo: el back espera — bloqueado, no atenuado
+    // (misma homologación que register — hallazgo revisor-ui).
+    final s = context.read<VerifyEmailCubit>().state;
+    if (s.isInProgress || s.isResending) return;
+    context.go(AuthGuard.loginRoute);
+  }
 
   /// La UI nunca muestra el texto crudo del backend (i18n-workflow) —
   /// cada AuthFailure mapea a su copy; las claves loginError* se reusan
@@ -99,10 +105,20 @@ class _VerifyEmailViewState extends State<_VerifyEmailView> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              IconButton(
-                icon: const Icon(Icons.arrow_back),
-                tooltip: l10n.commonBack,
-                onPressed: _backToLogin,
+              // La flecha también queda bloqueada durante submit/reenvío
+              // (IgnorePointer — apariencia intacta).
+              BlocBuilder<VerifyEmailCubit, VerifyEmailState>(
+                buildWhen: (p, c) =>
+                    p.isInProgress != c.isInProgress ||
+                    p.isResending != c.isResending,
+                builder: (context, state) => IgnorePointer(
+                  ignoring: state.isInProgress || state.isResending,
+                  child: IconButton(
+                    icon: const Icon(Icons.arrow_back),
+                    tooltip: l10n.commonBack,
+                    onPressed: _backToLogin,
+                  ),
+                ),
               ),
               Expanded(
                 // Dos listeners separados: con uno solo, el `else if

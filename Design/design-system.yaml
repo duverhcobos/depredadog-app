@@ -4,8 +4,8 @@
 
 meta:
   product: Depredadog
-  version: 1.10.0
-  updated: 2026-10-29
+  version: 1.11.0
+  updated: 2026-10-30
 
 palette:
   # Identidad Depredadog — "condimentos" (definida por el usuario, §001):
@@ -67,6 +67,8 @@ components:
     description: "Fila bajo el campo contraseña: Checkbox 'Recuérdame' (compacto, tap en texto alterna) a la izquierda + link '¿Olvidaste tu contraseña?' (bodySmall primary w600) a la derecha. rememberMe decidirá en integración si el refresh token persiste entre sesiones."
   login_brand_header:
     description: "Imagotipo vertical 148px (Hero tag HeroTags.brandImagotipo, vuela desde el splash) + headline primary + subtítulo (bodyMedium onSurface 70%). Asset por tema: imagotipo_depredadog.png (=imagotipo_negro_*) en claro; imagotipo_depredadog_dark.png (=imagotipo__1*, trazos blancos + color) en oscuro — con MVP solo oscuro (app_theme_mode) siempre resuelve a la variante dark. Densidades 1.5x–4x."
+  register_stepper:
+    description: "Indicador de 3 pasos (register, §009): 3 círculos 32px + conectores 2px + labels 'Datos'/'Cuenta'/'Revisión'. Estados: actual=círculo lleno primary + número onPrimary + label w600; completado=círculo tenue con ✓ + conector lleno; pendiente=outline + conector tenue. SOLO visual — no navega al tocar (la navegación es flecha/Atrás/back). Implementación: 3 segmentos Expanded simétricos, cada uno = media línea + círculo + media línea, así los conectores tocan el borde del círculo sin aire (el OverflowBox inicial se descartó — reventaba con altura infinita en tests y emulador). Fijo fuera del SingleChildScrollView con 16px al título. A11y: liveRegion anuncia 'Paso X de 3'; cada segmento expone label+estado (completado/pendiente) y selected en el actual."
 
 screens:
   splash:
@@ -78,10 +80,25 @@ screens:
   verify_email:
     route: "/verify-email"
     spec: "Se llega desde login cuando el backend responde 'correo no verificado' (o con email en extra). Scaffold liso + PopScope(canPop:false → _backToLogin): la flecha top-left FIJA (fuera del bloque centrado — antes flotaba dentro de la Column centrada, bug detectado) y el back nativo de Android ambos van a /login porque se llega con go() y no hay stack que pop. Contenido centrado+scroll: ícono de marca icono_verificar_correo.svg (80px, flutter_svg, elemento firma — ExcludeSemantics, el headline ya describe), headline primary + subtítulo con el email destino, casillas OTP (componente verify_email_code_input), CTA 'Verificar' (loading: spinner DENTRO del botón, ver elevated_button_primary; campo y reenviar se bloquean por IgnorePointer en isInProgress), fila '¿No recibiste el código? Reenviar' con cooldown real 60s ('Reenviar en Ns', TextButton deshabilitado — el disabled visible del cooldown sí pinta: es su estado semántico, no un bloqueo de loading). Feedback por AppToast: error genérico 'Ingresa el código de 6 dígitos' (cubre vacío/parcial), 'Código reenviado', 'Verificación simulada'. resend() limpia código+error (el código viejo queda invalidado) y el TextField oculto se resincroniza por listener. PROVISIONAL: submit y reenvío simulados — sin endpoints todavía."
+  register:
+    route: "/register"
+    spec: "Wizard de 3 pasos (§008 + §009 — aprobado por el usuario: el formulario único de 8 inputs era denso). Header compacto SIN imagotipo (decisión del usuario): flecha top-left + register_stepper fijo + headline primary por paso ('Cuéntanos quién eres' / 'Tu correo y tu llave' / 'Todo listo, {firstName}') + subtítulo. Paso 1 'Datos': 4 campos LatAm (primer nombre*, segundo nombre, primer apellido*, segundo apellido) + teléfono opcional; sanitización compartida — solo letras latinas con tilde/ñ/ü + espacio + apóstrofe (' y ’), SIN guion (decisión del usuario), filtro al teclear + validación. Teléfono: solo dígitos máx 10, celular colombiano ^3\\d{9}$ (decisión: solo celular, solo dígitos). Paso 2 'Cuenta': email + contraseña (helper 'Mínimo 8 caracteres' bajo el campo) + confirmar con ojos de visibilidad independientes. Paso 3 'Revisión': tarjeta Nombre compuesto/Correo/Teléfono o 'Sin teléfono' — la contraseña nunca se muestra. Navegación (modelo del usuario): flecha top-left SIEMPRE sale a /login (abandonar, no retrocede pasos); TextButton 'Atrás' a la izquierda del primario (solo pasos 2-3) retrocede un paso conservando lo tipeado; back nativo Android retrocede paso (paso 1 sale). Transición AnimatedSwitcher ~250ms + AnimatedSize; scroll reset por paso; contenido top-aligned. Teclado NUNCA abre solo al cambiar de paso (decisión del usuario tras probarlo) — solo al tocar campo o cuando 'Continuar' falla (foco al primer inválido del paso, no navega a otro paso). Validación por paso; submit revalida todo. Errores de campo GENÉRICOS (decisión del usuario): 'Teléfono/Correo/Contraseña/Nombre/Apellido incorrecto' — no revelan la regla; 'Mínimo 8 caracteres' vive como hint, no error. Footer persistente '¿Ya tienes cuenta? Inicia sesión' (hit area ≥44dp + Semantics button). Durante submit: IgnorePointer en todo lo interactivo + guard isInProgress en el cubit. PROVISIONAL: submit simulado 800ms → /verify-email con email en extra y shouldSave:false (sin modal de Google)."
   welcome:
     status: "ELIMINADA (decisión del usuario) — splash va directo a /login para no autenticados"
 
 changelog:
+  - version: "1.11.0"
+    date: 2026-10-30
+    page: "register + register_stepper + login (footer)"
+    status: "completed"
+    changes:
+      - "Nueva pantalla register (presentación, §008 + §009): wizard de 3 pasos — el formulario único de 8 inputs se sentía denso ('muchos inputs en una sola pantalla', feedback del usuario). Paso 1 Datos (nombres LatAm + teléfono), paso 2 Cuenta (email + claves), paso 3 Revisión (decisión: paso libre elegido como review). Sin imagotipo en el wizard (decisión del usuario)."
+      - "Nuevo componente register_stepper: 3 círculos + conectores + labels con estados actual/completado/pendiente; solo visual; segmentos Expanded simétricos (el OverflowBox inicial crasheaba con altura infinita). A11y completa: liveRegion + estado por paso + selected."
+      - "Modelo de navegación decidido por el usuario: flecha top = abandonar a /login en cualquier paso; 'Atrás' secundario (pasos 2-3) = retroceder paso; back nativo Android = retroceder paso. Teclado nunca abre al cambiar de paso ('no me gusta que el teclado se me active automaticamente') — solo al tocar campo o al fallar Continuar (foco al primer inválido)."
+      - "Sanitización decidida por el usuario: nombres solo letras latinas + espacio + apóstrofe (' y ’), SIN guion; teléfono solo dígitos máx 10 con validación de celular colombiano ^3\\d{9}$; errores de campo GENÉRICOS ('X incorrecto') que no revelan la regla."
+      - "Detalles de la crítica revisor-ui (2 ciclos): hit area ≥44dp + Semantics button en links de footer (register y login); límite silencioso de caracteres en inputs con regla de largo; stepper fijo fuera del scroll; scroll reset + AnimatedSize por paso; paso 3 top-aligned; bloqueo de flecha/back nativo durante submit (homologado con verify_email); guard isInProgress en field-changes del cubit; segundo apellido sin autofillHint duplicado."
+      - "Infra Android: network_security_config.xml nuevo — cleartext http SOLO para 10.0.2.2/localhost en dev (prod sigue exigiendo https); necesario para que el build release hable con el backend local."
+      - "Tests: register_cubit_test (reglas de inputs, navegación de pasos, submit simulado) + register_screen_test (render por paso, errores, navegación, preservación de datos) — 94/94 suite total."
   - version: "1.10.0"
     date: 2026-10-29
     page: "elevated_button_primary (loading) + login + verify_email"

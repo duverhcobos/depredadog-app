@@ -205,24 +205,42 @@ class _LoginViewState extends State<_LoginView> {
                                         l10n.loginNoAccount,
                                         style: theme.textTheme.bodyMedium,
                                       ),
+                                      // Hit area >=44dp + rol botón:
+                                      // padding interno + opaque.
                                       GestureDetector(
+                                        behavior: HitTestBehavior.opaque,
                                         onTap: () {
-                                          // PROVISIONAL: /register llega en
-                                          // su propia pantalla — por ahora
-                                          // aviso.
-                                          AppToast.success(
-                                            context,
-                                            l10n.comingSoon,
+                                          // Salida del login sin éxito:
+                                          // autofill se cierra SIN guardar
+                                          // (misma razón que
+                                          // EmailNotVerifiedFailure →
+                                          // /verify-email — el modal "¿Guardar
+                                          // contraseña?" no debe dispararse).
+                                          TextInput.finishAutofillContext(
+                                            shouldSave: false,
                                           );
+                                          context.push(AuthGuard.registerRoute);
                                         },
-                                        child: Text(
-                                          l10n.loginRegisterLink,
-                                          style: theme.textTheme.bodyMedium
-                                              ?.copyWith(
-                                                color:
-                                                    theme.colorScheme.primary,
-                                                fontWeight: FontWeight.w700,
-                                              ),
+                                        child: Semantics(
+                                          button: true,
+                                          label: l10n.loginRegisterLink,
+                                          excludeSemantics: true,
+                                          child: Padding(
+                                            padding: const EdgeInsets.symmetric(
+                                              horizontal: 8,
+                                              vertical: 12,
+                                            ),
+                                            child: Text(
+                                              l10n.loginRegisterLink,
+                                              style: theme.textTheme.bodyMedium
+                                                  ?.copyWith(
+                                                    color: theme
+                                                        .colorScheme
+                                                        .primary,
+                                                    fontWeight: FontWeight.w700,
+                                                  ),
+                                            ),
+                                          ),
                                         ),
                                       ),
                                     ],

@@ -135,4 +135,148 @@ class AppLocalizationsEs extends AppLocalizations {
   @override
   String get verifyEmailErrorInvalidCode =>
       'El código es incorrecto o ya expiró — pide uno nuevo.';
+
+  @override
+  String get registerStepDataLabel => 'Datos';
+
+  @override
+  String get registerStepAccountLabel => 'Cuenta';
+
+  @override
+  String get registerStepReviewLabel => 'Revisión';
+
+  @override
+  String get registerStep1Title => 'Cuéntanos quién eres';
+
+  @override
+  String get registerStep1Subtitle => 'Empecemos por tus datos personales.';
+
+  @override
+  String get registerStep2Title => 'Tu correo y tu llave';
+
+  @override
+  String get registerStep2Subtitle => 'Con estos datos entrarás a tu cuenta.';
+
+  @override
+  String registerStep3Title(String name) {
+    return 'Todo listo, $name';
+  }
+
+  @override
+  String get registerStep3Subtitle => 'Revisa que todo esté bien.';
+
+  @override
+  String registerStepProgress(int current, int total) {
+    return 'Paso $current de $total';
+  }
+
+  @override
+  String registerStepItemLabel(int number, String label, String status) {
+    return 'Paso $number: $label, $status';
+  }
+
+  @override
+  String get registerStepStatusCompleted => 'completado';
+
+  @override
+  String get registerStepStatusCurrent => 'actual';
+
+  @override
+  String get registerStepStatusPending => 'pendiente';
+
+  @override
+  String get registerContinue => 'Continuar';
+
+  @override
+  String get registerBackStep => 'Atrás';
+
+  @override
+  String get registerReviewName => 'Nombre';
+
+  @override
+  String get registerReviewEmail => 'Correo';
+
+  @override
+  String get registerReviewPhone => 'Teléfono';
+
+  @override
+  String get registerReviewNoPhone => 'Sin teléfono';
+
+  @override
+  String get registerFirstNameLabel => 'Primer nombre *';
+
+  @override
+  String get registerFirstNameHint => 'Ej: Ana';
+
+  @override
+  String get registerSecondNameLabel => 'Segundo nombre (opcional)';
+
+  @override
+  String get registerLastNameLabel => 'Primer apellido *';
+
+  @override
+  String get registerLastNameHint => 'Ej: Pérez';
+
+  @override
+  String get registerSecondLastNameLabel => 'Segundo apellido (opcional)';
+
+  @override
+  String get registerEmailLabel => 'Correo electrónico *';
+
+  @override
+  String get registerPhoneLabel => 'Teléfono (opcional)';
+
+  @override
+  String get registerPhoneHint => 'Ej: 300 123 4567';
+
+  @override
+  String get registerPasswordLabel => 'Contraseña *';
+
+  @override
+  String get registerPasswordHint => 'Mínimo 8 caracteres';
+
+  @override
+  String get registerConfirmPasswordLabel => 'Confirmar contraseña *';
+
+  @override
+  String get registerConfirmPasswordHint => 'Repite tu contraseña';
+
+  @override
+  String get registerNameRequired => 'Ingresa tu nombre';
+
+  @override
+  String get registerNameInvalid => 'Nombre incorrecto';
+
+  @override
+  String get registerLastNameRequired => 'Ingresa tu apellido';
+
+  @override
+  String get registerLastNameInvalid => 'Apellido incorrecto';
+
+  @override
+  String get registerPhoneInvalid => 'Teléfono incorrecto';
+
+  @override
+  String get registerEmailInvalid => 'Correo incorrecto';
+
+  @override
+  String get registerPasswordRequired => 'Ingresa una contraseña';
+
+  @override
+  String get registerPasswordInvalid => 'Contraseña incorrecta';
+
+  @override
+  String get registerConfirmRequired => 'Confirma tu contraseña';
+
+  @override
+  String get registerConfirmMismatch => 'Las contraseñas no coinciden';
+
+  @override
+  String get registerButton => 'Crear cuenta';
+
+  @override
+  String get registerHasAccount => '¿Ya tienes cuenta? ';
+
+  @override
+  String get registerLoginLink => 'Inicia sesión';
 }

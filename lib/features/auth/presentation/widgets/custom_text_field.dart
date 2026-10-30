@@ -15,9 +15,11 @@ class CustomTextField extends StatelessWidget {
     this.suffixIcon,
     this.obscureText = false,
     this.keyboardType,
+    this.textCapitalization = TextCapitalization.none,
     this.textInputAction,
     this.autofillHints,
     this.errorText,
+    this.helperText = ' ',
     this.maxLength,
     this.inputFormatters,
     this.onChanged,
@@ -32,9 +34,15 @@ class CustomTextField extends StatelessWidget {
   final Widget? suffixIcon;
   final bool obscureText;
   final TextInputType? keyboardType;
+  final TextCapitalization textCapitalization;
   final TextInputAction? textInputAction;
   final Iterable<String>? autofillHints;
   final String? errorText;
+
+  /// Texto de ayuda persistente bajo el campo. Default `' '` (un espacio):
+  /// reserva la línea de error para que mostrar `errorText` no re-fluya
+  /// el formulario. Si hay error, Material pinta el error en su lugar.
+  final String? helperText;
   final int? maxLength;
   final List<TextInputFormatter>? inputFormatters;
   final ValueChanged<String>? onChanged;
@@ -59,6 +67,7 @@ class CustomTextField extends StatelessWidget {
           focusNode: focusNode,
           obscureText: obscureText,
           keyboardType: keyboardType,
+          textCapitalization: textCapitalization,
           textInputAction: textInputAction,
           autofillHints: autofillHints,
           maxLength: maxLength,
@@ -73,7 +82,7 @@ class CustomTextField extends StatelessWidget {
             prefixIcon: prefixIcon,
             suffixIcon: suffixIcon,
             errorText: errorText,
-            helperText: ' ',
+            helperText: helperText,
           ),
         ),
       ],

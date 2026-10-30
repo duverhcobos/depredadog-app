@@ -1,6 +1,7 @@
 import 'package:go_router/go_router.dart';
 
 import '../../features/auth/presentation/screens/login_screen.dart';
+import '../../features/auth/presentation/screens/register_screen.dart';
 import '../../features/auth/presentation/screens/verify_email_screen.dart';
 import '../screens/home_placeholder_screen.dart';
 import '../screens/splash_screen.dart';
@@ -39,14 +40,19 @@ class AppRouter {
             CustomTransitions.slideUp(state, const LoginScreen()),
       ),
       GoRoute(
+        path: AuthGuard.registerRoute,
+        pageBuilder: (context, state) =>
+            CustomTransitions.slideUp(state, const RegisterScreen()),
+      ),
+      GoRoute(
         path: AuthGuard.verifyEmailRoute,
         pageBuilder: (context, state) => CustomTransitions.slideUp(
           state,
           VerifyEmailScreen(email: (state.extra as String?) ?? ''),
         ),
       ),
-      // /register, /forgot-password y /reset-password se registran con
-      // cada pantalla — el guard ya las trata como públicas.
+      // /forgot-password y /reset-password se registran con cada
+      // pantalla — el guard ya las trata como públicas.
     ],
   );
 }
