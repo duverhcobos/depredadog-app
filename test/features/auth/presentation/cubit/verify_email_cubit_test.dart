@@ -27,7 +27,7 @@ void main() {
     id: 'u1',
     email: email,
     firstName: 'Test',
-    lastName: 'User',
+    firstLastName: 'User',
     role: 'customer',
     status: 'active',
   );

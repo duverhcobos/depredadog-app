@@ -26,6 +26,45 @@ class AuthRepositoryImpl implements IAuthRepository {
   final IDeviceInfoProvider _deviceInfoProvider;
 
   @override
+  Future<Either<AuthFailure, User>> register({
+    required String email,
+    required String password,
+    required String firstName,
+    String? secondName,
+    required String firstLastName,
+    String? secondLastName,
+    String? phone,
+  }) async {
+    if (!await _networkInfo.isConnected) {
+      return const Left(NoConnectionFailure());
+    }
+    try {
+      final fingerprint = await _deviceInfoProvider.fingerprint();
+      final user = await _remoteDataSource.register(
+        email: email,
+        password: password,
+        firstName: firstName,
+        secondName: secondName,
+        firstLastName: firstLastName,
+        secondLastName: secondLastName,
+        phone: phone,
+        deviceFingerprint: fingerprint,
+        platform: _deviceInfoProvider.platform,
+      );
+      // Sin saveSession: /auth/register NO emite tokens — la cuenta
+      // queda pending_verification y el auto-login ocurre en verifyEmail.
+      return Right(user);
+    } on NetworkException catch (e) {
+      return Left(_mapFailure(e));
+    } catch (e) {
+      // Misma red de seguridad que login: un 201 malformado (cast del
+      // datasource) no es NetworkException — sin este catch la excepción
+      // escaparía al cubit y la UI quedaría en loading para siempre.
+      return Left(UnknownAuthFailure(e.toString()));
+    }
+  }
+
+  @override
   Future<Either<AuthFailure, User>> login({
     required String email,
     required String password,
@@ -158,6 +197,13 @@ class AuthRepositoryImpl implements IAuthRepository {
       if (e.message == 'Account is suspended') {
         return const AccountSuspendedFailure();
       }
+    }
+    // 409 solo lo emite /auth/register y solo significa "Email is already
+    // registered" — en esta feature no hay otro 409 posible, así que el
+    // mapeo va por statusCode directo (400 "Invalid referral code" no se
+    // mapea: no enviamos referralCode — cae a Unknown, bug nuestro si llega).
+    if (e.statusCode == 409) {
+      return const EmailAlreadyRegisteredFailure();
     }
     if (e.statusCode == 429) return const TooManyAttemptsFailure();
     return UnknownAuthFailure(e.message);

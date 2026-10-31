@@ -260,6 +260,13 @@ class AppLocalizationsEs extends AppLocalizations {
   String get registerEmailInvalid => 'Correo incorrecto';
 
   @override
+  String get registerEmailTaken => 'Este correo ya tiene cuenta';
+
+  @override
+  String get registerErrorGeneric =>
+      'No se pudo crear la cuenta, intenta de nuevo';
+
+  @override
   String get registerPasswordRequired => 'Ingresa una contraseña';
 
   @override

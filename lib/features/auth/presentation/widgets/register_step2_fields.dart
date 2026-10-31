@@ -56,6 +56,8 @@ class RegisterStep2Fields extends StatelessWidget {
                 errorText: (s) => switch (s.emailErrorKey()) {
                   'empty' => l10n.loginEmailRequired,
                   'invalid' => l10n.registerEmailInvalid,
+                  // 409 del submit (propuesta 010): prima sobre formato.
+                  'taken' => l10n.registerEmailTaken,
                   _ => null,
                 },
                 onChanged: (v) => context.read<RegisterCubit>().emailChanged(v),

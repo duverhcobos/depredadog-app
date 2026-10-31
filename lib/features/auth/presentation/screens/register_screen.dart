@@ -3,9 +3,11 @@ import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../../../core/di/setup_di.dart';
 import '../../../../core/routes/auth_guard.dart';
 import '../../../../core/widgets/app_toast.dart';
 import '../../../../l10n/app_localizations.dart';
+import '../../domain/failures/auth_failure.dart';
 import '../cubit/register_cubit.dart';
 import '../cubit/register_state.dart';
 import '../widgets/register_login_footer.dart';
@@ -15,21 +17,21 @@ import '../widgets/register_step2_fields.dart';
 import '../widgets/register_step_header.dart';
 import '../widgets/register_stepper.dart';
 
-/// Pantalla de registro — FASE PRESENTACIÓN (propuesta 009): wizard de 3
-/// pasos con stepper visual (datos → cuenta → revisión). El submit sigue
-/// simulado (delay → éxito → /verify-email con el email tipeado).
-/// Patrón dos clases: `RegisterScreen` provee el cubit, `_RegisterView`
-/// renderiza; los campos viven en `RegisterStepXFields`.
+/// Pantalla de registro — wizard de 3 pasos (datos → cuenta → revisión)
+/// INTEGRADO con POST /auth/register (propuesta 010): el éxito navega a
+/// /verify-email con el email tipeado (la cuenta queda
+/// pending_verification y el código ya fue enviado — el auto-login
+/// ocurre allá); el 409 correo-duplicado devuelve al paso 2 con el
+/// correo marcado.
+/// Patrón dos clases: `RegisterScreen` provee el cubit vía locator,
+/// `_RegisterView` renderiza; los campos viven en `RegisterStepXFields`.
 class RegisterScreen extends StatelessWidget {
   const RegisterScreen({super.key});
 
   @override
   Widget build(BuildContext context) {
     return BlocProvider<RegisterCubit>(
-      // BlocProvider local (sin locator): el cubit simulado no tiene
-      // dependencias. Cuando llegue la integración se registrará en DI
-      // como LoginCubit/VerifyEmailCubit.
-      create: (context) => RegisterCubit(),
+      create: (context) => locator<RegisterCubit>(),
       child: const _RegisterView(),
     );
   }
@@ -86,7 +88,7 @@ class _RegisterViewState extends State<_RegisterView> {
   }
 
   /// Botón primario del wizard: "Continuar" valida el paso y avanza;
-  /// "Crear cuenta" (último paso) dispara el submit simulado.
+  /// "Crear cuenta" (último paso) dispara `submit()` contra /auth/register.
   void _onPrimaryPressed() {
     FocusScope.of(context).unfocus();
     final cubit = context.read<RegisterCubit>();
@@ -150,7 +152,9 @@ class _RegisterViewState extends State<_RegisterView> {
         _phoneFocus.requestFocus();
       }
     } else if (state.currentStep == 1) {
-      if (state.email.isNotValid) {
+      // emailTaken: el 409 enfoca el correo aunque su formato sea válido
+      // — es el campo donde se corrige el error.
+      if (state.email.isNotValid || state.emailTaken) {
         _emailFocus.requestFocus();
       } else if (state.password.isNotValid) {
         _passwordFocus.requestFocus();
@@ -159,6 +163,26 @@ class _RegisterViewState extends State<_RegisterView> {
       }
     }
   }
+
+  /// La UI nunca muestra el texto crudo del backend — cada AuthFailure
+  /// mapea a su copy en español (i18n-workflow). El 409 tiene mensaje
+  /// propio: ya quedó pintado bajo el campo Correo, el toast lo repite.
+  String _authErrorMessage(AppLocalizations l10n, AuthFailure failure) =>
+      switch (failure) {
+        EmailAlreadyRegisteredFailure() => l10n.registerEmailTaken,
+        TooManyAttemptsFailure() => l10n.loginErrorTooManyAttempts,
+        NoConnectionFailure() => l10n.loginErrorNoConnection,
+        // Inalcanzables acá (401/403 son de login/me, InvalidCode de
+        // verify-email, Session/NoStored de restoreSession) — caen al
+        // genérico por exhaustividad del sealed, igual que en login.
+        InvalidCredentialsFailure() => l10n.registerErrorGeneric,
+        EmailNotVerifiedFailure() => l10n.registerErrorGeneric,
+        InvalidCodeFailure() => l10n.registerErrorGeneric,
+        AccountSuspendedFailure() => l10n.registerErrorGeneric,
+        SessionExpiredFailure() => l10n.registerErrorGeneric,
+        NoStoredSessionFailure() => l10n.registerErrorGeneric,
+        UnknownAuthFailure() => l10n.registerErrorGeneric,
+      };
 
   /// Contenido del paso: header (título+subtítulo) + cuerpo. La key por
   /// paso es lo que AnimatedSwitcher usa para detectar el cambio.
@@ -245,8 +269,8 @@ class _RegisterViewState extends State<_RegisterView> {
                       // Cerramos autofill SIN guardar (shouldSave: false):
                       // /verify-email autofocusa su campo OTP y el modal
                       // "¿Guardar contraseña?" de GMS competiría con el
-                      // teclado — misma carrera que login→verify. Al
-                      // integrar /auth/register se decide el shouldSave.
+                      // teclado — misma carrera que login→verify (decisión
+                      // confirmada en la integración, propuesta 010).
                       TextInput.finishAutofillContext(shouldSave: false);
                       context.go(
                         AuthGuard.verifyEmailRoute,
@@ -255,9 +279,16 @@ class _RegisterViewState extends State<_RegisterView> {
                     } else if (state.status == RegisterStatus.failure) {
                       _focusFirstInvalid(state);
                       AppToast.error(context, l10n.loginFormInvalid);
+                    } else if (state.status == RegisterStatus.authError &&
+                        state.authFailure != null) {
+                      // El 409 ya dejó currentStep en 1 — el foco cae en
+                      // el correo aunque su formato sea válido (emailTaken).
+                      _focusFirstInvalid(state);
+                      AppToast.error(
+                        context,
+                        _authErrorMessage(l10n, state.authFailure!),
+                      );
                     }
-                    // authError llega con la integración (409/400/429) —
-                    // el submit simulado nunca lo emite.
                   },
                   child: BlocListener<RegisterCubit, RegisterState>(
                     // Cambio de paso: reset de scroll + foco al primer

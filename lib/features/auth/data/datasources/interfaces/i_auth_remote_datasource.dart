@@ -16,6 +16,21 @@ class LoginResult {
 }
 
 abstract class IAuthRemoteDataSource {
+  /// /auth/register devuelve solo el UserResponseDto (sin tokens — la
+  /// cuenta queda pending_verification), así que no usa LoginResult.
+  /// Los opcionales llegan null → la impl omite la clave en el body.
+  Future<UserModel> register({
+    required String email,
+    required String password,
+    required String firstName,
+    String? secondName,
+    required String firstLastName,
+    String? secondLastName,
+    String? phone,
+    String? deviceFingerprint,
+    String? platform,
+  });
+
   Future<LoginResult> login({
     required String email,
     required String password,

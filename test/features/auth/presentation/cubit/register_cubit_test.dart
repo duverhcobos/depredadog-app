@@ -1,14 +1,30 @@
 import 'package:bloc_test/bloc_test.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:mocktail/mocktail.dart';
+import 'package:dartz/dartz.dart';
+import 'package:depredadog_app/features/auth/domain/entities/user.dart';
 import 'package:depredadog_app/features/auth/domain/failures/auth_failure.dart';
+import 'package:depredadog_app/features/auth/domain/use_cases/register_use_case.dart';
 import 'package:depredadog_app/features/auth/presentation/cubit/register_cubit.dart';
 import 'package:depredadog_app/features/auth/presentation/cubit/register_state.dart';
 import 'package:depredadog_app/features/auth/presentation/inputs/login_inputs.dart';
 import 'package:depredadog_app/features/auth/presentation/inputs/register_inputs.dart';
 
+class MockRegisterUseCase extends Mock implements RegisterUseCase {}
+
 void main() {
-  // Delay cero: el submit simulado (~800ms en prod) no debe esperarse.
-  RegisterCubit buildCubit() => RegisterCubit(simulatedDelay: Duration.zero);
+  late MockRegisterUseCase useCase;
+
+  const user = User(
+    id: 'u1',
+    email: 'ana@ejemplo.com',
+    firstName: 'Ana',
+    secondName: 'María',
+    firstLastName: 'Pérez',
+    secondLastName: 'Gómez',
+    role: 'customer',
+    status: 'pending_verification',
+  );
 
   const validSeed = RegisterState(
     firstName: NameInput.dirty('Ana'),
@@ -23,6 +39,36 @@ void main() {
       value: 'secreto123',
     ),
     currentStep: RegisterState.lastStep,
+  );
+
+  setUp(() {
+    useCase = MockRegisterUseCase();
+  });
+
+  RegisterCubit buildCubit() => RegisterCubit(registerUseCase: useCase);
+
+  void stubRegister(Either<AuthFailure, User> result) => when(
+    () => useCase(
+      email: any(named: 'email'),
+      password: any(named: 'password'),
+      firstName: any(named: 'firstName'),
+      secondName: any(named: 'secondName'),
+      firstLastName: any(named: 'firstLastName'),
+      secondLastName: any(named: 'secondLastName'),
+      phone: any(named: 'phone'),
+    ),
+  ).thenAnswer((_) async => result);
+
+  void verifyNeverRegister() => verifyNever(
+    () => useCase(
+      email: any(named: 'email'),
+      password: any(named: 'password'),
+      firstName: any(named: 'firstName'),
+      secondName: any(named: 'secondName'),
+      firstLastName: any(named: 'firstLastName'),
+      secondLastName: any(named: 'secondLastName'),
+      phone: any(named: 'phone'),
+    ),
   );
 
   group('RegisterCubit.nextStep', () {
@@ -152,7 +198,8 @@ void main() {
   group('RegisterCubit.submit', () {
     blocTest<RegisterCubit, RegisterState>(
       'inválido: failure con todas las banderas → initial '
-      '(re-valida TODO aunque se dispare desde la revisión)',
+      '(re-valida TODO aunque se dispare desde la revisión) '
+      'y NO llama al use case',
       build: buildCubit,
       seed: () => validSeed.copyWith(
         confirmPassword: const ConfirmPasswordInput.dirty(
@@ -173,12 +220,15 @@ void main() {
           RegisterStatus.initial,
         ),
       ],
+      verify: (_) => verifyNeverRegister(),
     );
 
     blocTest<RegisterCubit, RegisterState>(
-      'válido en paso 3: inProgress → success (submit simulado)',
+      'válido en paso 3: inProgress → success, use case recibe los campos '
+      'de los 3 pasos (requeridos trimmed)',
       build: buildCubit,
       seed: () => validSeed,
+      setUp: () => stubRegister(const Right(user)),
       act: (cubit) => cubit.submit(),
       // El re-dirty del email produce un estado idéntico al seed (ya dirty
       // y trimmed) — bloc lo deduplica por == y no notifica: solo se
@@ -195,34 +245,163 @@ void main() {
           RegisterStatus.success,
         ),
       ],
+      verify: (_) => verify(
+        () => useCase(
+          email: 'ana@ejemplo.com',
+          password: 'secreto123',
+          firstName: 'Ana',
+          secondName: 'María',
+          firstLastName: 'Pérez',
+          secondLastName: 'Gómez',
+          phone: '3001234567',
+        ),
+      ).called(1),
     );
 
     blocTest<RegisterCubit, RegisterState>(
-      'submit durante inProgress no re-emite (doble tap / done del teclado)',
+      'opcionales vacíos llegan al use case como null (el datasource '
+      'omite la clave en el body)',
+      build: buildCubit,
+      // Sin segundo nombre/apellido ni teléfono — los OptionalTextInput/
+      // PhoneInput quedan pure (valor '').
+      seed: () => const RegisterState(
+        firstName: NameInput.dirty('  Ana  '),
+        firstLastName: NameInput.dirty(' Pérez '),
+        email: EmailInput.dirty('ana@ejemplo.com'),
+        password: RegisterPasswordInput.dirty('secreto123'),
+        confirmPassword: ConfirmPasswordInput.dirty(
+          password: 'secreto123',
+          value: 'secreto123',
+        ),
+        currentStep: RegisterState.lastStep,
+      ),
+      setUp: () => stubRegister(const Right(user)),
+      act: (cubit) => cubit.submit(),
+      expect: () => [
+        isA<RegisterState>().having(
+          (s) => s.status,
+          'status',
+          RegisterStatus.inProgress,
+        ),
+        isA<RegisterState>().having(
+          (s) => s.status,
+          'status',
+          RegisterStatus.success,
+        ),
+      ],
+      verify: (_) => verify(
+        () => useCase(
+          email: 'ana@ejemplo.com',
+          password: 'secreto123',
+          // Los requeridos también van trimmeados (backend: Matches(/\S/)).
+          firstName: 'Ana',
+          secondName: null,
+          firstLastName: 'Pérez',
+          secondLastName: null,
+          phone: null,
+        ),
+      ).called(1),
+    );
+
+    blocTest<RegisterCubit, RegisterState>(
+      '409 correo duplicado: authError volviendo al paso 2 con el correo '
+      'marcado (emailTaken) → initial conserva el campo en rojo',
+      build: buildCubit,
+      seed: () => validSeed,
+      setUp: () => stubRegister(const Left(EmailAlreadyRegisteredFailure())),
+      act: (cubit) => cubit.submit(),
+      expect: () => [
+        isA<RegisterState>().having(
+          (s) => s.status,
+          'status',
+          RegisterStatus.inProgress,
+        ),
+        isA<RegisterState>()
+            .having((s) => s.status, 'status', RegisterStatus.authError)
+            .having(
+              (s) => s.authFailure,
+              'authFailure',
+              isA<EmailAlreadyRegisteredFailure>(),
+            )
+            .having((s) => s.currentStep, 'currentStep', 1)
+            .having((s) => s.showEmailError, 'showEmailError', true)
+            .having((s) => s.emailTaken, 'emailTaken', true)
+            .having((s) => s.emailErrorKey(), 'emailErrorKey', 'taken'),
+        isA<RegisterState>()
+            .having((s) => s.status, 'status', RegisterStatus.initial)
+            .having((s) => s.authFailure, 'authFailure', isNull)
+            // emailTaken/showEmailError sobreviven al re-armado: el correo
+            // queda rojo hasta que el usuario lo edite.
+            .having((s) => s.currentStep, 'currentStep', 1)
+            .having((s) => s.emailTaken, 'emailTaken', true)
+            .having((s) => s.emailErrorKey(), 'emailErrorKey', 'taken'),
+      ],
+    );
+
+    // Errores sin campo que señalar: authError + toast, sin moverse de
+    // paso (el usuario sigue en la revisión).
+    for (final (name, failure) in [
+      ('429 throttle', const TooManyAttemptsFailure()),
+      ('sin conexión', const NoConnectionFailure()),
+      ('500 ajeno', const UnknownAuthFailure('Boom')),
+    ]) {
+      blocTest<RegisterCubit, RegisterState>(
+        '$name: authError → initial SIN cambiar de paso ni marcar campos',
+        build: buildCubit,
+        seed: () => validSeed,
+        setUp: () => stubRegister(Left(failure)),
+        act: (cubit) => cubit.submit(),
+        expect: () => [
+          isA<RegisterState>().having(
+            (s) => s.status,
+            'status',
+            RegisterStatus.inProgress,
+          ),
+          isA<RegisterState>()
+              .having((s) => s.status, 'status', RegisterStatus.authError)
+              .having((s) => s.authFailure, 'authFailure', failure)
+              .having((s) => s.currentStep, 'currentStep', 2)
+              .having((s) => s.emailTaken, 'emailTaken', false)
+              .having((s) => s.showEmailError, 'showEmailError', false),
+          isA<RegisterState>()
+              .having((s) => s.status, 'status', RegisterStatus.initial)
+              .having((s) => s.authFailure, 'authFailure', isNull),
+        ],
+      );
+    }
+
+    blocTest<RegisterCubit, RegisterState>(
+      'submit durante inProgress no re-emite ni re-llama '
+      '(doble tap / done del teclado)',
       build: buildCubit,
       seed: () => validSeed.copyWith(status: RegisterStatus.inProgress),
       act: (cubit) => cubit.submit(),
       expect: () => <RegisterState>[],
+      verify: (_) => verifyNeverRegister(),
     );
   });
 
   group('RegisterCubit.*Changed', () {
     blocTest<RegisterCubit, RegisterState>(
-      'emailChanged limpia showEmailError + authFailure y vuelve a initial',
+      'emailChanged limpia showEmailError + emailTaken + authFailure '
+      'y vuelve a initial',
       build: buildCubit,
       seed: () => const RegisterState(
-        email: EmailInput.dirty('malo'),
+        email: EmailInput.dirty('tomado@ejemplo.com'),
         status: RegisterStatus.authError,
         showEmailError: true,
-        authFailure: UnknownAuthFailure('x'),
+        emailTaken: true,
+        authFailure: EmailAlreadyRegisteredFailure(),
       ),
       act: (cubit) => cubit.emailChanged('nuevo@ejemplo.com'),
       expect: () => [
         isA<RegisterState>()
             .having((s) => s.email.value, 'email', 'nuevo@ejemplo.com')
             .having((s) => s.showEmailError, 'showEmailError', false)
+            .having((s) => s.emailTaken, 'emailTaken', false)
             .having((s) => s.status, 'status', RegisterStatus.initial)
-            .having((s) => s.authFailure, 'authFailure', isNull),
+            .having((s) => s.authFailure, 'authFailure', isNull)
+            .having((s) => s.emailErrorKey(), 'emailErrorKey', isNull),
       ],
     );
 

@@ -6,8 +6,8 @@ import '../inputs/login_inputs.dart';
 import '../inputs/register_inputs.dart';
 
 /// `failure` = validación local (campos vacíos/formato) — patrón LoginState.
-/// `authError` queda listo para la integración de /auth/register (409 email
-/// duplicado, 400 validación, 429) — en la fase presentación nunca se emite.
+/// `authError` = error de /auth/register (propuesta 010): 409 correo ya
+/// registrado, 429 throttle, sin conexión, validación de DTO, 5xx.
 enum RegisterStatus { initial, inProgress, success, failure, authError }
 
 /// Estado de `/register` (wizard de 3 pasos — propuesta 009). Los flags
@@ -36,6 +36,7 @@ class RegisterState extends Equatable {
     this.showPhoneError = false,
     this.showPasswordError = false,
     this.showConfirmPasswordError = false,
+    this.emailTaken = false,
     this.authFailure,
   });
 
@@ -60,7 +61,12 @@ class RegisterState extends Equatable {
   final bool showPasswordError;
   final bool showConfirmPasswordError;
 
-  /// Solo tiene valor cuando status == authError (fase integración).
+  /// Solo true tras un 409 (EmailAlreadyRegisteredFailure): distingue el
+  /// correo duplicado del error de formato en el MISMO campo — prima en
+  /// [emailErrorKey] y solo se limpia al editar el correo (emailChanged).
+  final bool emailTaken;
+
+  /// Solo tiene valor cuando status == authError.
   final AuthFailure? authFailure;
 
   bool get isValid => Formz.validate([
@@ -93,8 +99,14 @@ class RegisterState extends Equatable {
       showFirstLastNameError && firstLastName.isNotValid
       ? firstLastName.error?.name
       : null;
-  String? emailErrorKey() =>
-      showEmailError && email.isNotValid ? email.error?.name : null;
+
+  /// El 409 prima sobre el formato: el correo puede ser válido en forma
+  /// y aun así estar tomado — "ya tiene cuenta" es la razón real.
+  String? emailErrorKey() {
+    if (emailTaken) return 'taken';
+    return showEmailError && email.isNotValid ? email.error?.name : null;
+  }
+
   String? phoneErrorKey() =>
       showPhoneError && phone.isNotValid ? phone.error?.name : null;
   String? passwordErrorKey() =>
@@ -123,6 +135,7 @@ class RegisterState extends Equatable {
     bool? showPhoneError,
     bool? showPasswordError,
     bool? showConfirmPasswordError,
+    bool? emailTaken,
     AuthFailure? authFailure,
   }) {
     return RegisterState(
@@ -147,6 +160,7 @@ class RegisterState extends Equatable {
       showPasswordError: showPasswordError ?? this.showPasswordError,
       showConfirmPasswordError:
           showConfirmPasswordError ?? this.showConfirmPasswordError,
+      emailTaken: emailTaken ?? this.emailTaken,
       // authFailure se limpia explícitamente pasando el nuevo status,
       // nunca se arrastra entre intentos (patrón LoginState).
       authFailure: status == RegisterStatus.authError
@@ -175,6 +189,7 @@ class RegisterState extends Equatable {
     showPhoneError,
     showPasswordError,
     showConfirmPasswordError,
+    emailTaken,
     authFailure,
   ];
 }

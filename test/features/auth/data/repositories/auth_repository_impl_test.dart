@@ -29,7 +29,7 @@ void main() {
     id: 'u1',
     email: 'test@depredadog.com',
     firstName: 'Test',
-    lastName: 'User',
+    firstLastName: 'User',
     role: 'customer',
     status: 'active',
   );
@@ -38,6 +38,40 @@ void main() {
     accessToken: 'access-token',
     refreshToken: 'refresh-token',
     user: user,
+  );
+
+  void stubRemoteRegister(Future<UserModel> Function() answer) => when(
+    () => remote.register(
+      email: any(named: 'email'),
+      password: any(named: 'password'),
+      firstName: any(named: 'firstName'),
+      secondName: any(named: 'secondName'),
+      firstLastName: any(named: 'firstLastName'),
+      secondLastName: any(named: 'secondLastName'),
+      phone: any(named: 'phone'),
+      deviceFingerprint: any(named: 'deviceFingerprint'),
+      platform: any(named: 'platform'),
+    ),
+  ).thenAnswer((_) => answer());
+
+  void stubRemoteRegisterThrows(NetworkException e) =>
+      stubRemoteRegister(() => throw e);
+
+  Future<Object> callRegister() => repository.register(
+    email: 'ana@ejemplo.com',
+    password: 'secreto123',
+    firstName: 'Ana',
+    secondName: 'María',
+    firstLastName: 'Pérez',
+    secondLastName: 'Gómez',
+    phone: '3001234567',
+  );
+
+  void verifyNeverSaveSession() => verifyNever(
+    () => local.saveSession(
+      accessToken: any(named: 'accessToken'),
+      refreshToken: any(named: 'refreshToken'),
+    ),
   );
 
   void stubRemoteLogin(Future<LoginResult> Function() answer) => when(
@@ -100,6 +134,105 @@ void main() {
       ),
     ).thenAnswer((_) async {});
     when(() => local.clearSession()).thenAnswer((_) async {});
+  });
+
+  group('AuthRepositoryImpl.register', () {
+    test('éxito: devuelve el usuario SIN guardar sesión (register no '
+        'emite tokens — el auto-login es de verify-email)', () async {
+      stubRemoteRegister(() async => user);
+
+      final result = await callRegister();
+
+      expect(result, const Right<AuthFailure, UserModel>(user));
+      verify(
+        () => remote.register(
+          email: 'ana@ejemplo.com',
+          password: 'secreto123',
+          firstName: 'Ana',
+          secondName: 'María',
+          firstLastName: 'Pérez',
+          secondLastName: 'Gómez',
+          phone: '3001234567',
+          deviceFingerprint: 'fp-123',
+          platform: 'android',
+        ),
+      ).called(1);
+      // El endpoint devuelve solo UserResponseDto: saveSession NUNCA se
+      // llama — no hay tokens que persistir.
+      verifyNeverSaveSession();
+    });
+
+    test('opcionales ausentes: llegan null al datasource', () async {
+      stubRemoteRegister(() async => user);
+
+      await repository.register(
+        email: 'ana@ejemplo.com',
+        password: 'secreto123',
+        firstName: 'Ana',
+        firstLastName: 'Pérez',
+      );
+
+      verify(
+        () => remote.register(
+          email: 'ana@ejemplo.com',
+          password: 'secreto123',
+          firstName: 'Ana',
+          secondName: null,
+          firstLastName: 'Pérez',
+          secondLastName: null,
+          phone: null,
+          deviceFingerprint: 'fp-123',
+          platform: 'android',
+        ),
+      ).called(1);
+    });
+
+    test('sin conexión: NoConnectionFailure sin tocar el datasource', () async {
+      when(() => networkInfo.isConnected).thenAnswer((_) async => false);
+
+      final result = await callRegister();
+
+      expect(result, const Left<AuthFailure, Object>(NoConnectionFailure()));
+      verifyNever(
+        () => remote.register(
+          email: any(named: 'email'),
+          password: any(named: 'password'),
+          firstName: any(named: 'firstName'),
+          secondName: any(named: 'secondName'),
+          firstLastName: any(named: 'firstLastName'),
+          secondLastName: any(named: 'secondLastName'),
+          phone: any(named: 'phone'),
+          deviceFingerprint: any(named: 'deviceFingerprint'),
+          platform: any(named: 'platform'),
+        ),
+      );
+      verifyNeverSaveSession();
+    });
+
+    test('409 "Email is already registered" → '
+        'EmailAlreadyRegisteredFailure', () async {
+      stubRemoteRegisterThrows(
+        const ServerException('Email is already registered', statusCode: 409),
+      );
+
+      final result = await callRegister();
+
+      expect(
+        result,
+        const Left<AuthFailure, Object>(EmailAlreadyRegisteredFailure()),
+      );
+      verifyNeverSaveSession();
+    });
+
+    test('429 → TooManyAttemptsFailure', () async {
+      stubRemoteRegisterThrows(
+        const ServerException('Too many requests', statusCode: 429),
+      );
+
+      final result = await callRegister();
+
+      expect(result, const Left<AuthFailure, Object>(TooManyAttemptsFailure()));
+    });
   });
 
   group('AuthRepositoryImpl.login', () {

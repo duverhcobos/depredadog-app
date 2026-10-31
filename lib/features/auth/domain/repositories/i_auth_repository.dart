@@ -6,6 +6,20 @@ import '../failures/auth_failure.dart';
 /// SOLID (DIP): la capa de aplicación depende de esta interfaz, nunca de
 /// AuthRepositoryImpl directo (solo setup_di.dart la conoce).
 abstract class IAuthRepository {
+  /// Crea la cuenta (POST /auth/register). Éxito = usuario creado en
+  /// estado `pending_verification` con el código ya enviado al correo —
+  /// el repositorio NO persiste sesión (el endpoint no emite tokens; el
+  /// auto-login ocurre en verifyEmail).
+  Future<Either<AuthFailure, User>> register({
+    required String email,
+    required String password,
+    required String firstName,
+    String? secondName,
+    required String firstLastName,
+    String? secondLastName,
+    String? phone,
+  });
+
   /// Autentica con email/password. Si tiene éxito, el repositorio ya dejó
   /// la sesión persistida (tokens en secure storage) — el caller solo
   /// recibe el User.

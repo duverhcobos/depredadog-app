@@ -33,8 +33,14 @@ class InvalidCodeFailure extends AuthFailure {
   const InvalidCodeFailure();
 }
 
+/// 409 en /auth/register — el correo ya tiene cuenta. Es el único 409
+/// posible de la feature: el repository lo mapea por statusCode directo.
+class EmailAlreadyRegisteredFailure extends AuthFailure {
+  const EmailAlreadyRegisteredFailure();
+}
+
 /// 429 — rate limit del endpoint (throttle del backend: 5/min en login y
-/// verify-email, 3/min en resend-verification).
+/// verify-email, 3/min en register y resend-verification).
 class TooManyAttemptsFailure extends AuthFailure {
   const TooManyAttemptsFailure();
 }

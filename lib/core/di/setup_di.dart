@@ -8,10 +8,12 @@ import '../../features/auth/data/datasources/interfaces/i_auth_remote_datasource
 import '../../features/auth/data/repositories/auth_repository_impl.dart';
 import '../../features/auth/domain/repositories/i_auth_repository.dart';
 import '../../features/auth/domain/use_cases/login_use_case.dart';
+import '../../features/auth/domain/use_cases/register_use_case.dart';
 import '../../features/auth/domain/use_cases/resend_verification_use_case.dart';
 import '../../features/auth/domain/use_cases/restore_session_use_case.dart';
 import '../../features/auth/domain/use_cases/verify_email_use_case.dart';
 import '../../features/auth/presentation/cubit/login_cubit.dart';
+import '../../features/auth/presentation/cubit/register_cubit.dart';
 import '../../features/auth/presentation/cubit/splash_cubit.dart';
 import '../../features/auth/presentation/cubit/verify_email_cubit.dart';
 import '../auth/auth_session.dart';
@@ -93,6 +95,9 @@ void setupDI() {
   locator.registerLazySingleton<LoginUseCase>(
     () => LoginUseCase(locator<IAuthRepository>()),
   );
+  locator.registerLazySingleton<RegisterUseCase>(
+    () => RegisterUseCase(locator<IAuthRepository>()),
+  );
   locator.registerLazySingleton<VerifyEmailUseCase>(
     () => VerifyEmailUseCase(locator<IAuthRepository>()),
   );
@@ -115,6 +120,11 @@ void setupDI() {
       loginUseCase: locator<LoginUseCase>(),
       authSession: locator<AuthSession>(),
     ),
+  );
+  // RegisterCubit NO recibe AuthSession: register no autentica — el
+  // auto-login ocurre en verify-email (propuesta 010).
+  locator.registerFactory<RegisterCubit>(
+    () => RegisterCubit(registerUseCase: locator<RegisterUseCase>()),
   );
   locator.registerFactoryParam<VerifyEmailCubit, String, void>(
     (email, _) => VerifyEmailCubit(

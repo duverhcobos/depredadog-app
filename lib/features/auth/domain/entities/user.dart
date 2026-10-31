@@ -4,12 +4,18 @@ import 'package:equatable/equatable.dart';
 /// app usa hoy (MVP). El resto de UserResponseDto (phone, emailVerifiedAt,
 /// referralCode, marketingOptIn, createdAt) se suma cuando una pantalla
 /// real los necesite, sin romper este contrato.
+///
+/// Nombres según el split LatAm del backend (propuesta backend 004):
+/// `firstLastName` es requerido; `secondName`/`secondLastName` llegan
+/// `null` cuando el usuario no los diligenció — ya no existe `lastName`.
 class User extends Equatable {
   const User({
     required this.id,
     required this.email,
     required this.firstName,
-    required this.lastName,
+    this.secondName,
+    required this.firstLastName,
+    this.secondLastName,
     required this.role,
     required this.status,
   });
@@ -17,7 +23,9 @@ class User extends Equatable {
   final String id;
   final String email;
   final String firstName;
-  final String? lastName;
+  final String? secondName;
+  final String firstLastName;
+  final String? secondLastName;
 
   /// Valores del backend: 'customer' | 'admin'.
   final String role;
@@ -26,5 +34,14 @@ class User extends Equatable {
   final String status;
 
   @override
-  List<Object?> get props => [id, email, firstName, lastName, role, status];
+  List<Object?> get props => [
+    id,
+    email,
+    firstName,
+    secondName,
+    firstLastName,
+    secondLastName,
+    role,
+    status,
+  ];
 }

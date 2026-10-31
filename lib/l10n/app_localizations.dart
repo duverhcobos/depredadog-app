@@ -562,6 +562,18 @@ abstract class AppLocalizations {
   /// **'Correo incorrecto'**
   String get registerEmailInvalid;
 
+  /// No description provided for @registerEmailTaken.
+  ///
+  /// In es, this message translates to:
+  /// **'Este correo ya tiene cuenta'**
+  String get registerEmailTaken;
+
+  /// No description provided for @registerErrorGeneric.
+  ///
+  /// In es, this message translates to:
+  /// **'No se pudo crear la cuenta, intenta de nuevo'**
+  String get registerErrorGeneric;
+
   /// No description provided for @registerPasswordRequired.
   ///
   /// In es, this message translates to:

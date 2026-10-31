@@ -129,6 +129,8 @@
   "registerLastNameInvalid": "Apellido incorrecto",
   "registerPhoneInvalid": "Teléfono incorrecto",
   "registerEmailInvalid": "Correo incorrecto",
+  "registerEmailTaken": "Este correo ya tiene cuenta",
+  "registerErrorGeneric": "No se pudo crear la cuenta, intenta de nuevo",
   "registerPasswordRequired": "Ingresa una contraseña",
   "registerPasswordInvalid": "Contraseña incorrecta",
   "registerConfirmRequired": "Confirma tu contraseña",

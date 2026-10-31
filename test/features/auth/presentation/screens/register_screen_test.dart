@@ -1,15 +1,63 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:get_it/get_it.dart';
 import 'package:go_router/go_router.dart';
+import 'package:mocktail/mocktail.dart';
+import 'package:dartz/dartz.dart';
 import 'package:depredadog_app/core/routes/auth_guard.dart';
 import 'package:depredadog_app/core/theme/app_theme.dart';
+import 'package:depredadog_app/features/auth/domain/entities/user.dart';
+import 'package:depredadog_app/features/auth/domain/failures/auth_failure.dart';
+import 'package:depredadog_app/features/auth/domain/use_cases/register_use_case.dart';
+import 'package:depredadog_app/features/auth/presentation/cubit/register_cubit.dart';
 import 'package:depredadog_app/features/auth/presentation/screens/register_screen.dart';
 import 'package:depredadog_app/l10n/app_localizations.dart';
 
+class MockRegisterUseCase extends Mock implements RegisterUseCase {}
+
 void main() {
-  // RegisterScreen crea su cubit con BlocProvider local (el submit es
-  // simulado y no tiene dependencias) — estos tests no tocan GetIt.
+  // RegisterScreen resuelve su cubit vía locator (propuesta 010) — los
+  // tests registran la factory con el use case mockeado, patrón
+  // login/verify-email.
+  final locator = GetIt.instance;
+  late MockRegisterUseCase registerUseCase;
+
+  const user = User(
+    id: 'u1',
+    email: 'ana@ejemplo.com',
+    firstName: 'Ana',
+    firstLastName: 'Pérez',
+    role: 'customer',
+    status: 'pending_verification',
+  );
+
+  void stubRegister(Either<AuthFailure, User> result) => when(
+    () => registerUseCase(
+      email: any(named: 'email'),
+      password: any(named: 'password'),
+      firstName: any(named: 'firstName'),
+      secondName: any(named: 'secondName'),
+      firstLastName: any(named: 'firstLastName'),
+      secondLastName: any(named: 'secondLastName'),
+      phone: any(named: 'phone'),
+    ),
+  ).thenAnswer((_) async => result);
+
+  setUp(() {
+    registerUseCase = MockRegisterUseCase();
+    // Default benigno: el registro devuelve el usuario creado — los tests
+    // de UI que ejercen el submit lo re-stubbean según el caso.
+    stubRegister(const Right(user));
+    locator.registerFactory<RegisterCubit>(
+      () => RegisterCubit(registerUseCase: registerUseCase),
+    );
+  });
+
+  tearDown(() async {
+    await locator.reset();
+  });
+
   Future<void> pumpRegister(WidgetTester tester) {
     return tester.pumpWidget(
       MaterialApp(
@@ -316,23 +364,59 @@ void main() {
     },
   );
 
+  testWidgets('crear cuenta: éxito → navega a /verify-email con el email', (
+    tester,
+  ) async {
+    await pumpRegisterWithRouter(tester);
+    await tester.pump();
+
+    await fillStep1(tester, phone: '3001234567');
+    await tapPrimary(tester, 'Continuar');
+    await fillStep2(tester);
+    await tapPrimary(tester, 'Continuar');
+
+    // Revisión con teléfono diligenciado.
+    expect(find.text('3001234567'), findsOneWidget);
+    await tapPrimary(tester, 'Crear cuenta');
+    // pumpAndSettle (dentro de tapPrimary) resuelve el use case mockeado
+    // y la transición de la ruta destino.
+    expect(find.text('PANTALLA VERIFY'), findsOneWidget);
+    verify(
+      () => registerUseCase(
+        email: 'ana@ejemplo.com',
+        password: 'secreto123',
+        firstName: 'Ana',
+        secondName: null,
+        firstLastName: 'Pérez',
+        secondLastName: null,
+        phone: '3001234567',
+      ),
+    ).called(1);
+  });
+
   testWidgets(
-    'crear cuenta: éxito simulado → navega a /verify-email con el email',
+    '409 correo duplicado: vuelve al paso 2 con "Este correo ya tiene '
+    'cuenta" bajo Correo',
     (tester) async {
-      await pumpRegisterWithRouter(tester);
+      stubRegister(const Left(EmailAlreadyRegisteredFailure()));
+      await pumpRegister(tester);
       await tester.pump();
 
-      await fillStep1(tester, phone: '3001234567');
+      await fillStep1(tester);
       await tapPrimary(tester, 'Continuar');
       await fillStep2(tester);
       await tapPrimary(tester, 'Continuar');
+      expect(find.text('Todo listo, Ana'), findsOneWidget);
 
-      // Revisión con teléfono diligenciado.
-      expect(find.text('3001234567'), findsOneWidget);
       await tapPrimary(tester, 'Crear cuenta');
-      // pumpAndSettle (dentro de tapPrimary) avanza el reloj fake: cubre
-      // el delay simulado (~800ms) y la transición de la ruta destino.
-      expect(find.text('PANTALLA VERIFY'), findsOneWidget);
+
+      // Volvió al paso 2 (el error queda donde se corrige) con el correo
+      // marcado — el mensaje del 409 prima sobre el de formato.
+      expect(find.text('Tu correo y tu llave'), findsOneWidget);
+      expect(find.text('Este correo ya tiene cuenta'), findsOneWidget);
+      // Los otros campos del paso no se marcaron.
+      expect(find.text('Ingresa una contraseña'), findsNothing);
+      expect(find.text('Confirma tu contraseña'), findsNothing);
     },
   );
 
