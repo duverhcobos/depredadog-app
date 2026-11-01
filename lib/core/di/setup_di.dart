@@ -7,9 +7,12 @@ import '../../features/auth/data/datasources/interfaces/i_auth_local_datasource.
 import '../../features/auth/data/datasources/interfaces/i_auth_remote_datasource.dart';
 import '../../features/auth/data/repositories/auth_repository_impl.dart';
 import '../../features/auth/domain/repositories/i_auth_repository.dart';
+import '../../features/auth/domain/use_cases/check_reset_code_use_case.dart';
+import '../../features/auth/domain/use_cases/forgot_password_use_case.dart';
 import '../../features/auth/domain/use_cases/login_use_case.dart';
 import '../../features/auth/domain/use_cases/register_use_case.dart';
 import '../../features/auth/domain/use_cases/resend_verification_use_case.dart';
+import '../../features/auth/domain/use_cases/reset_password_use_case.dart';
 import '../../features/auth/domain/use_cases/restore_session_use_case.dart';
 import '../../features/auth/domain/use_cases/verify_email_use_case.dart';
 import '../../features/auth/presentation/cubit/forgot_password_cubit.dart';
@@ -108,6 +111,15 @@ void setupDI() {
   locator.registerLazySingleton<RestoreSessionUseCase>(
     () => RestoreSessionUseCase(locator<IAuthRepository>()),
   );
+  locator.registerLazySingleton<ForgotPasswordUseCase>(
+    () => ForgotPasswordUseCase(locator<IAuthRepository>()),
+  );
+  locator.registerLazySingleton<CheckResetCodeUseCase>(
+    () => CheckResetCodeUseCase(locator<IAuthRepository>()),
+  );
+  locator.registerLazySingleton<ResetPasswordUseCase>(
+    () => ResetPasswordUseCase(locator<IAuthRepository>()),
+  );
 
   // --- Cubits ---
   locator.registerFactory<SplashCubit>(
@@ -127,12 +139,16 @@ void setupDI() {
   locator.registerFactory<RegisterCubit>(
     () => RegisterCubit(registerUseCase: locator<RegisterUseCase>()),
   );
-  // ForgotPasswordCubit recibe AuthSession aun en fase presentación: el
-  // éxito simulado marca una sesión stub o el guard rebota /home → /login
-  // en silencio (hallazgo revisor-ui). La integración agregará sus
-  // use cases igual que RegisterCubit en §010.
+  // ForgotPasswordCubit (integración §012): el reset emite IssuedSession
+  // igual que verifyEmail — recibe los 3 use cases del flujo + AuthSession
+  // para el auto-login en memoria (guard → /home).
   locator.registerFactory<ForgotPasswordCubit>(
-    () => ForgotPasswordCubit(authSession: locator<AuthSession>()),
+    () => ForgotPasswordCubit(
+      forgotPasswordUseCase: locator<ForgotPasswordUseCase>(),
+      checkResetCodeUseCase: locator<CheckResetCodeUseCase>(),
+      resetPasswordUseCase: locator<ResetPasswordUseCase>(),
+      authSession: locator<AuthSession>(),
+    ),
   );
   locator.registerFactoryParam<VerifyEmailCubit, String, void>(
     (email, _) => VerifyEmailCubit(

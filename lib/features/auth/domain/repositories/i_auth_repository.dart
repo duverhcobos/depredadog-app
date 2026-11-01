@@ -38,6 +38,29 @@ abstract class IAuthRepository {
   /// Reenvía el código. El backend responde 200 siempre (anti-enumeración).
   Future<Either<AuthFailure, void>> resendVerification({required String email});
 
+  /// Pide un código de restablecimiento (POST /auth/forgot-password).
+  /// Éxito = el backend aceptó el pedido (200 genérico anti-enumeración —
+  /// no garantiza que el correo exista ni que el código haya salido).
+  /// Sin sesión.
+  Future<Either<AuthFailure, void>> forgotPassword({required String email});
+
+  /// Chequea el código de restablecimiento SIN consumirlo
+  /// (POST /auth/check-reset-code). Éxito = código vivo y NO consumido —
+  /// sigue disponible para [resetPassword].
+  Future<Either<AuthFailure, void>> checkResetCode({
+    required String email,
+    required String code,
+  });
+
+  /// Restablece la contraseña (POST /auth/reset-password). Éxito =
+  /// contraseña cambiada + sesión YA persistida (el endpoint emite
+  /// IssuedSession igual que verifyEmail — auto-login).
+  Future<Either<AuthFailure, User>> resetPassword({
+    required String email,
+    required String code,
+    required String newPassword,
+  });
+
   /// Valida la sesión guardada contra el backend. Solo el splash la usa
   /// (decidir login vs home al abrir). Semántica por resultado:
   /// Right(user) = sesión válida; SessionExpiredFailure = 401, tokens ya

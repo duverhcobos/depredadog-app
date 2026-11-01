@@ -324,4 +324,8 @@ class AppLocalizationsEs extends AppLocalizations {
 
   @override
   String get forgotSubmit => 'Cambiar contraseña';
+
+  @override
+  String get forgotErrorGeneric =>
+      'No se pudo restablecer la contraseña, intenta de nuevo';
 }

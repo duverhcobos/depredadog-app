@@ -687,6 +687,12 @@ abstract class AppLocalizations {
   /// In es, this message translates to:
   /// **'Cambiar contraseña'**
   String get forgotSubmit;
+
+  /// No description provided for @forgotErrorGeneric.
+  ///
+  /// In es, this message translates to:
+  /// **'No se pudo restablecer la contraseña, intenta de nuevo'**
+  String get forgotErrorGeneric;
 }
 
 class _AppLocalizationsDelegate

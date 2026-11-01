@@ -7,6 +7,7 @@ import '../../../../core/di/setup_di.dart';
 import '../../../../core/routes/auth_guard.dart';
 import '../../../../core/widgets/app_toast.dart';
 import '../../../../l10n/app_localizations.dart';
+import '../../domain/failures/auth_failure.dart';
 import '../cubit/forgot_password_cubit.dart';
 import '../cubit/forgot_password_state.dart';
 import '../widgets/forgot_step1_email.dart';
@@ -15,12 +16,12 @@ import '../widgets/forgot_step3_password.dart';
 import '../widgets/register_login_footer.dart';
 import '../widgets/wizard_stepper.dart';
 
-/// Pantalla de recuperación de contraseña — FASE PRESENTACIÓN
-/// (propuesta 011): wizard de 3 pasos (correo → código OTP → nueva
-/// clave) con submits SIMULADOS; el éxito navega a /home, espejo del
-/// auto-login real del flujo. Mismo shell que /register: stepper fijo,
-/// AnimatedSwitcher + AnimatedSize, back nativo por PopScope, scroll
-/// reset, sin autofocus al cambiar de paso.
+/// Pantalla de recuperación de contraseña — FASE INTEGRACIÓN
+/// (propuesta 012): wizard de 3 pasos (correo → código OTP → nueva
+/// clave) contra los endpoints reales; el éxito del reset es auto-login
+/// (tokens ya persistidos por el repo) y navega a /home. Mismo shell que
+/// /register: stepper fijo, AnimatedSwitcher + AnimatedSize, back nativo
+/// por PopScope, scroll reset, sin autofocus al cambiar de paso.
 /// Patrón dos clases: `ForgotPasswordScreen` provee el cubit,
 /// `_ForgotPasswordView` renderiza; los campos viven en `ForgotStepN*`.
 class ForgotPasswordScreen extends StatelessWidget {
@@ -29,9 +30,8 @@ class ForgotPasswordScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return BlocProvider<ForgotPasswordCubit>(
-      // Ya resuelve por locator: el cubit necesita AuthSession para la
-      // sesión stub del éxito simulado (sin ella el guard rebota /home
-      // → /login). Los use cases llegan con la integración.
+      // Resuelve por locator: el cubit recibe los 3 use cases del flujo +
+      // AuthSession para el auto-login del reset (setup_di §012).
       create: (_) => locator<ForgotPasswordCubit>(),
       child: const _ForgotPasswordView(),
     );
@@ -72,8 +72,8 @@ class _ForgotPasswordViewState extends State<_ForgotPasswordView> {
   }
 
   /// Botón primario del wizard: "Enviar código"/"Verificar" validan el
-  /// paso y avanzan; "Cambiar contraseña" (último paso) dispara el
-  /// submit simulado.
+  /// paso y avanzan (envío y check reales); "Cambiar contraseña" (último
+  /// paso) dispara el submit — el reset que termina en auto-login.
   void _onPrimaryPressed() {
     FocusScope.of(context).unfocus();
     final cubit = context.read<ForgotPasswordCubit>();
@@ -121,6 +121,18 @@ class _ForgotPasswordViewState extends State<_ForgotPasswordView> {
       curve: Curves.easeOut,
     );
   }
+
+  /// La UI nunca muestra el texto crudo del backend (i18n-workflow) —
+  /// cada AuthFailure mapea a su copy. Espejo de verify-email: las claves
+  /// loginError*/verifyEmailErrorInvalidCode se reusan porque el texto
+  /// es el mismo concepto (rate limit, sin red, código inválido).
+  String _authErrorMessage(AppLocalizations l10n, AuthFailure failure) =>
+      switch (failure) {
+        InvalidCodeFailure() => l10n.verifyEmailErrorInvalidCode,
+        TooManyAttemptsFailure() => l10n.loginErrorTooManyAttempts,
+        NoConnectionFailure() => l10n.loginErrorNoConnection,
+        _ => l10n.forgotErrorGeneric,
+      };
 
   /// Foco al primer campo inválido DEL PASO en orden visual (forms skill).
   void _focusFirstInvalid(ForgotPasswordState state) {
@@ -231,10 +243,10 @@ class _ForgotPasswordViewState extends State<_ForgotPasswordView> {
                       listener: (context, state) {
                         if (state.status == ForgotPasswordStatus.success) {
                           // Éxito → /home: se GUARDA el autofill — el
-                          // flujo real termina en auto-login y el gestor
-                          // debe ofrecer la NUEVA contraseña (patrón
-                          // login; en register era shouldSave:false solo
-                          // porque /verify-email autofocusa su OTP).
+                          // reset termina en auto-login y el gestor debe
+                          // ofrecer la NUEVA contraseña (patrón login; en
+                          // register era shouldSave:false solo porque
+                          // /verify-email autofocusa su OTP).
                           TextInput.finishAutofillContext(shouldSave: true);
                           context.go(AuthGuard.homeRoute);
                         } else if (state.status ==
@@ -250,6 +262,19 @@ class _ForgotPasswordViewState extends State<_ForgotPasswordView> {
                             state.currentStep == 1
                                 ? l10n.verifyEmailFormInvalid
                                 : l10n.loginFormInvalid,
+                          );
+                        } else if (state.status ==
+                                ForgotPasswordStatus.authError &&
+                            state.authFailure != null) {
+                          // Refocus solo si el problema es el código — un
+                          // 429 o sin red no tienen nada que corregir ahí
+                          // (patrón verify-email).
+                          if (state.authFailure is InvalidCodeFailure) {
+                            _codeFocus.requestFocus();
+                          }
+                          AppToast.error(
+                            context,
+                            _authErrorMessage(l10n, state.authFailure!),
                           );
                         }
                       },

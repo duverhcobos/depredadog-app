@@ -1,7 +1,8 @@
 import '../../models/user_model.dart';
 
 /// Resultado crudo de los endpoints que emiten sesión (/auth/login,
-/// /auth/verify-email) — el repository decide qué hacer con cada token
+/// /auth/verify-email, /auth/reset-password) — el repository decide qué
+/// hacer con cada token
 /// (dónde persistirlos); el datasource solo parsea la respuesta.
 class LoginResult {
   const LoginResult({
@@ -48,6 +49,25 @@ abstract class IAuthRemoteDataSource {
   });
 
   Future<void> resendVerification({required String email});
+
+  /// /auth/forgot-password responde 200 siempre (anti-enumeración) — no
+  /// hay forma de saber si el correo existe; sin fingerprint (el endpoint
+  /// no lo recibe: no emite sesión).
+  Future<void> forgotPassword({required String email});
+
+  /// /auth/check-reset-code: el código existe, no está consumido ni
+  /// expirado — el chequeo NO lo consume (sigue vivo para resetPassword).
+  Future<void> checkResetCode({required String email, required String code});
+
+  /// /auth/reset-password devuelve la misma IssuedSession que login —
+  /// se reutiliza LoginResult (auto-login).
+  Future<LoginResult> resetPassword({
+    required String email,
+    required String code,
+    required String newPassword,
+    String? deviceFingerprint,
+    String? platform,
+  });
 
   /// GET /auth/me — el AuthInterceptor adjunta el Bearer guardado; acá no
   /// se arman headers. Devuelve el usuario crudo (UserResponseDto).

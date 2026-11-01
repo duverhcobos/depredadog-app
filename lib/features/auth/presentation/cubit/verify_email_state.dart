@@ -59,7 +59,10 @@ class VerifyEmailState extends Equatable {
       resendCooldown: resendCooldown ?? this.resendCooldown,
       isResending: isResending ?? this.isResending,
       resendTick: resendTick ?? this.resendTick,
-      authFailure: status == VerifyEmailStatus.authError
+      // Status EFECTIVO: evaluar solo el parámetro nullearía authFailure en
+      // cualquier copyWith sin status (ej. un tick del cooldown tras authError
+      // — el rojo del OTP moría en ≤1s; mismo fix que ForgotPasswordState).
+      authFailure: (status ?? this.status) == VerifyEmailStatus.authError
           ? (authFailure ?? this.authFailure)
           : null,
     );

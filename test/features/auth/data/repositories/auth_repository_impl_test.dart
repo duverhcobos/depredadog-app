@@ -113,6 +113,48 @@ void main() {
   Future<Object> callResend() =>
       repository.resendVerification(email: 'test@depredadog.com');
 
+  void stubRemoteForgot(Future<void> Function() answer) =>
+      when(() => remote.forgotPassword(email: any(named: 'email')))
+          .thenAnswer((_) => answer());
+
+  void stubRemoteForgotThrows(NetworkException e) =>
+      stubRemoteForgot(() => throw e);
+
+  Future<Object> callForgot() =>
+      repository.forgotPassword(email: 'test@depredadog.com');
+
+  void stubRemoteCheckCode(Future<void> Function() answer) => when(
+    () => remote.checkResetCode(
+      email: any(named: 'email'),
+      code: any(named: 'code'),
+    ),
+  ).thenAnswer((_) => answer());
+
+  void stubRemoteCheckCodeThrows(NetworkException e) =>
+      stubRemoteCheckCode(() => throw e);
+
+  Future<Object> callCheckCode() =>
+      repository.checkResetCode(email: 'test@depredadog.com', code: '123456');
+
+  void stubRemoteReset(Future<LoginResult> Function() answer) => when(
+    () => remote.resetPassword(
+      email: any(named: 'email'),
+      code: any(named: 'code'),
+      newPassword: any(named: 'newPassword'),
+      deviceFingerprint: any(named: 'deviceFingerprint'),
+      platform: any(named: 'platform'),
+    ),
+  ).thenAnswer((_) => answer());
+
+  void stubRemoteResetThrows(NetworkException e) =>
+      stubRemoteReset(() => throw e);
+
+  Future<Object> callReset() => repository.resetPassword(
+    email: 'test@depredadog.com',
+    code: '123456',
+    newPassword: 'nuevaClave123',
+  );
+
   setUp(() {
     remote = MockRemoteDataSource();
     local = MockLocalDataSource();
@@ -478,6 +520,169 @@ void main() {
       final result = await callResend();
 
       expect(result, const Left<AuthFailure, Object>(TooManyAttemptsFailure()));
+    });
+  });
+
+  group('AuthRepositoryImpl.forgotPassword', () {
+    test('éxito: Right(null) y saveSession NUNCA se llama — el 200 '
+        'genérico anti-enumeración no emite tokens', () async {
+      stubRemoteForgot(() async {});
+
+      final result = await callForgot();
+
+      expect(result, const Right<AuthFailure, void>(null));
+      verify(() => remote.forgotPassword(email: 'test@depredadog.com'))
+          .called(1);
+      verifyNeverSaveSession();
+    });
+
+    test('sin conexión: NoConnectionFailure sin tocar el datasource', () async {
+      when(() => networkInfo.isConnected).thenAnswer((_) async => false);
+
+      final result = await callForgot();
+
+      expect(result, const Left<AuthFailure, Object>(NoConnectionFailure()));
+      verifyNever(() => remote.forgotPassword(email: any(named: 'email')));
+    });
+
+    test(
+      '429 → TooManyAttemptsFailure (throttle 3/min del endpoint)',
+      () async {
+        stubRemoteForgotThrows(
+          const ServerException('Too many requests', statusCode: 429),
+        );
+
+        final result = await callForgot();
+
+        expect(
+          result,
+          const Left<AuthFailure, Object>(TooManyAttemptsFailure()),
+        );
+        verifyNeverSaveSession();
+      },
+    );
+  });
+
+  group('AuthRepositoryImpl.checkResetCode', () {
+    test('éxito: Right(null) y saveSession NUNCA se llama — el check no '
+        'emite tokens ni consume el código', () async {
+      stubRemoteCheckCode(() async {});
+
+      final result = await callCheckCode();
+
+      expect(result, const Right<AuthFailure, void>(null));
+      verify(
+        () =>
+            remote.checkResetCode(email: 'test@depredadog.com', code: '123456'),
+      ).called(1);
+      verifyNeverSaveSession();
+    });
+
+    test('sin conexión: NoConnectionFailure sin tocar el datasource', () async {
+      when(() => networkInfo.isConnected).thenAnswer((_) async => false);
+
+      final result = await callCheckCode();
+
+      expect(result, const Left<AuthFailure, Object>(NoConnectionFailure()));
+      verifyNever(
+        () => remote.checkResetCode(
+          email: any(named: 'email'),
+          code: any(named: 'code'),
+        ),
+      );
+    });
+
+    test(
+      '400 "Invalid or expired code" → InvalidCodeFailure (código '
+      'errado, expirado o ya consumido — genérico anti-enumeración)',
+      () async {
+        stubRemoteCheckCodeThrows(
+          const ServerException('Invalid or expired code', statusCode: 400),
+        );
+
+        final result = await callCheckCode();
+
+        expect(result, const Left<AuthFailure, Object>(InvalidCodeFailure()));
+        verifyNeverSaveSession();
+      },
+    );
+
+    test('429 → TooManyAttemptsFailure', () async {
+      stubRemoteCheckCodeThrows(
+        const ServerException('Too many requests', statusCode: 429),
+      );
+
+      final result = await callCheckCode();
+
+      expect(result, const Left<AuthFailure, Object>(TooManyAttemptsFailure()));
+    });
+  });
+
+  group('AuthRepositoryImpl.resetPassword', () {
+    test('éxito: guarda la sesión y devuelve el usuario — el reset emite '
+        'IssuedSession igual que verifyEmail (auto-login)', () async {
+      stubRemoteReset(() async => loginResult);
+
+      final result = await callReset();
+
+      expect(result, const Right<AuthFailure, UserModel>(user));
+      verify(
+        () => remote.resetPassword(
+          email: 'test@depredadog.com',
+          code: '123456',
+          newPassword: 'nuevaClave123',
+          deviceFingerprint: 'fp-123',
+          platform: 'android',
+        ),
+      ).called(1);
+      verify(
+        () => local.saveSession(
+          accessToken: 'access-token',
+          refreshToken: 'refresh-token',
+        ),
+      ).called(1);
+    });
+
+    test('sin conexión: NoConnectionFailure sin tocar el datasource', () async {
+      when(() => networkInfo.isConnected).thenAnswer((_) async => false);
+
+      final result = await callReset();
+
+      expect(result, const Left<AuthFailure, Object>(NoConnectionFailure()));
+      verifyNever(
+        () => remote.resetPassword(
+          email: any(named: 'email'),
+          code: any(named: 'code'),
+          newPassword: any(named: 'newPassword'),
+          deviceFingerprint: any(named: 'deviceFingerprint'),
+          platform: any(named: 'platform'),
+        ),
+      );
+      verifyNeverSaveSession();
+    });
+
+    test('400 "Invalid or expired code" → InvalidCodeFailure (el código '
+        'expiró o fue consumido ENTRE el check y el submit — la carrera '
+        'real del paso 3)', () async {
+      stubRemoteResetThrows(
+        const ServerException('Invalid or expired code', statusCode: 400),
+      );
+
+      final result = await callReset();
+
+      expect(result, const Left<AuthFailure, Object>(InvalidCodeFailure()));
+      verifyNeverSaveSession();
+    });
+
+    test('429 → TooManyAttemptsFailure', () async {
+      stubRemoteResetThrows(
+        const ServerException('Too many requests', statusCode: 429),
+      );
+
+      final result = await callReset();
+
+      expect(result, const Left<AuthFailure, Object>(TooManyAttemptsFailure()));
+      verifyNeverSaveSession();
     });
   });
 

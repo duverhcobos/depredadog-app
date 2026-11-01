@@ -142,6 +142,77 @@ class AuthRepositoryImpl implements IAuthRepository {
   }
 
   @override
+  Future<Either<AuthFailure, void>> forgotPassword({
+    required String email,
+  }) async {
+    if (!await _networkInfo.isConnected) {
+      return const Left(NoConnectionFailure());
+    }
+    try {
+      // Sin fingerprint: el endpoint no lo recibe (no emite sesión — el
+      // 200 genérico anti-enumeración solo confirma el pedido aceptado).
+      await _remoteDataSource.forgotPassword(email: email);
+      return const Right(null);
+    } on NetworkException catch (e) {
+      return Left(_mapFailure(e));
+    } catch (e) {
+      return Left(UnknownAuthFailure(e.toString()));
+    }
+  }
+
+  @override
+  Future<Either<AuthFailure, void>> checkResetCode({
+    required String email,
+    required String code,
+  }) async {
+    if (!await _networkInfo.isConnected) {
+      return const Left(NoConnectionFailure());
+    }
+    try {
+      // Sin fingerprint: el check no emite sesión ni consume el código
+      // (queda vivo para el reset del paso 3).
+      await _remoteDataSource.checkResetCode(email: email, code: code);
+      return const Right(null);
+    } on NetworkException catch (e) {
+      return Left(_mapFailure(e));
+    } catch (e) {
+      return Left(UnknownAuthFailure(e.toString()));
+    }
+  }
+
+  @override
+  Future<Either<AuthFailure, User>> resetPassword({
+    required String email,
+    required String code,
+    required String newPassword,
+  }) async {
+    if (!await _networkInfo.isConnected) {
+      return const Left(NoConnectionFailure());
+    }
+    try {
+      final fingerprint = await _deviceInfoProvider.fingerprint();
+      final result = await _remoteDataSource.resetPassword(
+        email: email,
+        code: code,
+        newPassword: newPassword,
+        deviceFingerprint: fingerprint,
+        platform: _deviceInfoProvider.platform,
+      );
+      // Mismo saveSession que verifyEmail: el endpoint emite
+      // IssuedSession — el reset es también el auto-login.
+      await _localDataSource.saveSession(
+        accessToken: result.accessToken,
+        refreshToken: result.refreshToken,
+      );
+      return Right(result.user);
+    } on NetworkException catch (e) {
+      return Left(_mapFailure(e));
+    } catch (e) {
+      return Left(UnknownAuthFailure(e.toString()));
+    }
+  }
+
+  @override
   Future<Either<AuthFailure, User>> restoreSession() async {
     try {
       // Fast path: sin token guardado ni siquiera tocamos red ni

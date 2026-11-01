@@ -1,24 +1,25 @@
 import 'package:equatable/equatable.dart';
 import 'package:formz/formz.dart';
 
+import '../../domain/failures/auth_failure.dart';
 import '../inputs/code_input.dart';
 import '../inputs/login_inputs.dart';
 import '../inputs/register_inputs.dart';
 
-/// `failure` = validación local (campos vacíos/formato) — patrón
-/// RegisterState. SIN `authError`: la fase presentación no pega al
-/// backend; la integración (forgot-password / check-reset-code /
-/// reset-password) lo agregará junto a `authFailure`.
-enum ForgotPasswordStatus { initial, inProgress, success, failure }
+/// `failure` = validación local (campos vacíos/formato) — ya existía.
+/// `authError` = el backend rechazó forgot/check/reset/resend (código
+/// inválido, rate limit, sin conexión) — trae `authFailure` con el motivo
+/// (mismo patrón que VerifyEmailStatus / RegisterState §010).
+enum ForgotPasswordStatus { initial, inProgress, success, failure, authError }
 
-/// Estado de `/forgot-password` (wizard de 3 pasos — propuesta 011):
-/// correo → código OTP → nueva contraseña. Los flags `show*Error` se
-/// activan juntos al validar el paso/submit fallido y cada uno se limpia
-/// cuando el usuario retoca SU campo — los errores aparecen tras el
-/// intento de continuar, no en vivo (patrón register).
+/// Estado de `/forgot-password` (wizard de 3 pasos — propuesta 011,
+/// integración §012): correo → código OTP → nueva contraseña. Los flags
+/// `show*Error` se activan juntos al validar el paso/submit fallido y cada
+/// uno se limpia cuando el usuario retoca SU campo — los errores aparecen
+/// tras el intento de continuar, no en vivo (patrón register).
 /// `resendCooldown`/`isResending`/`resendTick` espejan el cooldown de
-/// verify-email (Timer local de 60s simulado; `resendTick` dispara el
-/// toast de éxito desde un BlocListener propio).
+/// verify-email (Timer local de 60s; `resendTick` dispara el toast de
+/// éxito desde un BlocListener propio).
 class ForgotPasswordState extends Equatable {
   const ForgotPasswordState({
     this.email = const EmailInput.pure(),
@@ -36,6 +37,7 @@ class ForgotPasswordState extends Equatable {
     this.resendCooldown = 0,
     this.isResending = false,
     this.resendTick = 0,
+    this.authFailure,
   });
 
   final EmailInput email;
@@ -57,6 +59,9 @@ class ForgotPasswordState extends Equatable {
   final int resendCooldown;
   final bool isResending;
   final int resendTick;
+
+  /// Solo tiene valor cuando status == authError.
+  final AuthFailure? authFailure;
 
   bool get isValid => Formz.validate([email, code, password, confirmPassword]);
   bool get isInProgress => status == ForgotPasswordStatus.inProgress;
@@ -104,6 +109,7 @@ class ForgotPasswordState extends Equatable {
     int? resendCooldown,
     bool? isResending,
     int? resendTick,
+    AuthFailure? authFailure,
   }) {
     return ForgotPasswordState(
       email: email ?? this.email,
@@ -123,6 +129,13 @@ class ForgotPasswordState extends Equatable {
       resendCooldown: resendCooldown ?? this.resendCooldown,
       isResending: isResending ?? this.isResending,
       resendTick: resendTick ?? this.resendTick,
+      // authFailure vive solo bajo status == authError — se evalúa sobre el
+      // status EFECTIVO (no solo el parámetro): un copyWith que no cambia
+      // el status (tick del cooldown en el paso 2, donde el cooldown
+      // corre siempre desde §012) no debe barrer el rojo del OTP.
+      authFailure: (status ?? this.status) == ForgotPasswordStatus.authError
+          ? (authFailure ?? this.authFailure)
+          : null,
     );
   }
 
@@ -143,5 +156,6 @@ class ForgotPasswordState extends Equatable {
     resendCooldown,
     isResending,
     resendTick,
+    authFailure,
   ];
 }

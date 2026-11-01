@@ -4,7 +4,8 @@ import '../interfaces/i_auth_remote_datasource.dart';
 
 /// SOLID (SRP): solo construye el body y parsea la respuesta de los
 /// endpoints de auth — públicos (/auth/register, /auth/login,
-/// /auth/verify-email, /auth/resend-verification) y autenticados
+/// /auth/verify-email, /auth/resend-verification, /auth/forgot-password,
+/// /auth/check-reset-code, /auth/reset-password) y autenticados
 /// (/auth/me — el Bearer lo adjunta el AuthInterceptor, acá no se arman
 /// headers). Nunca loguea email/password ni los tokens.
 class AuthRemoteDataSourceImpl implements IAuthRemoteDataSource {
@@ -99,6 +100,48 @@ class AuthRemoteDataSourceImpl implements IAuthRemoteDataSource {
     return _networkService.post(
       '/auth/resend-verification',
       body: {'email': email},
+    );
+  }
+
+  @override
+  Future<void> forgotPassword({required String email}) {
+    return _networkService.post(
+      '/auth/forgot-password',
+      body: {'email': email},
+    );
+  }
+
+  @override
+  Future<void> checkResetCode({required String email, required String code}) {
+    return _networkService.post(
+      '/auth/check-reset-code',
+      body: {'email': email, 'code': code},
+    );
+  }
+
+  @override
+  Future<LoginResult> resetPassword({
+    required String email,
+    required String code,
+    required String newPassword,
+    String? deviceFingerprint,
+    String? platform,
+  }) async {
+    final response = await _networkService.post(
+      '/auth/reset-password',
+      body: {
+        'email': email,
+        'code': code,
+        'newPassword': newPassword,
+        'deviceFingerprint': ?deviceFingerprint,
+        'platform': ?platform,
+      },
+    );
+    final map = response as Map<String, dynamic>;
+    return LoginResult(
+      accessToken: map['accessToken'] as String,
+      refreshToken: map['refreshToken'] as String,
+      user: UserModel.fromJson(map['user'] as Map<String, dynamic>),
     );
   }
 

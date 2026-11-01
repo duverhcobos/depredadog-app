@@ -2,17 +2,18 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
 import '../../../../l10n/app_localizations.dart';
+import '../../domain/failures/auth_failure.dart';
 import '../cubit/forgot_password_cubit.dart';
 import '../cubit/forgot_password_state.dart';
 import 'six_digit_code_field.dart';
 
 const int _kCodeLength = 6;
 
-/// Paso 2 "Revisa tu correo" (propuesta 011): el OTP de 6 casillas
-/// (`SixDigitCodeField` genérico) + reenvío con cooldown de 60s — mismo
-/// patrón que verify-email. El subtítulo lleva el correo tipeado en el
-/// paso 1. Auto-avanza al completar el 6to dígito (igual que verify) —
-/// el "envío" del código y el "check" son simulados, solo validación local.
+/// Paso 2 "Revisa tu correo" (propuesta 011, integración §012): el OTP de
+/// 6 casillas (`SixDigitCodeField` genérico) + reenvío con cooldown de
+/// 60s — mismo patrón que verify-email. El subtítulo lleva el correo
+/// tipeado en el paso 1. Auto-avanza al completar el 6to dígito (igual
+/// que verify) — el check real NO consume el código en el server.
 /// SIN autofocus: el wizard nunca abre el teclado al cambiar de paso
 /// (decisión del usuario) — solo al tocar el campo o al fallar validación.
 class ForgotStep2Code extends StatefulWidget {
@@ -101,8 +102,16 @@ class _ForgotStep2CodeState extends State<ForgotStep2Code> {
                 p.code != c.code ||
                 p.showCodeError != c.showCodeError ||
                 p.isInProgress != c.isInProgress ||
-                p.isResending != c.isResending,
+                p.isResending != c.isResending ||
+                p.authFailure != c.authFailure,
             builder: (context, state) {
+              // Rojo en validación local O cuando el backend rechazó el
+              // código (InvalidCodeFailure) — un código de 6 dígitos
+              // errado es formz-válido, así que el flag local no basta
+              // (convención verify-email).
+              final hasError =
+                  (state.showCodeError && state.code.isNotValid) ||
+                  state.authFailure is InvalidCodeFailure;
               // Convención loading: IgnorePointer bloquea sin atenuar.
               // isResending también bloquea: teclear durante el reenvío
               // sería texto que el éxito de ese resend borra (verify).
@@ -112,7 +121,7 @@ class _ForgotStep2CodeState extends State<ForgotStep2Code> {
                   controller: _controller,
                   focusNode: widget.codeFocus,
                   // Sin autofocus: entrar al paso no abre el teclado.
-                  hasError: state.showCodeError && state.code.isNotValid,
+                  hasError: hasError,
                   // Semántica propia del flujo: "restablecimiento", no
                   // "verificación" — TalkBack anuncia el propósito real.
                   semanticsLabel: (filled) => l10n.forgotCodeSemantics(filled),
