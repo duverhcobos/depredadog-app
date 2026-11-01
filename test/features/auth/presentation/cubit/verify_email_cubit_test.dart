@@ -9,7 +9,7 @@ import 'package:depredadog_app/features/auth/domain/use_cases/resend_verificatio
 import 'package:depredadog_app/features/auth/domain/use_cases/verify_email_use_case.dart';
 import 'package:depredadog_app/features/auth/presentation/cubit/verify_email_cubit.dart';
 import 'package:depredadog_app/features/auth/presentation/cubit/verify_email_state.dart';
-import 'package:depredadog_app/features/auth/presentation/inputs/verify_email_inputs.dart';
+import 'package:depredadog_app/features/auth/presentation/inputs/code_input.dart';
 
 class MockVerifyEmailUseCase extends Mock implements VerifyEmailUseCase {}
 

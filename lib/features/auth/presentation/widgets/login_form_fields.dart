@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:go_router/go_router.dart';
 
-import '../../../../core/widgets/app_toast.dart';
+import '../../../../core/routes/auth_guard.dart';
 import '../../../../l10n/app_localizations.dart';
 import '../cubit/login_cubit.dart';
 import '../cubit/login_state.dart';
@@ -140,9 +142,13 @@ class LoginFormFields extends StatelessWidget {
                   const Spacer(),
                   GestureDetector(
                     onTap: () {
-                      // PROVISIONAL: /forgot-password llega en su propia
-                      // pantalla — por ahora aviso.
-                      AppToast.success(context, l10n.comingSoon);
+                      // Salida del login sin éxito: autofill se cierra
+                      // SIN guardar (misma razón que "Regístrate" — el
+                      // modal "¿Guardar contraseña?" no debe dispararse).
+                      // push, no go: la flecha de /forgot-password vuelve
+                      // al login conservando lo tipeado.
+                      TextInput.finishAutofillContext(shouldSave: false);
+                      context.push(AuthGuard.forgotPasswordRoute);
                     },
                     child: Text(
                       l10n.loginForgotPassword,

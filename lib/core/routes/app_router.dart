@@ -1,5 +1,6 @@
 import 'package:go_router/go_router.dart';
 
+import '../../features/auth/presentation/screens/forgot_password_screen.dart';
 import '../../features/auth/presentation/screens/login_screen.dart';
 import '../../features/auth/presentation/screens/register_screen.dart';
 import '../../features/auth/presentation/screens/verify_email_screen.dart';
@@ -51,8 +52,15 @@ class AppRouter {
           VerifyEmailScreen(email: (state.extra as String?) ?? ''),
         ),
       ),
-      // /forgot-password y /reset-password se registran con cada
-      // pantalla — el guard ya las trata como públicas.
+      GoRoute(
+        path: AuthGuard.forgotPasswordRoute,
+        pageBuilder: (context, state) =>
+            CustomTransitions.slideUp(state, const ForgotPasswordScreen()),
+      ),
+      // /reset-password se registra con su pantalla — el guard ya la
+      // trata como pública. (El wizard de /forgot-password cubre los 3
+      // pasos; /reset-password queda reservada para un deep link de
+      // correo si algún día se usa — propuesta 011.)
     ],
   );
 }

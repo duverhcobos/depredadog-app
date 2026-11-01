@@ -405,7 +405,14 @@ class _RegisterViewState extends State<_RegisterView> {
                             // /login (su propósito es ese), igual que la
                             // flecha superior — el retroceso entre pasos
                             // es del botón "Atrás".
-                            RegisterLoginFooter(onTap: _backToLogin),
+                            BlocBuilder<RegisterCubit, RegisterState>(
+                              buildWhen: (p, c) =>
+                                  p.isInProgress != c.isInProgress,
+                              builder: (context, state) => RegisterLoginFooter(
+                                isInProgress: state.isInProgress,
+                                onTap: _backToLogin,
+                              ),
+                            ),
                           ],
                         ),
                       ),

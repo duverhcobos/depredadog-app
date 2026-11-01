@@ -255,7 +255,7 @@ void main() {
     await fillStep1(tester);
     await tapPrimary(tester, 'Continuar');
 
-    expect(find.text('Tu correo y tu llave'), findsOneWidget);
+    expect(find.text('Tu correo y tu contraseña'), findsOneWidget);
     expect(find.byType(TextFormField), findsNWidgets(3));
     expect(find.text('Correo electrónico *'), findsOneWidget);
     expect(find.text('Contraseña *'), findsOneWidget);
@@ -277,7 +277,7 @@ void main() {
 
     expect(find.text('Las contraseñas no coinciden'), findsOneWidget);
     // Sigue en el paso 2.
-    expect(find.text('Tu correo y tu llave'), findsOneWidget);
+    expect(find.text('Tu correo y tu contraseña'), findsOneWidget);
   });
 
   testWidgets('"Atrás" en paso 2 vuelve a paso 1 conservando lo tipeado', (
@@ -288,7 +288,7 @@ void main() {
 
     await fillStep1(tester, phone: '3001234567');
     await tapPrimary(tester, 'Continuar');
-    expect(find.text('Tu correo y tu llave'), findsOneWidget);
+    expect(find.text('Tu correo y tu contraseña'), findsOneWidget);
     expect(find.text('Atrás'), findsOneWidget);
 
     await tapBackStep(tester);
@@ -313,7 +313,7 @@ void main() {
 
     await tapBackStep(tester);
 
-    expect(find.text('Tu correo y tu llave'), findsOneWidget);
+    expect(find.text('Tu correo y tu contraseña'), findsOneWidget);
     expect(find.byType(TextFormField), findsNWidgets(3));
   });
 
@@ -325,7 +325,7 @@ void main() {
 
     await fillStep1(tester);
     await tapPrimary(tester, 'Continuar');
-    expect(find.text('Tu correo y tu llave'), findsOneWidget);
+    expect(find.text('Tu correo y tu contraseña'), findsOneWidget);
 
     await tester.tap(find.byIcon(Icons.arrow_back));
     await tester.pumpAndSettle();
@@ -412,7 +412,7 @@ void main() {
 
       // Volvió al paso 2 (el error queda donde se corrige) con el correo
       // marcado — el mensaje del 409 prima sobre el de formato.
-      expect(find.text('Tu correo y tu llave'), findsOneWidget);
+      expect(find.text('Tu correo y tu contraseña'), findsOneWidget);
       expect(find.text('Este correo ya tiene cuenta'), findsOneWidget);
       // Los otros campos del paso no se marcaron.
       expect(find.text('Ingresa una contraseña'), findsNothing);

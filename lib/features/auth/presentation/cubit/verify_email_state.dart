@@ -1,7 +1,7 @@
 import 'package:equatable/equatable.dart';
 
 import '../../domain/failures/auth_failure.dart';
-import '../inputs/verify_email_inputs.dart';
+import '../inputs/code_input.dart';
 
 /// `failure` = validación local (código vacío/formato) — ya existía.
 /// `authError` = el backend rechazó verify o resend (código inválido, rate

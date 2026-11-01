@@ -12,6 +12,7 @@ import '../../features/auth/domain/use_cases/register_use_case.dart';
 import '../../features/auth/domain/use_cases/resend_verification_use_case.dart';
 import '../../features/auth/domain/use_cases/restore_session_use_case.dart';
 import '../../features/auth/domain/use_cases/verify_email_use_case.dart';
+import '../../features/auth/presentation/cubit/forgot_password_cubit.dart';
 import '../../features/auth/presentation/cubit/login_cubit.dart';
 import '../../features/auth/presentation/cubit/register_cubit.dart';
 import '../../features/auth/presentation/cubit/splash_cubit.dart';
@@ -125,6 +126,13 @@ void setupDI() {
   // auto-login ocurre en verify-email (propuesta 010).
   locator.registerFactory<RegisterCubit>(
     () => RegisterCubit(registerUseCase: locator<RegisterUseCase>()),
+  );
+  // ForgotPasswordCubit recibe AuthSession aun en fase presentación: el
+  // éxito simulado marca una sesión stub o el guard rebota /home → /login
+  // en silencio (hallazgo revisor-ui). La integración agregará sus
+  // use cases igual que RegisterCubit en §010.
+  locator.registerFactory<ForgotPasswordCubit>(
+    () => ForgotPasswordCubit(authSession: locator<AuthSession>()),
   );
   locator.registerFactoryParam<VerifyEmailCubit, String, void>(
     (email, _) => VerifyEmailCubit(

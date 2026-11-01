@@ -152,7 +152,7 @@ class AppLocalizationsEs extends AppLocalizations {
   String get registerStep1Subtitle => 'Empecemos por tus datos personales.';
 
   @override
-  String get registerStep2Title => 'Tu correo y tu llave';
+  String get registerStep2Title => 'Tu correo y tu contraseña';
 
   @override
   String get registerStep2Subtitle => 'Con estos datos entrarás a tu cuenta.';
@@ -270,7 +270,7 @@ class AppLocalizationsEs extends AppLocalizations {
   String get registerPasswordRequired => 'Ingresa una contraseña';
 
   @override
-  String get registerPasswordInvalid => 'Contraseña incorrecta';
+  String get registerPasswordInvalid => 'Mínimo 8 caracteres';
 
   @override
   String get registerConfirmRequired => 'Confirma tu contraseña';
@@ -286,4 +286,42 @@ class AppLocalizationsEs extends AppLocalizations {
 
   @override
   String get registerLoginLink => 'Inicia sesión';
+
+  @override
+  String get forgotTitle => '¿Olvidaste tu contraseña?';
+
+  @override
+  String get forgotSubtitle => 'Te enviamos un código para restablecerla.';
+
+  @override
+  String get forgotSendCode => 'Enviar código';
+
+  @override
+  String get forgotStepEmailLabel => 'Correo';
+
+  @override
+  String get forgotStepCodeLabel => 'Código';
+
+  @override
+  String get forgotStepPasswordLabel => 'Clave';
+
+  @override
+  String get forgotCodeTitle => 'Revisa tu correo';
+
+  @override
+  String forgotCodeSemantics(int filled) {
+    return 'Código de restablecimiento, $filled de 6 dígitos';
+  }
+
+  @override
+  String get forgotPasswordTitle => 'Crea tu nueva contraseña';
+
+  @override
+  String get forgotPasswordSubtitle => 'Elige una que no uses en otro lado.';
+
+  @override
+  String get forgotNewPasswordLabel => 'Nueva contraseña *';
+
+  @override
+  String get forgotSubmit => 'Cambiar contraseña';
 }

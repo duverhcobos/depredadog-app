@@ -6,7 +6,7 @@ import '../cubit/register_cubit.dart';
 import '../cubit/register_state.dart';
 import 'register_field.dart';
 
-/// Paso 2 "Tu correo y tu llave" (propuesta 009): correo + contraseña con
+/// Paso 2 "Tu correo y tu contraseña" (propuesta 009): correo + contraseña con
 /// ojo y helper "Mínimo 8 caracteres" + confirmar con ojo independiente.
 /// Controllers/FocusNodes los posee el State de la pantalla.
 /// Misma convención de loading: IgnorePointer sin atenuar.
@@ -68,8 +68,10 @@ class RegisterStep2Fields extends StatelessWidget {
                 label: l10n.registerPasswordLabel,
                 controller: passwordController,
                 focusNode: passwordFocus,
-                // El hint vive BAJO el campo (helperText), no dentro —
-                // siempre visible, no desaparece al teclear (propuesta).
+                // Hint dentro (ejemplo, como confirmar) + regla BAJO el
+                // campo (helperText) — vacío sin placeholder se veía
+                // "muerto" al lado del de confirmar.
+                hintText: l10n.loginPasswordHint,
                 helperText: l10n.registerPasswordHint,
                 prefixIcon: const Icon(Icons.lock_outline),
                 keyboardType: TextInputType.visiblePassword,

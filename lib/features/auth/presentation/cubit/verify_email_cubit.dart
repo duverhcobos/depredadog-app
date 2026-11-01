@@ -5,7 +5,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import '../../../../core/auth/auth_session.dart';
 import '../../domain/use_cases/resend_verification_use_case.dart';
 import '../../domain/use_cases/verify_email_use_case.dart';
-import '../inputs/verify_email_inputs.dart';
+import '../inputs/code_input.dart';
 import 'verify_email_state.dart';
 
 /// Integración real de /auth/verify-email + /auth/resend-verification

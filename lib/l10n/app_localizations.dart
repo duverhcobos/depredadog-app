@@ -361,7 +361,7 @@ abstract class AppLocalizations {
   /// No description provided for @registerStep2Title.
   ///
   /// In es, this message translates to:
-  /// **'Tu correo y tu llave'**
+  /// **'Tu correo y tu contraseña'**
   String get registerStep2Title;
 
   /// No description provided for @registerStep2Subtitle.
@@ -583,7 +583,7 @@ abstract class AppLocalizations {
   /// No description provided for @registerPasswordInvalid.
   ///
   /// In es, this message translates to:
-  /// **'Contraseña incorrecta'**
+  /// **'Mínimo 8 caracteres'**
   String get registerPasswordInvalid;
 
   /// No description provided for @registerConfirmRequired.
@@ -615,6 +615,78 @@ abstract class AppLocalizations {
   /// In es, this message translates to:
   /// **'Inicia sesión'**
   String get registerLoginLink;
+
+  /// No description provided for @forgotTitle.
+  ///
+  /// In es, this message translates to:
+  /// **'¿Olvidaste tu contraseña?'**
+  String get forgotTitle;
+
+  /// No description provided for @forgotSubtitle.
+  ///
+  /// In es, this message translates to:
+  /// **'Te enviamos un código para restablecerla.'**
+  String get forgotSubtitle;
+
+  /// No description provided for @forgotSendCode.
+  ///
+  /// In es, this message translates to:
+  /// **'Enviar código'**
+  String get forgotSendCode;
+
+  /// No description provided for @forgotStepEmailLabel.
+  ///
+  /// In es, this message translates to:
+  /// **'Correo'**
+  String get forgotStepEmailLabel;
+
+  /// No description provided for @forgotStepCodeLabel.
+  ///
+  /// In es, this message translates to:
+  /// **'Código'**
+  String get forgotStepCodeLabel;
+
+  /// No description provided for @forgotStepPasswordLabel.
+  ///
+  /// In es, this message translates to:
+  /// **'Clave'**
+  String get forgotStepPasswordLabel;
+
+  /// No description provided for @forgotCodeTitle.
+  ///
+  /// In es, this message translates to:
+  /// **'Revisa tu correo'**
+  String get forgotCodeTitle;
+
+  /// No description provided for @forgotCodeSemantics.
+  ///
+  /// In es, this message translates to:
+  /// **'Código de restablecimiento, {filled} de 6 dígitos'**
+  String forgotCodeSemantics(int filled);
+
+  /// No description provided for @forgotPasswordTitle.
+  ///
+  /// In es, this message translates to:
+  /// **'Crea tu nueva contraseña'**
+  String get forgotPasswordTitle;
+
+  /// No description provided for @forgotPasswordSubtitle.
+  ///
+  /// In es, this message translates to:
+  /// **'Elige una que no uses en otro lado.'**
+  String get forgotPasswordSubtitle;
+
+  /// No description provided for @forgotNewPasswordLabel.
+  ///
+  /// In es, this message translates to:
+  /// **'Nueva contraseña *'**
+  String get forgotNewPasswordLabel;
+
+  /// No description provided for @forgotSubmit.
+  ///
+  /// In es, this message translates to:
+  /// **'Cambiar contraseña'**
+  String get forgotSubmit;
 }
 
 class _AppLocalizationsDelegate

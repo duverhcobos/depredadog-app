@@ -1,6 +1,9 @@
 import 'package:formz/formz.dart';
 
-/// SOLID (SRP): código de verificación — 6 dígitos numéricos.
+/// SOLID (SRP): código de 6 dígitos numéricos — compartido por
+/// verify-email (verificación de correo) y forgot-password (código de
+/// restablecimiento). Vivía en `verify_email_inputs.dart`; se movió a
+/// archivo propio al tener un segundo consumidor (propuesta 011).
 enum CodeValidationError { empty, invalid }
 
 final class CodeInput extends FormzInput<String, CodeValidationError> {
