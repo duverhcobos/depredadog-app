@@ -69,7 +69,7 @@ void main() {
     expect(find.text('Contraseña'), findsOneWidget);
     expect(find.text('¿Olvidaste tu contraseña?'), findsOneWidget);
     expect(find.text('Iniciar sesión'), findsOneWidget);
-    expect(find.text('Ingresar con Google'), findsOneWidget);
+    expect(find.text('Continuar con Google'), findsOneWidget);
     expect(find.text('Regístrate'), findsOneWidget);
     expect(find.byType(Image), findsWidgets); // imagotipo + logo G
   });

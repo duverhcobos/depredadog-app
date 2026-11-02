@@ -76,9 +76,12 @@ void main() {
   }
 
   /// Tap del botón primario del paso visible (queda dentro del scroll).
+  /// ensureVisible + pumpAndSettle: el scroll animado debe TERMINAR —
+  /// con un solo pump el viewport quedaba a medio camino y el tap caía
+  /// fuera del clip (el bloque Google §013 hizo el paso 1 más alto).
   Future<void> tapPrimary(WidgetTester tester, String label) async {
     await tester.ensureVisible(find.text(label));
-    await tester.pump();
+    await tester.pumpAndSettle();
     await tester.tap(find.text(label));
     // pumpAndSettle cubre la transición AnimatedSwitcher (~250ms).
     await tester.pumpAndSettle();
@@ -88,7 +91,7 @@ void main() {
   /// que el primario).
   Future<void> tapBackStep(WidgetTester tester) async {
     await tester.ensureVisible(find.text('Atrás'));
-    await tester.pump();
+    await tester.pumpAndSettle();
     await tester.tap(find.text('Atrás'));
     await tester.pumpAndSettle();
   }
@@ -196,9 +199,15 @@ void main() {
     expect(find.text('Datos'), findsOneWidget);
     expect(find.text('Cuenta'), findsOneWidget);
     expect(find.text('Revisión'), findsOneWidget);
-    // Título del paso 1 — sin imagotipo ni headline viejo.
+    // Título del paso 1 — sin imagotipo ni headline viejo: el ÚNICO
+    // Image del paso es la G de Google del botón social (§013).
     expect(find.text('Cuéntanos quién eres'), findsOneWidget);
-    expect(find.byType(Image), findsNothing);
+    final images = tester.widgetList<Image>(find.byType(Image)).toList();
+    expect(images, hasLength(1));
+    expect(
+      (images.single.image as AssetImage).assetName,
+      'assets/images/google_g.png',
+    );
     // Solo los 5 campos del paso 1 (nombres + teléfono).
     expect(find.byType(TextFormField), findsNWidgets(5));
     expect(find.text('Primer nombre *'), findsOneWidget);
@@ -219,6 +228,29 @@ void main() {
 
     expect(find.text('Atrás'), findsNothing);
     expect(find.text('Continuar'), findsOneWidget);
+  });
+
+  testWidgets('paso 1: botón Google con divisor; pasos 2-3 NO lo muestran '
+      '(decisión del usuario)', (tester) async {
+    await pumpRegister(tester);
+    await tester.pump();
+
+    // Paso 1: espejo de login — divisor "o continúa con" + botón outlined.
+    expect(find.text('o continúa con'), findsOneWidget);
+    expect(find.text('Continuar con Google'), findsOneWidget);
+
+    // Paso 2: ya comprometido con el formulario — Google desaparece.
+    await fillStep1(tester);
+    await tapPrimary(tester, 'Continuar');
+    expect(find.text('Tu correo y tu contraseña'), findsOneWidget);
+    expect(find.text('o continúa con'), findsNothing);
+    expect(find.text('Continuar con Google'), findsNothing);
+
+    // Paso 3: igual.
+    await fillStep2(tester);
+    await tapPrimary(tester, 'Continuar');
+    expect(find.text('o continúa con'), findsNothing);
+    expect(find.text('Continuar con Google'), findsNothing);
   });
 
   testWidgets('flecha de volver queda fija arriba, fuera del scroll', (

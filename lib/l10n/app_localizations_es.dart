@@ -65,7 +65,7 @@ class AppLocalizationsEs extends AppLocalizations {
   String get loginOrContinueWith => 'o continúa con';
 
   @override
-  String get loginGoogleButton => 'Ingresar con Google';
+  String get loginGoogleButton => 'Continuar con Google';
 
   @override
   String get loginNoAccount => '¿No tienes cuenta? ';

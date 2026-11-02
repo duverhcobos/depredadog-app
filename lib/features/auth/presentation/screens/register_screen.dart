@@ -10,6 +10,7 @@ import '../../../../l10n/app_localizations.dart';
 import '../../domain/failures/auth_failure.dart';
 import '../cubit/register_cubit.dart';
 import '../cubit/register_state.dart';
+import '../widgets/google_sign_in_button.dart';
 import '../widgets/register_login_footer.dart';
 import '../widgets/register_review_card.dart';
 import '../widgets/register_step1_fields.dart';
@@ -401,6 +402,63 @@ class _RegisterViewState extends State<_RegisterView> {
                               },
                             ),
                             const SizedBox(height: 24),
+                            // Google sign-in: SOLO paso 1 (decisión del
+                            // usuario) — Google reemplaza el registro
+                            // entero, no lo complementa; en pasos 2-3 ya
+                            // se está comprometido con el formulario.
+                            // Espejo del bloque de login: divisor
+                            // "o continúa con" + botón outlined compartido.
+                            // AnimatedSize suaviza la aparición y la
+                            // desaparición del bloque al cambiar de paso —
+                            // sin él el footer saltaba ~116px en seco
+                            // mientras el cuerpo aún animaba (revisor-ui).
+                            AnimatedSize(
+                              duration: const Duration(milliseconds: 250),
+                              curve: Curves.easeOut,
+                              alignment: Alignment.topCenter,
+                              child: BlocBuilder<RegisterCubit, RegisterState>(
+                                buildWhen: (p, c) =>
+                                    p.isFirstStep != c.isFirstStep ||
+                                    p.isInProgress != c.isInProgress,
+                                builder: (context, state) {
+                                  if (!state.isFirstStep) {
+                                    return const SizedBox.shrink();
+                                  }
+                                  return IgnorePointer(
+                                    ignoring: state.isInProgress,
+                                    child: Column(
+                                      crossAxisAlignment:
+                                          CrossAxisAlignment.stretch,
+                                      children: [
+                                        Row(
+                                          children: [
+                                            const Expanded(child: Divider()),
+                                            Padding(
+                                              padding:
+                                                  const EdgeInsets.symmetric(
+                                                    horizontal: 12,
+                                                  ),
+                                              child: Text(
+                                                l10n.loginOrContinueWith,
+                                                style:
+                                                    theme.textTheme.bodySmall,
+                                              ),
+                                            ),
+                                            const Expanded(child: Divider()),
+                                          ],
+                                        ),
+                                        const SizedBox(height: 24),
+                                        const GoogleSignInButton(),
+                                        // 32 (no 24): paridad con login —
+                                        // el footer necesita respiro extra
+                                        // tras el bloque social (revisor-ui).
+                                        const SizedBox(height: 32),
+                                      ],
+                                    ),
+                                  );
+                                },
+                              ),
+                            ),
                             // El link "Inicia sesión" siempre abandona a
                             // /login (su propósito es ese), igual que la
                             // flecha superior — el retroceso entre pasos

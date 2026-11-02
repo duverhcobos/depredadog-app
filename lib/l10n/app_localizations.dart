@@ -205,7 +205,7 @@ abstract class AppLocalizations {
   /// No description provided for @loginGoogleButton.
   ///
   /// In es, this message translates to:
-  /// **'Ingresar con Google'**
+  /// **'Continuar con Google'**
   String get loginGoogleButton;
 
   /// No description provided for @loginNoAccount.

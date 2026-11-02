@@ -18,7 +18,7 @@
   "loginRememberMe": "Recuérdame",
   "loginButton": "Iniciar sesión",
   "loginOrContinueWith": "o continúa con",
-  "loginGoogleButton": "Ingresar con Google",
+  "loginGoogleButton": "Continuar con Google",
   "loginNoAccount": "¿No tienes cuenta? ",
   "loginRegisterLink": "Regístrate",
   "loginErrorInvalidCredentials": "Correo o contraseña incorrectos",

@@ -6,7 +6,7 @@
 
 ## Contexto
 
-El login muestra "Ingresar con Google" pero no hay endpoint integrado ni proyecto en Google Cloud. Para que funcione en prod se necesitan client IDs OAuth y la huella del keystore de release — el SHA-1 de debug **no sirve** para la app firmada.
+El botón "Continuar con Google" (`GoogleSignInButton` compartido) existe en login y en el paso 1 del registro, pero no hay endpoint integrado ni proyecto en Google Cloud. Para que funcione en prod se necesitan client IDs OAuth y la huella del keystore de release — el SHA-1 de debug **no sirve** para la app firmada. Al ser widget compartido, ocultarlo en prod resuelve ambas superficies a la vez.
 
 ## Qué falta
 
