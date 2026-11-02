@@ -5,10 +5,12 @@ import 'package:get_it/get_it.dart';
 import 'package:go_router/go_router.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:dartz/dartz.dart';
+import 'package:depredadog_app/core/auth/auth_session.dart';
 import 'package:depredadog_app/core/routes/auth_guard.dart';
 import 'package:depredadog_app/core/theme/app_theme.dart';
 import 'package:depredadog_app/features/auth/domain/entities/user.dart';
 import 'package:depredadog_app/features/auth/domain/failures/auth_failure.dart';
+import 'package:depredadog_app/features/auth/domain/use_cases/google_sign_in_use_case.dart';
 import 'package:depredadog_app/features/auth/domain/use_cases/register_use_case.dart';
 import 'package:depredadog_app/features/auth/presentation/cubit/register_cubit.dart';
 import 'package:depredadog_app/features/auth/presentation/screens/register_screen.dart';
@@ -16,12 +18,16 @@ import 'package:depredadog_app/l10n/app_localizations.dart';
 
 class MockRegisterUseCase extends Mock implements RegisterUseCase {}
 
+class MockGoogleSignInUseCase extends Mock implements GoogleSignInUseCase {}
+
 void main() {
   // RegisterScreen resuelve su cubit vía locator (propuesta 010) — los
   // tests registran la factory con el use case mockeado, patrón
   // login/verify-email.
   final locator = GetIt.instance;
   late MockRegisterUseCase registerUseCase;
+  late MockGoogleSignInUseCase googleUseCase;
+  late AuthSession authSession;
 
   const user = User(
     id: 'u1',
@@ -46,11 +52,17 @@ void main() {
 
   setUp(() {
     registerUseCase = MockRegisterUseCase();
+    googleUseCase = MockGoogleSignInUseCase();
+    authSession = AuthSession();
     // Default benigno: el registro devuelve el usuario creado — los tests
     // de UI que ejercen el submit lo re-stubbean según el caso.
     stubRegister(const Right(user));
     locator.registerFactory<RegisterCubit>(
-      () => RegisterCubit(registerUseCase: registerUseCase),
+      () => RegisterCubit(
+        registerUseCase: registerUseCase,
+        googleSignInUseCase: googleUseCase,
+        authSession: authSession,
+      ),
     );
   });
 
@@ -116,6 +128,11 @@ void main() {
           path: AuthGuard.verifyEmailRoute,
           builder: (context, state) =>
               const Scaffold(body: Text('PANTALLA VERIFY')),
+        ),
+        GoRoute(
+          path: AuthGuard.homeRoute,
+          builder: (context, state) =>
+              const Scaffold(body: Text('PANTALLA HOME')),
         ),
       ],
     );
@@ -451,6 +468,37 @@ void main() {
       expect(find.text('Confirma tu contraseña'), findsNothing);
     },
   );
+
+  testWidgets('botón Google del paso 1 cableado al cubit (sin gate — '
+      'siempre llama signInWithGoogle)', (tester) async {
+    when(() => googleUseCase()).thenAnswer((_) async => const Right(null));
+    await pumpRegister(tester);
+    await tester.pump();
+
+    await tester.ensureVisible(find.text('Continuar con Google'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Continuar con Google'));
+    await tester.pumpAndSettle();
+
+    verify(() => googleUseCase()).called(1);
+  });
+
+  testWidgets('éxito Google en paso 1: sesión completa → /home directo '
+      '(sin verify-email)', (tester) async {
+    when(() => googleUseCase()).thenAnswer((_) async => const Right(user));
+    await pumpRegisterWithRouter(tester);
+    await tester.pump();
+
+    await tester.ensureVisible(find.text('Continuar con Google'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Continuar con Google'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('PANTALLA HOME'), findsOneWidget);
+    expect(find.text('PANTALLA VERIFY'), findsNothing);
+    expect(authSession.isAuthenticated, isTrue);
+    verify(() => googleUseCase()).called(1);
+  });
 
   testWidgets('flecha de volver en paso 1 sin stack navega a /login', (
     tester,

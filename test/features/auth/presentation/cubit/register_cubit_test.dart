@@ -4,6 +4,8 @@ import 'package:mocktail/mocktail.dart';
 import 'package:dartz/dartz.dart';
 import 'package:depredadog_app/features/auth/domain/entities/user.dart';
 import 'package:depredadog_app/features/auth/domain/failures/auth_failure.dart';
+import 'package:depredadog_app/core/auth/auth_session.dart';
+import 'package:depredadog_app/features/auth/domain/use_cases/google_sign_in_use_case.dart';
 import 'package:depredadog_app/features/auth/domain/use_cases/register_use_case.dart';
 import 'package:depredadog_app/features/auth/presentation/cubit/register_cubit.dart';
 import 'package:depredadog_app/features/auth/presentation/cubit/register_state.dart';
@@ -12,8 +14,12 @@ import 'package:depredadog_app/features/auth/presentation/inputs/register_inputs
 
 class MockRegisterUseCase extends Mock implements RegisterUseCase {}
 
+class MockGoogleSignInUseCase extends Mock implements GoogleSignInUseCase {}
+
 void main() {
   late MockRegisterUseCase useCase;
+  late MockGoogleSignInUseCase googleUseCase;
+  late AuthSession authSession;
 
   const user = User(
     id: 'u1',
@@ -43,9 +49,15 @@ void main() {
 
   setUp(() {
     useCase = MockRegisterUseCase();
+    googleUseCase = MockGoogleSignInUseCase();
+    authSession = AuthSession();
   });
 
-  RegisterCubit buildCubit() => RegisterCubit(registerUseCase: useCase);
+  RegisterCubit buildCubit() => RegisterCubit(
+    registerUseCase: useCase,
+    googleSignInUseCase: googleUseCase,
+    authSession: authSession,
+  );
 
   void stubRegister(Either<AuthFailure, User> result) => when(
     () => useCase(
@@ -70,6 +82,9 @@ void main() {
       phone: any(named: 'phone'),
     ),
   );
+
+  void stubGoogle(Either<AuthFailure, User?> result) =>
+      when(() => googleUseCase()).thenAnswer((_) async => result);
 
   group('RegisterCubit.nextStep', () {
     blocTest<RegisterCubit, RegisterState>(
@@ -520,5 +535,109 @@ void main() {
         isTrue,
       );
     });
+  });
+
+  group('RegisterCubit.signInWithGoogle', () {
+    blocTest<RegisterCubit, RegisterState>(
+      'éxito: inProgress → success con isGoogleAuth (la pantalla navega a '
+      '/home, no a verify-email) y marca AuthSession',
+      build: buildCubit,
+      setUp: () => stubGoogle(const Right(user)),
+      act: (cubit) => cubit.signInWithGoogle(),
+      expect: () => [
+        isA<RegisterState>().having(
+          (s) => s.status,
+          'status',
+          RegisterStatus.inProgress,
+        ),
+        isA<RegisterState>()
+            .having((s) => s.status, 'status', RegisterStatus.success)
+            .having((s) => s.isGoogleAuth, 'isGoogleAuth', isTrue),
+      ],
+      verify: (_) {
+        verify(() => googleUseCase()).called(1);
+        verifyNeverRegister();
+        expect(authSession.isAuthenticated, isTrue);
+        expect(authSession.currentUser, user);
+      },
+    );
+
+    blocTest<RegisterCubit, RegisterState>(
+      'cancel del picker (Right null): inProgress → initial en silencio, '
+      'sin authFailure ni sesión',
+      build: buildCubit,
+      setUp: () => stubGoogle(const Right(null)),
+      act: (cubit) => cubit.signInWithGoogle(),
+      expect: () => [
+        isA<RegisterState>().having(
+          (s) => s.status,
+          'status',
+          RegisterStatus.inProgress,
+        ),
+        isA<RegisterState>()
+            .having((s) => s.status, 'status', RegisterStatus.initial)
+            .having((s) => s.authFailure, 'authFailure', isNull)
+            .having((s) => s.isGoogleAuth, 'isGoogleAuth', isFalse),
+      ],
+      verify: (_) => expect(authSession.isAuthenticated, isFalse),
+    );
+
+    blocTest<RegisterCubit, RegisterState>(
+      'error: inProgress → authError con authFailure + isGoogleAuth (sin '
+      'moverse de paso ni marcar campos) → initial limpio',
+      build: buildCubit,
+      seed: () => validSeed,
+      setUp: () => stubGoogle(const Left(UnknownAuthFailure('SDK boom'))),
+      act: (cubit) => cubit.signInWithGoogle(),
+      expect: () => [
+        isA<RegisterState>().having(
+          (s) => s.status,
+          'status',
+          RegisterStatus.inProgress,
+        ),
+        isA<RegisterState>()
+            .having((s) => s.status, 'status', RegisterStatus.authError)
+            .having(
+              (s) => s.authFailure,
+              'authFailure',
+              isA<UnknownAuthFailure>(),
+            )
+            .having((s) => s.isGoogleAuth, 'isGoogleAuth', isTrue)
+            .having((s) => s.currentStep, 'currentStep', 2)
+            .having((s) => s.emailTaken, 'emailTaken', isFalse),
+        isA<RegisterState>()
+            .having((s) => s.status, 'status', RegisterStatus.initial)
+            .having((s) => s.authFailure, 'authFailure', isNull)
+            .having((s) => s.isGoogleAuth, 'isGoogleAuth', isFalse),
+      ],
+      verify: (_) => expect(authSession.isAuthenticated, isFalse),
+    );
+
+    blocTest<RegisterCubit, RegisterState>(
+      'durante inProgress no re-emite ni re-llama (doble tap)',
+      build: buildCubit,
+      seed: () => validSeed.copyWith(status: RegisterStatus.inProgress),
+      act: (cubit) => cubit.signInWithGoogle(),
+      expect: () => <RegisterState>[],
+      verify: (_) => verifyNever(() => googleUseCase()),
+    );
+
+    blocTest<RegisterCubit, RegisterState>(
+      'el éxito por email mantiene isGoogleAuth en false → /verify-email',
+      build: buildCubit,
+      seed: () => validSeed,
+      setUp: () => stubRegister(const Right(user)),
+      act: (cubit) => cubit.submit(),
+      expect: () => [
+        isA<RegisterState>().having(
+          (s) => s.status,
+          'status',
+          RegisterStatus.inProgress,
+        ),
+        isA<RegisterState>()
+            .having((s) => s.status, 'status', RegisterStatus.success)
+            .having((s) => s.isGoogleAuth, 'isGoogleAuth', isFalse),
+      ],
+    );
   });
 }

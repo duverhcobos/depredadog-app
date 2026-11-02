@@ -79,6 +79,25 @@ class _LoginViewState extends State<_LoginView> {
         UnknownAuthFailure() => l10n.loginErrorGeneric,
       };
 
+  /// Errores del flujo Google (propuesta 014): un solo toast genérico —
+  /// solo suspended / sin conexión / throttle conservan su copy porque
+  /// describen algo accionable (decisión del usuario). El 401 'Invalid
+  /// Google token', los errores del SDK y los inalcanzables de otros
+  /// endpoints caen al genérico de Google por exhaustividad del sealed.
+  String _googleErrorMessage(AppLocalizations l10n, AuthFailure failure) =>
+      switch (failure) {
+        AccountSuspendedFailure() => l10n.loginErrorAccountSuspended,
+        TooManyAttemptsFailure() => l10n.loginErrorTooManyAttempts,
+        NoConnectionFailure() => l10n.loginErrorNoConnection,
+        InvalidCredentialsFailure() => l10n.googleSignInError,
+        EmailNotVerifiedFailure() => l10n.googleSignInError,
+        InvalidCodeFailure() => l10n.googleSignInError,
+        SessionExpiredFailure() => l10n.googleSignInError,
+        NoStoredSessionFailure() => l10n.googleSignInError,
+        EmailAlreadyRegisteredFailure() => l10n.googleSignInError,
+        UnknownAuthFailure() => l10n.googleSignInError,
+      };
+
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
@@ -89,7 +108,9 @@ class _LoginViewState extends State<_LoginView> {
           listenWhen: (prev, curr) => prev.status != curr.status,
           listener: (context, state) {
             if (state.status == LoginStatus.success) {
-              TextInput.finishAutofillContext(shouldSave: true);
+              // En éxito Google no se guardan las credenciales tipeadas:
+              // nunca se enviaron y podrían estar erradas.
+              TextInput.finishAutofillContext(shouldSave: !state.isGoogleAuth);
               context.go(AuthGuard.homeRoute);
             } else if (state.status == LoginStatus.failure) {
               // Foco al primer campo inválido en orden visual (forms skill).
@@ -101,7 +122,14 @@ class _LoginViewState extends State<_LoginView> {
               AppToast.error(context, l10n.loginFormInvalid);
             } else if (state.status == LoginStatus.authError &&
                 state.authFailure != null) {
-              if (state.authFailure is EmailNotVerifiedFailure) {
+              if (state.isGoogleAuth) {
+                // El flujo Google no tiene campos que señalar ni salida
+                // propia: solo el toast.
+                AppToast.error(
+                  context,
+                  _googleErrorMessage(l10n, state.authFailure!),
+                );
+              } else if (state.authFailure is EmailNotVerifiedFailure) {
                 // El login no se completó: cerramos el contexto de
                 // autofill SIN guardar — si la sesión queda abierta, al
                 // navegar Android la "commitea" y GMS dispara el modal
@@ -198,7 +226,16 @@ class _LoginViewState extends State<_LoginView> {
                               child: Column(
                                 crossAxisAlignment: CrossAxisAlignment.stretch,
                                 children: [
-                                  const GoogleSignInButton(),
+                                  // Sin gate de Environment (decisión del
+                                  // usuario): si el client ID está vacío el
+                                  // SDK falla y el usuario ve el toast
+                                  // genérico — comportamiento real desde el
+                                  // primer build.
+                                  GoogleSignInButton(
+                                    onPressed: () => context
+                                        .read<LoginCubit>()
+                                        .signInWithGoogle(),
+                                  ),
                                   const SizedBox(height: 32),
                                   Row(
                                     mainAxisAlignment: MainAxisAlignment.center,

@@ -1,15 +1,20 @@
 import 'package:flutter_bloc/flutter_bloc.dart';
 
 import '../../../../core/auth/auth_session.dart';
+import '../../domain/use_cases/google_sign_in_use_case.dart';
 import '../../domain/use_cases/login_use_case.dart';
 import '../inputs/login_inputs.dart';
 import 'login_state.dart';
 
 class LoginCubit extends Cubit<LoginState> {
-  LoginCubit({required this._loginUseCase, required this._authSession})
-    : super(const LoginState());
+  LoginCubit({
+    required this._loginUseCase,
+    required this._googleSignInUseCase,
+    required this._authSession,
+  }) : super(const LoginState());
 
   final LoginUseCase _loginUseCase;
+  final GoogleSignInUseCase _googleSignInUseCase;
   final AuthSession _authSession;
 
   /// Al escribir se limpia el error de ESE campo — la alerta desaparece
@@ -65,6 +70,37 @@ class LoginCubit extends Cubit<LoginState> {
       (user) {
         _authSession.markAuthenticated(user);
         emit(state.copyWith(status: LoginStatus.success));
+      },
+    );
+  }
+
+  /// Flujo Google (propuesta 014): cancel = vuelve a initial en silencio;
+  /// éxito = sesión persistida → markAuthenticated → success → el listener
+  /// navega a /home; error = authError marcado isGoogleAuth para que la
+  /// pantalla use el toast propio del flujo Google.
+  Future<void> signInWithGoogle() async {
+    if (state.isInProgress) return;
+    emit(state.copyWith(status: LoginStatus.inProgress));
+    final result = await _googleSignInUseCase();
+    if (isClosed) return;
+    result.fold(
+      (failure) {
+        emit(
+          state.copyWith(
+            status: LoginStatus.authError,
+            authFailure: failure,
+            isGoogleAuth: true,
+          ),
+        );
+        emit(state.copyWith(status: LoginStatus.initial));
+      },
+      (user) {
+        if (user == null) {
+          emit(state.copyWith(status: LoginStatus.initial));
+          return;
+        }
+        _authSession.markAuthenticated(user);
+        emit(state.copyWith(status: LoginStatus.success, isGoogleAuth: true));
       },
     );
   }

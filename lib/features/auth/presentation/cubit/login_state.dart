@@ -22,6 +22,7 @@ class LoginState extends Equatable {
     this.showPasswordError = false,
     this.rememberMe = false,
     this.authFailure,
+    this.isGoogleAuth = false,
   });
 
   final EmailInput email;
@@ -37,6 +38,12 @@ class LoginState extends Equatable {
 
   /// Solo tiene valor cuando status == authError.
   final AuthFailure? authFailure;
+
+  /// Solo tiene valor cuando status == success o authError: marca que la
+  /// resolución vino del flujo Google (propuesta 014) — la pantalla lo usa
+  /// para elegir el mapeo de error de Google (toast genérico propio) en
+  /// vez del de email/password.
+  final bool isGoogleAuth;
 
   bool get isValid => Formz.validate([email, password]);
   bool get isInProgress => status == LoginStatus.inProgress;
@@ -57,6 +64,7 @@ class LoginState extends Equatable {
     bool? showPasswordError,
     bool? rememberMe,
     AuthFailure? authFailure,
+    bool? isGoogleAuth,
   }) {
     return LoginState(
       email: email ?? this.email,
@@ -71,6 +79,13 @@ class LoginState extends Equatable {
       authFailure: status == LoginStatus.authError
           ? (authFailure ?? this.authFailure)
           : null,
+      // isGoogleAuth sigue la misma convención que authFailure: solo
+      // describe una resolución (success/authError) y se limpia al volver
+      // a initial/inProgress/failure — nunca se arrastra entre intentos.
+      isGoogleAuth:
+          status == LoginStatus.success || status == LoginStatus.authError
+          ? (isGoogleAuth ?? this.isGoogleAuth)
+          : false,
     );
   }
 
@@ -84,5 +99,6 @@ class LoginState extends Equatable {
     showPasswordError,
     rememberMe,
     authFailure,
+    isGoogleAuth,
   ];
 }

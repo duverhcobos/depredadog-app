@@ -27,6 +27,7 @@
   "loginErrorTooManyAttempts": "Demasiados intentos — espera un momento",
   "loginErrorNoConnection": "Sin conexión a internet",
   "loginErrorGeneric": "No se pudo iniciar sesión, intenta de nuevo",
+  "googleSignInError": "No pudimos entrar con Google — inténtalo de nuevo",
   "comingSoon": "Disponible próximamente",
   "commonBack": "Volver",
   "verifyEmailHeadline": "Verifica tu correo",

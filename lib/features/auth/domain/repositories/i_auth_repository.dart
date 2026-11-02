@@ -61,6 +61,12 @@ abstract class IAuthRepository {
     required String newPassword,
   });
 
+  /// Google sign-in completo (SDK nativo → POST /auth/google). Éxito =
+  /// sesión YA persistida (el endpoint emite tokens igual que login).
+  /// Right(null) = el usuario canceló el selector de Google — no es error,
+  /// la UI no muestra nada.
+  Future<Either<AuthFailure, User?>> signInWithGoogle();
+
   /// Valida la sesión guardada contra el backend. Solo el splash la usa
   /// (decidir login vs home al abrir). Semántica por resultado:
   /// Right(user) = sesión válida; SessionExpiredFailure = 401, tokens ya

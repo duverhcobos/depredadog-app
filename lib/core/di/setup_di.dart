@@ -3,12 +3,15 @@ import 'package:internet_connection_checker/internet_connection_checker.dart';
 
 import '../../features/auth/data/datasources/implementations/auth_local_datasource_impl.dart';
 import '../../features/auth/data/datasources/implementations/auth_remote_datasource_impl.dart';
+import '../../features/auth/data/datasources/implementations/google_sign_in_gateway_impl.dart';
 import '../../features/auth/data/datasources/interfaces/i_auth_local_datasource.dart';
 import '../../features/auth/data/datasources/interfaces/i_auth_remote_datasource.dart';
+import '../../features/auth/data/datasources/interfaces/i_google_sign_in_gateway.dart';
 import '../../features/auth/data/repositories/auth_repository_impl.dart';
 import '../../features/auth/domain/repositories/i_auth_repository.dart';
 import '../../features/auth/domain/use_cases/check_reset_code_use_case.dart';
 import '../../features/auth/domain/use_cases/forgot_password_use_case.dart';
+import '../../features/auth/domain/use_cases/google_sign_in_use_case.dart';
 import '../../features/auth/domain/use_cases/login_use_case.dart';
 import '../../features/auth/domain/use_cases/register_use_case.dart';
 import '../../features/auth/domain/use_cases/resend_verification_use_case.dart';
@@ -84,6 +87,11 @@ void setupDI() {
   locator.registerLazySingleton<IAuthLocalDataSource>(
     () => AuthLocalDataSourceImpl(secureStorage: locator<ISecureStorage>()),
   );
+  // Gateway del SDK de Google (no es HTTP — envuelve el plugin; init lazy
+  // al primer tap, propuesta 014).
+  locator.registerLazySingleton<IGoogleSignInGateway>(
+    () => GoogleSignInGatewayImpl(),
+  );
 
   // --- Repositories (auth) ---
   locator.registerLazySingleton<IAuthRepository>(
@@ -92,6 +100,7 @@ void setupDI() {
       localDataSource: locator<IAuthLocalDataSource>(),
       networkInfo: locator<INetworkInfo>(),
       deviceInfoProvider: locator<IDeviceInfoProvider>(),
+      googleGateway: locator<IGoogleSignInGateway>(),
     ),
   );
 
@@ -120,6 +129,9 @@ void setupDI() {
   locator.registerLazySingleton<ResetPasswordUseCase>(
     () => ResetPasswordUseCase(locator<IAuthRepository>()),
   );
+  locator.registerLazySingleton<GoogleSignInUseCase>(
+    () => GoogleSignInUseCase(locator<IAuthRepository>()),
+  );
 
   // --- Cubits ---
   locator.registerFactory<SplashCubit>(
@@ -131,13 +143,21 @@ void setupDI() {
   locator.registerFactory<LoginCubit>(
     () => LoginCubit(
       loginUseCase: locator<LoginUseCase>(),
+      googleSignInUseCase: locator<GoogleSignInUseCase>(),
       authSession: locator<AuthSession>(),
     ),
   );
-  // RegisterCubit NO recibe AuthSession: register no autentica — el
-  // auto-login ocurre en verify-email (propuesta 010).
+  // RegisterCubit recibe AuthSession SOLO por el flujo Google (propuesta
+  // 014): el registro por email sigue sin autenticar — su auto-login
+  // ocurre en verify-email (propuesta 010); la sesión Google nace
+  // completa y marca el flag en memoria para que el guard deje pasar
+  // a /home.
   locator.registerFactory<RegisterCubit>(
-    () => RegisterCubit(registerUseCase: locator<RegisterUseCase>()),
+    () => RegisterCubit(
+      registerUseCase: locator<RegisterUseCase>(),
+      googleSignInUseCase: locator<GoogleSignInUseCase>(),
+      authSession: locator<AuthSession>(),
+    ),
   );
   // ForgotPasswordCubit (integración §012): el reset emite IssuedSession
   // igual que verifyEmail — recibe los 3 use cases del flujo + AuthSession

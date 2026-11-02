@@ -38,6 +38,7 @@ class RegisterState extends Equatable {
     this.showConfirmPasswordError = false,
     this.emailTaken = false,
     this.authFailure,
+    this.isGoogleAuth = false,
   });
 
   final NameInput firstName;
@@ -68,6 +69,12 @@ class RegisterState extends Equatable {
 
   /// Solo tiene valor cuando status == authError.
   final AuthFailure? authFailure;
+
+  /// Solo tiene valor cuando status == success o authError: marca que la
+  /// resolución vino del flujo Google (propuesta 014). En success la
+  /// pantalla navega a /home (la sesión Google nace completa — sin
+  /// verify-email); en authError usa el toast propio del flujo Google.
+  final bool isGoogleAuth;
 
   bool get isValid => Formz.validate([
     firstName,
@@ -137,6 +144,7 @@ class RegisterState extends Equatable {
     bool? showConfirmPasswordError,
     bool? emailTaken,
     AuthFailure? authFailure,
+    bool? isGoogleAuth,
   }) {
     return RegisterState(
       firstName: firstName ?? this.firstName,
@@ -166,6 +174,13 @@ class RegisterState extends Equatable {
       authFailure: status == RegisterStatus.authError
           ? (authFailure ?? this.authFailure)
           : null,
+      // isGoogleAuth sigue la misma convención: solo describe una
+      // resolución (success/authError) y se limpia al volver a
+      // initial/inProgress/failure.
+      isGoogleAuth:
+          status == RegisterStatus.success || status == RegisterStatus.authError
+          ? (isGoogleAuth ?? this.isGoogleAuth)
+          : false,
     );
   }
 
@@ -191,5 +206,6 @@ class RegisterState extends Equatable {
     showConfirmPasswordError,
     emailTaken,
     authFailure,
+    isGoogleAuth,
   ];
 }

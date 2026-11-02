@@ -6,6 +6,7 @@ import 'package:depredadog_app/core/network/exceptions/network_exception.dart';
 import 'package:depredadog_app/core/network/interfaces/i_network_info.dart';
 import 'package:depredadog_app/features/auth/data/datasources/interfaces/i_auth_local_datasource.dart';
 import 'package:depredadog_app/features/auth/data/datasources/interfaces/i_auth_remote_datasource.dart';
+import 'package:depredadog_app/features/auth/data/datasources/interfaces/i_google_sign_in_gateway.dart';
 import 'package:depredadog_app/features/auth/data/models/user_model.dart';
 import 'package:depredadog_app/features/auth/data/repositories/auth_repository_impl.dart';
 import 'package:depredadog_app/features/auth/domain/failures/auth_failure.dart';
@@ -18,11 +19,14 @@ class MockNetworkInfo extends Mock implements INetworkInfo {}
 
 class MockDeviceInfoProvider extends Mock implements IDeviceInfoProvider {}
 
+class MockGoogleSignInGateway extends Mock implements IGoogleSignInGateway {}
+
 void main() {
   late MockRemoteDataSource remote;
   late MockLocalDataSource local;
   late MockNetworkInfo networkInfo;
   late MockDeviceInfoProvider deviceInfo;
+  late MockGoogleSignInGateway googleGateway;
   late AuthRepositoryImpl repository;
 
   const user = UserModel(
@@ -155,16 +159,40 @@ void main() {
     newPassword: 'nuevaClave123',
   );
 
+  void stubRemoteGoogleLogin(Future<LoginResult> Function() answer) => when(
+    () => remote.googleLogin(
+      idToken: any(named: 'idToken'),
+      deviceFingerprint: any(named: 'deviceFingerprint'),
+      platform: any(named: 'platform'),
+    ),
+  ).thenAnswer((_) => answer());
+
+  void stubRemoteGoogleLoginThrows(NetworkException e) =>
+      stubRemoteGoogleLogin(() => throw e);
+
+  void stubGateway(Future<String?> Function() answer) =>
+      when(() => googleGateway.getIdToken()).thenAnswer((_) => answer());
+
+  void verifyNeverGoogleLogin() => verifyNever(
+    () => remote.googleLogin(
+      idToken: any(named: 'idToken'),
+      deviceFingerprint: any(named: 'deviceFingerprint'),
+      platform: any(named: 'platform'),
+    ),
+  );
+
   setUp(() {
     remote = MockRemoteDataSource();
     local = MockLocalDataSource();
     networkInfo = MockNetworkInfo();
     deviceInfo = MockDeviceInfoProvider();
+    googleGateway = MockGoogleSignInGateway();
     repository = AuthRepositoryImpl(
       remoteDataSource: remote,
       localDataSource: local,
       networkInfo: networkInfo,
       deviceInfoProvider: deviceInfo,
+      googleGateway: googleGateway,
     );
     when(() => networkInfo.isConnected).thenAnswer((_) async => true);
     when(() => deviceInfo.fingerprint()).thenAnswer((_) async => 'fp-123');
@@ -682,6 +710,109 @@ void main() {
       final result = await callReset();
 
       expect(result, const Left<AuthFailure, Object>(TooManyAttemptsFailure()));
+      verifyNeverSaveSession();
+    });
+  });
+
+  group('AuthRepositoryImpl.signInWithGoogle', () {
+    test('cancel del picker (gateway null): Right(null) sin tocar el '
+        'datasource ni la sesión', () async {
+      stubGateway(() async => null);
+
+      final result = await repository.signInWithGoogle();
+
+      expect(result, const Right<AuthFailure, UserModel?>(null));
+      verify(() => googleGateway.getIdToken()).called(1);
+      verifyNeverGoogleLogin();
+      verifyNeverSaveSession();
+    });
+
+    test('éxito: remote recibe idToken + fingerprint/platform y guarda '
+        'la sesión (auto-login igual que login)', () async {
+      stubGateway(() async => 'google-id-token');
+      stubRemoteGoogleLogin(() async => loginResult);
+
+      final result = await repository.signInWithGoogle();
+
+      expect(result, const Right<AuthFailure, UserModel>(user));
+      verify(
+        () => remote.googleLogin(
+          idToken: 'google-id-token',
+          deviceFingerprint: 'fp-123',
+          platform: 'android',
+        ),
+      ).called(1);
+      verify(
+        () => local.saveSession(
+          accessToken: 'access-token',
+          refreshToken: 'refresh-token',
+        ),
+      ).called(1);
+    });
+
+    test('sin conexión: NoConnectionFailure sin tocar el gateway', () async {
+      when(() => networkInfo.isConnected).thenAnswer((_) async => false);
+
+      final result = await repository.signInWithGoogle();
+
+      expect(result, const Left<AuthFailure, Object>(NoConnectionFailure()));
+      verifyNever(() => googleGateway.getIdToken());
+      verifyNeverGoogleLogin();
+    });
+
+    test('401 "Invalid Google token" → InvalidCredentialsFailure (el '
+        'cubit lo traduce al toast de Google)', () async {
+      stubGateway(() async => 'google-id-token');
+      stubRemoteGoogleLoginThrows(const UnauthorizedException());
+
+      final result = await repository.signInWithGoogle();
+
+      expect(
+        result,
+        const Left<AuthFailure, Object>(InvalidCredentialsFailure()),
+      );
+      verifyNeverSaveSession();
+    });
+
+    test('403 "Account is suspended" → AccountSuspendedFailure', () async {
+      stubGateway(() async => 'google-id-token');
+      stubRemoteGoogleLoginThrows(
+        const ServerException('Account is suspended', statusCode: 403),
+      );
+
+      final result = await repository.signInWithGoogle();
+
+      expect(
+        result,
+        const Left<AuthFailure, Object>(AccountSuspendedFailure()),
+      );
+      verifyNeverSaveSession();
+    });
+
+    test('429 → TooManyAttemptsFailure', () async {
+      stubGateway(() async => 'google-id-token');
+      stubRemoteGoogleLoginThrows(
+        const ServerException('Too many requests', statusCode: 429),
+      );
+
+      final result = await repository.signInWithGoogle();
+
+      expect(result, const Left<AuthFailure, Object>(TooManyAttemptsFailure()));
+    });
+
+    test('excepción del SDK de Google (no NetworkException) → '
+        'UnknownAuthFailure — nada escapa al cubit', () async {
+      stubGateway(() => throw StateError('no Play Services'));
+
+      final result = await repository.signInWithGoogle();
+
+      expect(
+        result,
+        const Left<AuthFailure, Object>(
+          UnknownAuthFailure('Bad state: no Play Services'),
+        ),
+      );
+      verifyNeverGoogleLogin();
       verifyNeverSaveSession();
     });
   });

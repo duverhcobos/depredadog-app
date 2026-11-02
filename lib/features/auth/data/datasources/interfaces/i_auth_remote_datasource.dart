@@ -1,8 +1,8 @@
 import '../../models/user_model.dart';
 
 /// Resultado crudo de los endpoints que emiten sesión (/auth/login,
-/// /auth/verify-email, /auth/reset-password) — el repository decide qué
-/// hacer con cada token
+/// /auth/verify-email, /auth/reset-password, /auth/google) — el repository
+/// decide qué hacer con cada token
 /// (dónde persistirlos); el datasource solo parsea la respuesta.
 class LoginResult {
   const LoginResult({
@@ -65,6 +65,15 @@ abstract class IAuthRemoteDataSource {
     required String email,
     required String code,
     required String newPassword,
+    String? deviceFingerprint,
+    String? platform,
+  });
+
+  /// /auth/google — mismo LoginResult que login/verify/reset (el endpoint
+  /// emite IssuedSession). El idToken sale del SDK de Google (gateway);
+  /// el repository lo pasa junto a fingerprint/platform como en login.
+  Future<LoginResult> googleLogin({
+    required String idToken,
     String? deviceFingerprint,
     String? platform,
   });

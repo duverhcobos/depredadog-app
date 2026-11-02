@@ -8,6 +8,7 @@ import '../../domain/failures/auth_failure.dart';
 import '../../domain/repositories/i_auth_repository.dart';
 import '../datasources/interfaces/i_auth_local_datasource.dart';
 import '../datasources/interfaces/i_auth_remote_datasource.dart';
+import '../datasources/interfaces/i_google_sign_in_gateway.dart';
 
 /// SOLID (SRP/DIP): orquesta remoto + local + conectividad; traduce
 /// NetworkException → AuthFailure (regla 6 SOLID) — nadie más atrapa
@@ -18,12 +19,14 @@ class AuthRepositoryImpl implements IAuthRepository {
     required this._localDataSource,
     required this._networkInfo,
     required this._deviceInfoProvider,
+    required this._googleGateway,
   });
 
   final IAuthRemoteDataSource _remoteDataSource;
   final IAuthLocalDataSource _localDataSource;
   final INetworkInfo _networkInfo;
   final IDeviceInfoProvider _deviceInfoProvider;
+  final IGoogleSignInGateway _googleGateway;
 
   @override
   Future<Either<AuthFailure, User>> register({
@@ -208,6 +211,37 @@ class AuthRepositoryImpl implements IAuthRepository {
     } on NetworkException catch (e) {
       return Left(_mapFailure(e));
     } catch (e) {
+      return Left(UnknownAuthFailure(e.toString()));
+    }
+  }
+
+  @override
+  Future<Either<AuthFailure, User?>> signInWithGoogle() async {
+    if (!await _networkInfo.isConnected) {
+      return const Left(NoConnectionFailure());
+    }
+    try {
+      final idToken = await _googleGateway.getIdToken();
+      if (idToken == null) return const Right(null); // cancel silencioso
+      final fingerprint = await _deviceInfoProvider.fingerprint();
+      final result = await _remoteDataSource.googleLogin(
+        idToken: idToken,
+        deviceFingerprint: fingerprint,
+        platform: _deviceInfoProvider.platform,
+      );
+      await _localDataSource.saveSession(
+        accessToken: result.accessToken,
+        refreshToken: result.refreshToken,
+      );
+      return Right(result.user);
+    } on NetworkException catch (e) {
+      // _mapFailure ya cubre el contrato: 401 'Invalid Google token' →
+      // InvalidCredentials (el cubit lo traduce al toast de Google),
+      // 403 suspended, 429, 5xx → Unknown.
+      return Left(_mapFailure(e));
+    } catch (e) {
+      // Incluye errores del SDK de Google (gateway) — misma red de
+      // seguridad que login: nada escapa al cubit.
       return Left(UnknownAuthFailure(e.toString()));
     }
   }

@@ -11,6 +11,7 @@ import 'package:depredadog_app/core/routes/auth_guard.dart';
 import 'package:depredadog_app/core/theme/app_theme.dart';
 import 'package:depredadog_app/features/auth/domain/entities/user.dart';
 import 'package:depredadog_app/features/auth/domain/failures/auth_failure.dart';
+import 'package:depredadog_app/features/auth/domain/use_cases/google_sign_in_use_case.dart';
 import 'package:depredadog_app/features/auth/domain/use_cases/login_use_case.dart';
 import 'package:depredadog_app/features/auth/presentation/cubit/login_cubit.dart';
 import 'package:depredadog_app/features/auth/presentation/screens/login_screen.dart';
@@ -18,9 +19,12 @@ import 'package:depredadog_app/l10n/app_localizations.dart';
 
 class MockLoginUseCase extends Mock implements LoginUseCase {}
 
+class MockGoogleSignInUseCase extends Mock implements GoogleSignInUseCase {}
+
 void main() {
   final locator = GetIt.instance;
   late MockLoginUseCase loginUseCase;
+  late MockGoogleSignInUseCase googleUseCase;
   late AuthSession authSession;
 
   const user = User(
@@ -34,9 +38,14 @@ void main() {
 
   setUp(() {
     loginUseCase = MockLoginUseCase();
+    googleUseCase = MockGoogleSignInUseCase();
     authSession = AuthSession();
     locator.registerFactory<LoginCubit>(
-      () => LoginCubit(loginUseCase: loginUseCase, authSession: authSession),
+      () => LoginCubit(
+        loginUseCase: loginUseCase,
+        googleSignInUseCase: googleUseCase,
+        authSession: authSession,
+      ),
     );
   });
 
@@ -82,6 +91,68 @@ void main() {
 
     expect(find.text('Ingresa tu correo'), findsOneWidget);
     expect(find.text('Ingresa tu contraseña'), findsOneWidget);
+  });
+
+  testWidgets('botón Google cableado al cubit (sin gate — siempre llama '
+      'signInWithGoogle)', (tester) async {
+    when(() => googleUseCase()).thenAnswer((_) async => const Right(null));
+    await pumpLogin(tester);
+
+    await tester.ensureVisible(find.text('Continuar con Google'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Continuar con Google'));
+    await tester.pumpAndSettle();
+
+    verify(() => googleUseCase()).called(1);
+  });
+
+  testWidgets('éxito Google: sesión marcada → navega a /home', (tester) async {
+    when(() => googleUseCase()).thenAnswer((_) async => const Right(user));
+
+    final router = GoRouter(
+      initialLocation: AuthGuard.loginRoute,
+      routes: [
+        GoRoute(
+          path: AuthGuard.loginRoute,
+          builder: (context, state) => const LoginScreen(),
+        ),
+        GoRoute(
+          path: AuthGuard.homeRoute,
+          builder: (context, state) =>
+              const Scaffold(body: Text('PANTALLA HOME')),
+        ),
+      ],
+    );
+    await tester.pumpWidget(
+      MaterialApp.router(
+        theme: AppTheme.dark(),
+        routerConfig: router,
+        localizationsDelegates: const [
+          AppLocalizations.delegate,
+          GlobalMaterialLocalizations.delegate,
+          GlobalWidgetsLocalizations.delegate,
+          GlobalCupertinoLocalizations.delegate,
+        ],
+        supportedLocales: AppLocalizations.supportedLocales,
+        locale: const Locale('es'),
+      ),
+    );
+
+    await tester.ensureVisible(find.text('Continuar con Google'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Continuar con Google'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('PANTALLA HOME'), findsOneWidget);
+    expect(authSession.isAuthenticated, isTrue);
+    expect(authSession.currentUser, user);
+    verify(() => googleUseCase()).called(1);
+    verifyNever(
+      () => loginUseCase(
+        email: any(named: 'email'),
+        password: any(named: 'password'),
+      ),
+    );
   });
 
   testWidgets('submit válido: éxito → navega a /home y marca la sesión', (

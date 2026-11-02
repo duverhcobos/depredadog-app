@@ -185,6 +185,25 @@ class _RegisterViewState extends State<_RegisterView> {
         UnknownAuthFailure() => l10n.registerErrorGeneric,
       };
 
+  /// Errores del flujo Google (propuesta 014): un solo toast genérico —
+  /// solo suspended / sin conexión / throttle conservan su copy (misma
+  /// decisión que login). El 401 'Invalid Google token', los errores del
+  /// SDK y los inalcanzables de otros endpoints caen al genérico de
+  /// Google por exhaustividad del sealed.
+  String _googleErrorMessage(AppLocalizations l10n, AuthFailure failure) =>
+      switch (failure) {
+        AccountSuspendedFailure() => l10n.loginErrorAccountSuspended,
+        TooManyAttemptsFailure() => l10n.loginErrorTooManyAttempts,
+        NoConnectionFailure() => l10n.loginErrorNoConnection,
+        EmailAlreadyRegisteredFailure() => l10n.googleSignInError,
+        InvalidCredentialsFailure() => l10n.googleSignInError,
+        EmailNotVerifiedFailure() => l10n.googleSignInError,
+        InvalidCodeFailure() => l10n.googleSignInError,
+        SessionExpiredFailure() => l10n.googleSignInError,
+        NoStoredSessionFailure() => l10n.googleSignInError,
+        UnknownAuthFailure() => l10n.googleSignInError,
+      };
+
   /// Contenido del paso: header (título+subtítulo) + cuerpo. La key por
   /// paso es lo que AnimatedSwitcher usa para detectar el cambio.
   Widget _buildStep(int step) {
@@ -273,22 +292,37 @@ class _RegisterViewState extends State<_RegisterView> {
                       // teclado — misma carrera que login→verify (decisión
                       // confirmada en la integración, propuesta 010).
                       TextInput.finishAutofillContext(shouldSave: false);
-                      context.go(
-                        AuthGuard.verifyEmailRoute,
-                        extra: state.email.value,
-                      );
+                      // Google (propuesta 014): la sesión nace completa →
+                      // /home directo; email → /verify-email (intacto).
+                      if (state.isGoogleAuth) {
+                        context.go(AuthGuard.homeRoute);
+                      } else {
+                        context.go(
+                          AuthGuard.verifyEmailRoute,
+                          extra: state.email.value,
+                        );
+                      }
                     } else if (state.status == RegisterStatus.failure) {
                       _focusFirstInvalid(state);
                       AppToast.error(context, l10n.loginFormInvalid);
                     } else if (state.status == RegisterStatus.authError &&
                         state.authFailure != null) {
-                      // El 409 ya dejó currentStep en 1 — el foco cae en
-                      // el correo aunque su formato sea válido (emailTaken).
-                      _focusFirstInvalid(state);
-                      AppToast.error(
-                        context,
-                        _authErrorMessage(l10n, state.authFailure!),
-                      );
+                      if (state.isGoogleAuth) {
+                        // El flujo Google no tiene campos que señalar ni
+                        // paso al que volver: solo el toast.
+                        AppToast.error(
+                          context,
+                          _googleErrorMessage(l10n, state.authFailure!),
+                        );
+                      } else {
+                        // El 409 ya dejó currentStep en 1 — el foco cae en
+                        // el correo aunque su formato sea válido (emailTaken).
+                        _focusFirstInvalid(state);
+                        AppToast.error(
+                          context,
+                          _authErrorMessage(l10n, state.authFailure!),
+                        );
+                      }
                     }
                   },
                   child: BlocListener<RegisterCubit, RegisterState>(
@@ -448,7 +482,15 @@ class _RegisterViewState extends State<_RegisterView> {
                                           ],
                                         ),
                                         const SizedBox(height: 24),
-                                        const GoogleSignInButton(),
+                                        // Sin gate de Environment (misma
+                                        // decisión que login): el SDK
+                                        // falla sin client ID → toast
+                                        // genérico.
+                                        GoogleSignInButton(
+                                          onPressed: () => context
+                                              .read<RegisterCubit>()
+                                              .signInWithGoogle(),
+                                        ),
                                         // 32 (no 24): paridad con login —
                                         // el footer necesita respiro extra
                                         // tras el bloque social (revisor-ui).

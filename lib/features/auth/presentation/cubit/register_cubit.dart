@@ -1,6 +1,8 @@
 import 'package:flutter_bloc/flutter_bloc.dart';
 
+import '../../../../core/auth/auth_session.dart';
 import '../../domain/failures/auth_failure.dart';
+import '../../domain/use_cases/google_sign_in_use_case.dart';
 import '../../domain/use_cases/register_use_case.dart';
 import '../inputs/login_inputs.dart';
 import '../inputs/register_inputs.dart';
@@ -13,11 +15,18 @@ import 'register_state.dart';
 /// correo marcado (emailTaken — decisión del usuario: el error queda donde
 /// se corrige).
 class RegisterCubit extends Cubit<RegisterState> {
-  RegisterCubit({required RegisterUseCase registerUseCase})
-    : _register = registerUseCase,
-      super(const RegisterState());
+  RegisterCubit({
+    required RegisterUseCase registerUseCase,
+    required this._googleSignInUseCase,
+    required this._authSession,
+  }) : _register = registerUseCase,
+       super(const RegisterState());
 
   final RegisterUseCase _register;
+  final GoogleSignInUseCase _googleSignInUseCase;
+  // Solo el flujo Google marca la sesión (propuesta 014): el registro por
+  // email sigue sin autenticar — su auto-login ocurre en verify-email.
+  final AuthSession _authSession;
 
   // Cada `*Changed`: dirty del input + limpia el error de ESE campo +
   // status a initial (limpia authFailure y re-arma el listener — patrón
@@ -250,5 +259,39 @@ class RegisterCubit extends Cubit<RegisterState> {
       // queda rojo hasta que el usuario lo edite.
       emit(state.copyWith(status: RegisterStatus.initial));
     }, (user) => emit(state.copyWith(status: RegisterStatus.success)));
+  }
+
+  /// Flujo Google (propuesta 014): cancel = vuelve a initial en silencio;
+  /// éxito = sesión completa → markAuthenticated → success+isGoogleAuth →
+  /// la pantalla navega a /home (sin verify-email — Google ya probó el
+  /// correo); error = authError marcado isGoogleAuth para el toast propio
+  /// del flujo (sin tocar paso ni campos del formulario).
+  Future<void> signInWithGoogle() async {
+    if (state.isInProgress) return;
+    emit(state.copyWith(status: RegisterStatus.inProgress));
+    final result = await _googleSignInUseCase();
+    if (isClosed) return;
+    result.fold(
+      (failure) {
+        emit(
+          state.copyWith(
+            status: RegisterStatus.authError,
+            authFailure: failure,
+            isGoogleAuth: true,
+          ),
+        );
+        emit(state.copyWith(status: RegisterStatus.initial));
+      },
+      (user) {
+        if (user == null) {
+          emit(state.copyWith(status: RegisterStatus.initial));
+          return;
+        }
+        _authSession.markAuthenticated(user);
+        emit(
+          state.copyWith(status: RegisterStatus.success, isGoogleAuth: true),
+        );
+      },
+    );
   }
 }

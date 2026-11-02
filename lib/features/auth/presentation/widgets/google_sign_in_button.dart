@@ -3,11 +3,15 @@ import 'package:flutter/material.dart';
 import '../../../../core/widgets/app_toast.dart';
 import '../../../../l10n/app_localizations.dart';
 
-/// PROVISIONAL: botón de Google sin endpoint — muestra un aviso hasta que
-/// /auth/google se integre (client IDs pendientes — ver propuesta de
-/// integración correspondiente).
+/// Botón de Google sign-in (propuesta 014): `onPressed` recibe el callback
+/// del cubit; null = sin integración configurada todavía — el botón queda
+/// en su comportamiento provisional (toast "Disponible próximamente").
 class GoogleSignInButton extends StatelessWidget {
-  const GoogleSignInButton({super.key});
+  const GoogleSignInButton({super.key, this.onPressed});
+
+  /// Acción del flujo Google (login o register — cada pantalla la cablea
+  /// a su cubit).
+  final VoidCallback? onPressed;
 
   @override
   Widget build(BuildContext context) {
@@ -15,7 +19,8 @@ class GoogleSignInButton extends StatelessWidget {
     return SizedBox(
       width: double.infinity,
       child: OutlinedButton(
-        onPressed: () => AppToast.success(context, l10n.comingSoon),
+        onPressed:
+            onPressed ?? () => AppToast.success(context, l10n.comingSoon),
         // Alto/radius vienen del outlinedButtonTheme del tema.
         child: Row(
           mainAxisAlignment: MainAxisAlignment.center,

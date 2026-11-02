@@ -146,6 +146,28 @@ class AuthRemoteDataSourceImpl implements IAuthRemoteDataSource {
   }
 
   @override
+  Future<LoginResult> googleLogin({
+    required String idToken,
+    String? deviceFingerprint,
+    String? platform,
+  }) async {
+    final response = await _networkService.post(
+      '/auth/google',
+      body: {
+        'idToken': idToken,
+        'deviceFingerprint': ?deviceFingerprint,
+        'platform': ?platform,
+      },
+    );
+    final map = response as Map<String, dynamic>;
+    return LoginResult(
+      accessToken: map['accessToken'] as String,
+      refreshToken: map['refreshToken'] as String,
+      user: UserModel.fromJson(map['user'] as Map<String, dynamic>),
+    );
+  }
+
+  @override
   Future<UserModel> getMe() async {
     final response = await _networkService.get('/auth/me');
     return UserModel.fromJson(response as Map<String, dynamic>);

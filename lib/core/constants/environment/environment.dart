@@ -22,6 +22,16 @@ class Environment {
     defaultValue: 'http://10.0.2.2:3000',
   );
 
+  /// Client ID **web** de Google Cloud — el SDK lo usa para emitir el
+  /// idToken que el backend verifica contra GOOGLE_CLIENT_IDS. Vacío =
+  /// Google sign-in no configurado (pendiente 006): sin gate en la UI —
+  /// el botón siempre lanza el flujo y el SDK falla → toast genérico
+  /// (decisión del usuario, propuesta 014).
+  static const String googleServerClientId = String.fromEnvironment(
+    'GOOGLE_SERVER_CLIENT_ID',
+    defaultValue: '',
+  );
+
   static const bool isDev = currentEnvironment == EnvType.dev;
   static const bool isStg = currentEnvironment == EnvType.stg;
   static const bool isProd = currentEnvironment == EnvType.prod;

@@ -256,6 +256,12 @@ abstract class AppLocalizations {
   /// **'No se pudo iniciar sesión, intenta de nuevo'**
   String get loginErrorGeneric;
 
+  /// No description provided for @googleSignInError.
+  ///
+  /// In es, this message translates to:
+  /// **'No pudimos entrar con Google — inténtalo de nuevo'**
+  String get googleSignInError;
+
   /// No description provided for @comingSoon.
   ///
   /// In es, this message translates to:

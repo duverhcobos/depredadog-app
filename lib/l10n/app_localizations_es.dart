@@ -94,6 +94,10 @@ class AppLocalizationsEs extends AppLocalizations {
   String get loginErrorGeneric => 'No se pudo iniciar sesión, intenta de nuevo';
 
   @override
+  String get googleSignInError =>
+      'No pudimos entrar con Google — inténtalo de nuevo';
+
+  @override
   String get comingSoon => 'Disponible próximamente';
 
   @override
