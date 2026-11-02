@@ -41,6 +41,7 @@ El detalle de convenciones, arquitectura y workflows de este proyecto vive en sk
 | `app-icons` | Al tocar íconos de launcher o el splash nativo — ícono por modo, capas adaptativas, `mipmap-night-*`, procedimiento de actualización |
 | `emulator-health` | Cuando el emulador va lento/congelado, la app no levanta o `adb` no responde — diagnóstico de RAM del host, daemon Gradle, aceleración WHPX y cold boot sin snapshot |
 | `ui-design-critique` | Tras implementar una pantalla/widget, **antes** de mostrarla al usuario — rúbrica de crítica de diseño estricta que ejecuta el agente `revisor-ui` (código + capturas) |
+| `evaluacion-modulo` | **Gate obligatorio al cerrar un módulo** — evaluación 10/10 de producción: rúbrica, gaps por severidad, críticos se resuelven ya y el resto a `pendientes/` |
 
 Si una instrucción parece faltar acá, buscarla primero en `.devin/skills/` antes de asumir que no existe. En la raíz solo viven los esenciales: `AGENTS.md` y `README.md`.
 
