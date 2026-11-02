@@ -24,6 +24,7 @@ import '../../features/auth/presentation/cubit/register_cubit.dart';
 import '../../features/auth/presentation/cubit/splash_cubit.dart';
 import '../../features/auth/presentation/cubit/verify_email_cubit.dart';
 import '../auth/auth_session.dart';
+import '../auth/token_refresh_service.dart';
 import '../device/implementations/device_info_provider_impl.dart';
 import '../device/interfaces/i_device_info_provider.dart';
 import '../logging/implementations/debug_logger_service_impl.dart';
@@ -71,13 +72,41 @@ void setupDI() {
   locator.registerLazySingleton<INetworkInfo>(
     () => NetworkInfoImpl(locator<InternetConnectionChecker>()),
   );
-  locator.registerLazySingleton<INetworkService>(
+  // TokenRefreshService (propuesta 015): único que conoce POST
+  // /auth/refresh y la persistencia del par de tokens — single-flight
+  // interno deduplica 401s concurrentes.
+  locator.registerLazySingleton<TokenRefreshService>(
+    () => TokenRefreshService(
+      networkService: locator<INetworkService>(),
+      secureStorage: locator<ISecureStorage>(),
+      session: locator<AuthSession>(),
+      logger: locator<ILoggerService>(),
+    ),
+  );
+  // AuthInterceptor se construye dentro de la factory de
+  // DioNetworkServiceImpl — sus dependencias de red son RESOLVERS
+  // diferidos, no instancias: resolver TokenRefreshService acá
+  // re-entraría a INetworkService → impl con su factory aún en curso
+  // (get_it aborta con "circular dependency"). Se resuelven al primer
+  // 401, cuando el grafo ya existe.
+  locator.registerLazySingleton<AuthInterceptor>(
+    () => AuthInterceptor(
+      secureStorage: locator<ISecureStorage>(),
+      refresherResolver: () => locator<TokenRefreshService>(),
+      dioResolver: () => locator<DioNetworkServiceImpl>().dio,
+    ),
+  );
+  // El impl va tipado además del alias INetworkService: el dioResolver
+  // del interceptor y la app entera comparten UNA sola instancia de Dio
+  // (un solo interceptor chain).
+  locator.registerLazySingleton<DioNetworkServiceImpl>(
     () => DioNetworkServiceImpl(
       logger: locator<ILoggerService>(),
-      extraInterceptors: [
-        AuthInterceptor(secureStorage: locator<ISecureStorage>()),
-      ],
+      extraInterceptors: [locator<AuthInterceptor>()],
     ),
+  );
+  locator.registerLazySingleton<INetworkService>(
+    () => locator<DioNetworkServiceImpl>(),
   );
 
   // --- DataSources (auth) ---

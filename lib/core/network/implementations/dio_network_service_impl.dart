@@ -44,6 +44,11 @@ class DioNetworkServiceImpl implements INetworkService {
   final Dio _dio;
   final ILoggerService _logger;
 
+  /// Dio crudo — solo para AuthInterceptor, la única consumidora de Dio
+  /// crudo (reintenta la request original tras el refresh con fetch). El
+  /// resto de la app pasa por INetworkService; nunca exponer más de Dio.
+  Dio get dio => _dio;
+
   @override
   Future<dynamic> get(
     String path, {

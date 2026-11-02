@@ -890,7 +890,11 @@ void main() {
     test(
       '401 → SessionExpiredFailure y limpia los tokens (sesión muerta)',
       () async {
-        stubToken('access-token');
+        // Sesión muerta = TokenRefreshService ya borró las claves tras el
+        // rechazo definitivo del refresh: la segunda lectura da null.
+        var tokenReads = 0;
+        when(() => local.readAccessToken())
+            .thenAnswer((_) async => tokenReads++ == 0 ? 'access-token' : null);
         stubRemoteGetMe(() => throw const UnauthorizedException());
 
         final result = await repository.restoreSession();
@@ -902,6 +906,19 @@ void main() {
         verify(() => local.clearSession()).called(1);
       },
     );
+
+    test('401 con refresh transitorio: NoConnectionFailure conservando '
+        'los tokens (no destruye un refresh válido)', () async {
+      // El 401 propagó tras un refresh que no pudo completarse (429/
+      // 5xx/red): las claves siguen en storage → no es un logout.
+      stubToken('access-token');
+      stubRemoteGetMe(() => throw const UnauthorizedException());
+
+      final result = await repository.restoreSession();
+
+      expect(result, const Left<AuthFailure, Object>(NoConnectionFailure()));
+      verifyNever(() => local.clearSession());
+    });
 
     test('getMe lanza NoConnectionException (timeout con checker online): '
         'NoConnectionFailure conservando los tokens', () async {

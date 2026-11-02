@@ -264,8 +264,16 @@ class AuthRepositoryImpl implements IAuthRepository {
       return Right(user);
     } on NetworkException catch (e) {
       if (e.statusCode == 401) {
-        // El server declaró la sesión inválida — los tokens locales son
-        // basura (también cubre sesión revocada y cuenta suspendida).
+        // Este 401 ya pasó por el interceptor (propuesta 015): si el
+        // refresh fue rechazado de forma definitiva, TokenRefreshService
+        // ya borró las claves; si el refresh falló transitorio (429/5xx/
+        // red) las claves siguen ahí y deben conservarse — borrarlas
+        // destruiría un refresh token válido.
+        final tokenSurvives =
+            (await _localDataSource.readAccessToken()) != null;
+        if (tokenSurvives) {
+          return const Left(NoConnectionFailure());
+        }
         // El borrado va protegido: si el storage falla igual se reporta
         // expirada — el próximo arranque reintenta el 401 de todas formas.
         try {
