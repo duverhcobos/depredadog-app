@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../../l10n/app_localizations.dart';
 import '../widgets/app_toast.dart';
+import '../widgets/store_status_chip.dart';
 
 /// Cabecera fija del shell autenticado (§016): imagotipo a la izquierda,
 /// acciones a la derecha. Las acciones son PROVISIONALES — toast
@@ -31,6 +32,9 @@ class ShellHeader extends StatelessWidget {
               semanticLabel: l10n.appName,
             ),
             const Spacer(),
+            // Estado del local — junto a las notificaciones (§017,
+            // isOpen mock provisional; lo alimenta el módulo store).
+            const StoreStatusChip(isOpen: true),
             IconButton(
               icon: const Icon(Icons.notifications_outlined),
               tooltip: l10n.shellNotificationsTooltip,

@@ -78,6 +78,7 @@ flutter:
 
   assets:
     - assets/images/
+    - assets/images/products/
 
   # To add assets to your application, add an assets section, like this:
   # assets:
@@ -109,3 +110,11 @@ flutter:
   #
   # For details regarding fonts from package dependencies,
   # see https://flutter.dev/to/font-from-package
+
+  # Fuente display de la marca (decisión del usuario §017): condensada
+  # con actitud para títulos, nombres de producto y headlines. Bundleada
+  # — sin descarga en runtime. Body/label siguen en la fuente de sistema.
+  fonts:
+    - family: Anton
+      fonts:
+        - asset: assets/fonts/Anton-Regular.ttf

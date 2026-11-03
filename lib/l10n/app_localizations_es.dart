@@ -347,4 +347,57 @@ class AppLocalizationsEs extends AppLocalizations {
 
   @override
   String get shellCartTooltip => 'Carrito';
+
+  @override
+  String get homeStoreOpen => 'Abierto';
+
+  @override
+  String get homeStoreClosed => 'Cerrado';
+
+  @override
+  String get homeStoreEta => 'Entrega en 30-45 min';
+
+  @override
+  String get homePromoTag => 'PROMO';
+
+  @override
+  String get homePromoTitle => '2×1 en El Cachorro — solo hoy';
+
+  @override
+  String get homeFeaturedTag => 'EL DE LA CASA';
+
+  @override
+  String get catalogCategoryDogs => 'Perros';
+
+  @override
+  String get catalogCategoryMore => '& Más';
+
+  @override
+  String get catalogCategoryDrinks => 'Bebidas';
+
+  @override
+  String get catalogCategoryCombos => 'Combos';
+
+  @override
+  String get catalogAddTooltip => 'Agregar';
+
+  @override
+  String get catalogBackTooltip => 'Volver';
+
+  @override
+  String get catalogPromoTooltip => 'Ver promo';
+
+  @override
+  String get catalogEmptySubtitle => 'La manada aún está cazando aquí';
+
+  @override
+  String catalogProductsCount(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count productos',
+      one: '1 producto',
+    );
+    return '$_temp0';
+  }
 }

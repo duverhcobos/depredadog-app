@@ -5,6 +5,9 @@ import '../../features/auth/presentation/screens/forgot_password_screen.dart';
 import '../../features/auth/presentation/screens/login_screen.dart';
 import '../../features/auth/presentation/screens/register_screen.dart';
 import '../../features/auth/presentation/screens/verify_email_screen.dart';
+import '../../features/home/presentation/data/catalog_mock.dart';
+import '../../features/home/presentation/screens/category_products_screen.dart';
+import '../../features/home/presentation/screens/home_screen.dart';
 import '../../l10n/app_localizations.dart';
 import '../layout/app_shell_layout.dart';
 import '../screens/module_placeholder_screen.dart';
@@ -42,13 +45,21 @@ class AppRouter {
             routes: [
               GoRoute(
                 path: AuthGuard.homeRoute,
-                pageBuilder: (context, state) => CustomTransitions.fade(
-                  state,
-                  ModulePlaceholderScreen(
-                    icon: Icons.home_rounded,
-                    moduleLabel: AppLocalizations.of(context)!.shellTabHome,
+                pageBuilder: (context, state) =>
+                    CustomTransitions.fade(state, const HomeScreen()),
+                routes: [
+                  GoRoute(
+                    path: 'category/:categoryId',
+                    pageBuilder: (context, state) => CustomTransitions.slideUp(
+                      state,
+                      CategoryProductsScreen(
+                        category: CatalogCategoryX.fromSegment(
+                          state.pathParameters['categoryId'] ?? '',
+                        ),
+                      ),
+                    ),
                   ),
-                ),
+                ],
               ),
             ],
           ),

@@ -163,5 +163,27 @@
   "shellTabOrders": "Pedidos",
   "shellTabProfile": "Perfil",
   "shellNotificationsTooltip": "Notificaciones",
-  "shellCartTooltip": "Carrito"
+  "shellCartTooltip": "Carrito",
+  "homeStoreOpen": "Abierto",
+  "homeStoreClosed": "Cerrado",
+  "homeStoreEta": "Entrega en 30-45 min",
+  "homePromoTag": "PROMO",
+  "homePromoTitle": "2×1 en El Cachorro — solo hoy",
+  "homeFeaturedTag": "EL DE LA CASA",
+  "catalogCategoryDogs": "Perros",
+  "catalogCategoryMore": "& Más",
+  "catalogCategoryDrinks": "Bebidas",
+  "catalogCategoryCombos": "Combos",
+  "catalogAddTooltip": "Agregar",
+  "catalogBackTooltip": "Volver",
+  "catalogPromoTooltip": "Ver promo",
+  "catalogEmptySubtitle": "La manada aún está cazando aquí",
+  "catalogProductsCount": "{count, plural, =1{1 producto} other{{count} productos}}",
+  "@catalogProductsCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  }
 }

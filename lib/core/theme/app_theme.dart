@@ -45,11 +45,35 @@ class AppTheme {
     scaffold: AppColors.scaffoldDark,
   );
 
+  /// Familia display de la marca (§017, decisión del usuario): Anton —
+  /// condensada con actitud para títulos, nombres de producto y
+  /// headlines. Solo peso 400; los roles body/label siguen en sistema.
+  static const String displayFontFamily = 'Anton';
+
+  /// Anton en los slots display/headline/title del textTheme — así
+  /// TODA la app hereda la voz tipográfica sin fontFamily sueltos.
+  static TextTheme _displaySlots(TextTheme base) => base.copyWith(
+    displayLarge: base.displayLarge?.copyWith(fontFamily: displayFontFamily),
+    displayMedium: base.displayMedium?.copyWith(fontFamily: displayFontFamily),
+    displaySmall: base.displaySmall?.copyWith(fontFamily: displayFontFamily),
+    headlineLarge: base.headlineLarge?.copyWith(fontFamily: displayFontFamily),
+    headlineMedium: base.headlineMedium?.copyWith(
+      fontFamily: displayFontFamily,
+    ),
+    headlineSmall: base.headlineSmall?.copyWith(fontFamily: displayFontFamily),
+    titleLarge: base.titleLarge?.copyWith(fontFamily: displayFontFamily),
+    titleMedium: base.titleMedium?.copyWith(fontFamily: displayFontFamily),
+    titleSmall: base.titleSmall?.copyWith(fontFamily: displayFontFamily),
+  );
+
   static ThemeData _base(ColorScheme scheme, {Color? scaffold}) {
     return ThemeData(
       useMaterial3: true,
       colorScheme: scheme,
       scaffoldBackgroundColor: scaffold ?? scheme.surface,
+      textTheme: _displaySlots(
+        ThemeData(brightness: scheme.brightness).textTheme,
+      ),
       elevatedButtonTheme: ElevatedButtonThemeData(
         style: ElevatedButton.styleFrom(
           minimumSize: const Size.fromHeight(52),

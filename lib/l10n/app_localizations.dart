@@ -729,6 +729,96 @@ abstract class AppLocalizations {
   /// In es, this message translates to:
   /// **'Carrito'**
   String get shellCartTooltip;
+
+  /// No description provided for @homeStoreOpen.
+  ///
+  /// In es, this message translates to:
+  /// **'Abierto'**
+  String get homeStoreOpen;
+
+  /// No description provided for @homeStoreClosed.
+  ///
+  /// In es, this message translates to:
+  /// **'Cerrado'**
+  String get homeStoreClosed;
+
+  /// No description provided for @homeStoreEta.
+  ///
+  /// In es, this message translates to:
+  /// **'Entrega en 30-45 min'**
+  String get homeStoreEta;
+
+  /// No description provided for @homePromoTag.
+  ///
+  /// In es, this message translates to:
+  /// **'PROMO'**
+  String get homePromoTag;
+
+  /// No description provided for @homePromoTitle.
+  ///
+  /// In es, this message translates to:
+  /// **'2×1 en El Cachorro — solo hoy'**
+  String get homePromoTitle;
+
+  /// No description provided for @homeFeaturedTag.
+  ///
+  /// In es, this message translates to:
+  /// **'EL DE LA CASA'**
+  String get homeFeaturedTag;
+
+  /// No description provided for @catalogCategoryDogs.
+  ///
+  /// In es, this message translates to:
+  /// **'Perros'**
+  String get catalogCategoryDogs;
+
+  /// No description provided for @catalogCategoryMore.
+  ///
+  /// In es, this message translates to:
+  /// **'& Más'**
+  String get catalogCategoryMore;
+
+  /// No description provided for @catalogCategoryDrinks.
+  ///
+  /// In es, this message translates to:
+  /// **'Bebidas'**
+  String get catalogCategoryDrinks;
+
+  /// No description provided for @catalogCategoryCombos.
+  ///
+  /// In es, this message translates to:
+  /// **'Combos'**
+  String get catalogCategoryCombos;
+
+  /// No description provided for @catalogAddTooltip.
+  ///
+  /// In es, this message translates to:
+  /// **'Agregar'**
+  String get catalogAddTooltip;
+
+  /// No description provided for @catalogBackTooltip.
+  ///
+  /// In es, this message translates to:
+  /// **'Volver'**
+  String get catalogBackTooltip;
+
+  /// No description provided for @catalogPromoTooltip.
+  ///
+  /// In es, this message translates to:
+  /// **'Ver promo'**
+  String get catalogPromoTooltip;
+
+  /// No description provided for @catalogEmptySubtitle.
+  ///
+  /// In es, this message translates to:
+  /// **'La manada aún está cazando aquí'**
+  String get catalogEmptySubtitle;
+
+  /// No description provided for @catalogProductsCount.
+  ///
+  /// In es, this message translates to:
+  /// **'{count, plural, =1{1 producto} other{{count} productos}}'**
+  String catalogProductsCount(int count);
 }
 
 class _AppLocalizationsDelegate
