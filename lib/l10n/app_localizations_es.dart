@@ -332,4 +332,19 @@ class AppLocalizationsEs extends AppLocalizations {
   @override
   String get forgotErrorGeneric =>
       'No se pudo restablecer la contraseña, intenta de nuevo';
+
+  @override
+  String get shellTabHome => 'Inicio';
+
+  @override
+  String get shellTabOrders => 'Pedidos';
+
+  @override
+  String get shellTabProfile => 'Perfil';
+
+  @override
+  String get shellNotificationsTooltip => 'Notificaciones';
+
+  @override
+  String get shellCartTooltip => 'Carrito';
 }

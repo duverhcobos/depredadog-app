@@ -1,10 +1,13 @@
+import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../features/auth/presentation/screens/forgot_password_screen.dart';
 import '../../features/auth/presentation/screens/login_screen.dart';
 import '../../features/auth/presentation/screens/register_screen.dart';
 import '../../features/auth/presentation/screens/verify_email_screen.dart';
-import '../screens/home_placeholder_screen.dart';
+import '../../l10n/app_localizations.dart';
+import '../layout/app_shell_layout.dart';
+import '../screens/module_placeholder_screen.dart';
 import '../screens/splash_screen.dart';
 import 'auth_guard.dart';
 import 'custom_transitions.dart';
@@ -27,13 +30,57 @@ class AppRouter {
         pageBuilder: (context, state) =>
             CustomTransitions.fade(state, const SplashScreen()),
       ),
-      // /home es el destino autenticado — pantalla real llega con las
-      // features; por ahora el guard bloquea el acceso sin sesión.
-      // PROVISIONAL: placeholder hasta que exista el shell autenticado.
-      GoRoute(
-        path: AuthGuard.homeRoute,
-        pageBuilder: (context, state) =>
-            CustomTransitions.fade(state, const HomePlaceholderScreen()),
+      // El área autenticada vive dentro de un StatefulShellRoute (§016):
+      // header + nav bar persistentes. Las pantallas reales de cada módulo
+      // se declaran como HIJAS de su branch — NUNCA rutas raíz, porque eso
+      // las sacaría del shell (navigation-routing).
+      StatefulShellRoute.indexedStack(
+        builder: (context, state, navigationShell) =>
+            AppShellLayout(shell: navigationShell),
+        branches: [
+          StatefulShellBranch(
+            routes: [
+              GoRoute(
+                path: AuthGuard.homeRoute,
+                pageBuilder: (context, state) => CustomTransitions.fade(
+                  state,
+                  ModulePlaceholderScreen(
+                    icon: Icons.home_rounded,
+                    moduleLabel: AppLocalizations.of(context)!.shellTabHome,
+                  ),
+                ),
+              ),
+            ],
+          ),
+          StatefulShellBranch(
+            routes: [
+              GoRoute(
+                path: AuthGuard.ordersRoute,
+                pageBuilder: (context, state) => CustomTransitions.fade(
+                  state,
+                  ModulePlaceholderScreen(
+                    icon: Icons.receipt_long_rounded,
+                    moduleLabel: AppLocalizations.of(context)!.shellTabOrders,
+                  ),
+                ),
+              ),
+            ],
+          ),
+          StatefulShellBranch(
+            routes: [
+              GoRoute(
+                path: AuthGuard.profileRoute,
+                pageBuilder: (context, state) => CustomTransitions.fade(
+                  state,
+                  ModulePlaceholderScreen(
+                    icon: Icons.person_rounded,
+                    moduleLabel: AppLocalizations.of(context)!.shellTabProfile,
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ],
       ),
       GoRoute(
         path: AuthGuard.loginRoute,

@@ -14,6 +14,10 @@ class AuthGuard {
   // ---- Rutas (constantes públicas, siempre completas) ----
   static const String splashRoute = '/';
   static const String homeRoute = '/home';
+  // Secciones del shell autenticado (§016) — protegidas por defecto:
+  // no entran a defaultPublicRoutes.
+  static const String ordersRoute = '/orders';
+  static const String profileRoute = '/profile';
 
   // Rutas de la feature auth — declaradas ya para que el guard las
   // conozca; se registran en app_router cuando existan sus pantallas.

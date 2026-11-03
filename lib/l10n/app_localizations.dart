@@ -699,6 +699,36 @@ abstract class AppLocalizations {
   /// In es, this message translates to:
   /// **'No se pudo restablecer la contraseña, intenta de nuevo'**
   String get forgotErrorGeneric;
+
+  /// No description provided for @shellTabHome.
+  ///
+  /// In es, this message translates to:
+  /// **'Inicio'**
+  String get shellTabHome;
+
+  /// No description provided for @shellTabOrders.
+  ///
+  /// In es, this message translates to:
+  /// **'Pedidos'**
+  String get shellTabOrders;
+
+  /// No description provided for @shellTabProfile.
+  ///
+  /// In es, this message translates to:
+  /// **'Perfil'**
+  String get shellTabProfile;
+
+  /// No description provided for @shellNotificationsTooltip.
+  ///
+  /// In es, this message translates to:
+  /// **'Notificaciones'**
+  String get shellNotificationsTooltip;
+
+  /// No description provided for @shellCartTooltip.
+  ///
+  /// In es, this message translates to:
+  /// **'Carrito'**
+  String get shellCartTooltip;
 }
 
 class _AppLocalizationsDelegate

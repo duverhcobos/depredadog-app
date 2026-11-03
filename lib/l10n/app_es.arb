@@ -158,5 +158,10 @@
   "forgotPasswordSubtitle": "Elige una que no uses en otro lado.",
   "forgotNewPasswordLabel": "Nueva contraseña *",
   "forgotSubmit": "Cambiar contraseña",
-  "forgotErrorGeneric": "No se pudo restablecer la contraseña, intenta de nuevo"
+  "forgotErrorGeneric": "No se pudo restablecer la contraseña, intenta de nuevo",
+  "shellTabHome": "Inicio",
+  "shellTabOrders": "Pedidos",
+  "shellTabProfile": "Perfil",
+  "shellNotificationsTooltip": "Notificaciones",
+  "shellCartTooltip": "Carrito"
 }
