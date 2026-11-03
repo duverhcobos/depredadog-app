@@ -41,6 +41,7 @@ El detalle de convenciones, arquitectura y workflows de este proyecto vive en sk
 | `app-icons` | Al tocar íconos de launcher o el splash nativo — ícono por modo, capas adaptativas, `mipmap-night-*`, procedimiento de actualización |
 | `emulator-health` | Cuando el emulador va lento/congelado, la app no levanta o `adb` no responde — diagnóstico de RAM del host, daemon Gradle, aceleración WHPX y cold boot sin snapshot |
 | `ui-design-critique` | Tras implementar una pantalla/widget, **antes** de mostrarla al usuario — rúbrica de crítica de diseño estricta que ejecuta el agente `revisor-ui` (código + capturas) |
+| `ui-aesthetic-critique` | Tras implementar una pantalla/widget, **antes** de `revisor-ui` — crítica de dirección de arte que ejecuta `revisor-estetico` (¿se ve bonito? ¿tiene personalidad de marca?) anclada a brand-brief/frontend-design |
 | `evaluacion-modulo` | **Gate obligatorio al cerrar un módulo** — evaluación 10/10 de producción: rúbrica, gaps por severidad, críticos se resuelven ya y el resto a `pendientes/` |
 
 Si una instrucción parece faltar acá, buscarla primero en `.devin/skills/` antes de asumir que no existe. En la raíz solo viven los esenciales: `AGENTS.md` y `README.md`.
@@ -53,6 +54,7 @@ El proyecto tiene tres subagentes custom en `.devin/agents/`. **Usarlos siempre 
 |-----------|-----|------------------|
 | `implementador` | Aplica propuestas aprobadas al pie de la letra + `flutter analyze` + `flutter test` | Después de que la sesión principal redacte y el usuario apruebe una propuesta |
 | `revisor` | Audita SOLID/convenciones — solo lee, no edita | Después de implementar, para verificar calidad del código resultante |
+| `revisor-estetico` | Critica la ESTÉTICA/dirección de arte de pantallas (primer impacto, composición, personalidad de marca, apetito) anclada a brand-brief/design-system — solo reporta | Tras implementar una pantalla/widget, **antes** de `revisor-ui` (ver `ui-aesthetic-critique`) |
 | `revisor-ui` | Critica el DISEÑO de pantallas (jerarquía, espaciado, estados, consistencia) leyendo código + capturas del emulador — solo reporta | Tras implementar una pantalla/widget, **antes** de la aprobación visual del usuario (ver `ui-design-critique`) |
 
 ### Flujo estándar para cambios no triviales
@@ -79,10 +81,13 @@ Cuando el cambio es de UI visible (cards, pantallas, formularios), el orden es:
 
 ```
 1. Propuesta + implementación
-2. Subagente "revisor-ui" critica el diseño (código + capturas, skill
-   ui-design-critique) → sesión corrige CRITICO/IMPORTANTE y re-critica
-3. Se deja la app corriendo en el emulador para que el usuario LA VEA
-4. SOLO cuando el usuario aprueba lo que ve → flutter analyze, flutter test,
+2. Subagente "revisor-estetico" critica la dirección de arte (capturas,
+   skill ui-aesthetic-critique) → sesión aplica PULIDO / consulta al
+   usuario los hallazgos DIRECCION
+3. Subagente "revisor-ui" critica el diseño técnico (código + capturas,
+   skill ui-design-critique) → sesión corrige CRITICO/IMPORTANTE y re-critica
+4. Se deja la app corriendo en el emulador para que el usuario LA VEA
+5. SOLO cuando el usuario aprueba lo que ve → flutter analyze, flutter test,
    design-system yaml, commits
 ```
 
