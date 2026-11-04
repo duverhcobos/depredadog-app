@@ -766,30 +766,6 @@ abstract class AppLocalizations {
   /// **'EL DE LA CASA'**
   String get homeFeaturedTag;
 
-  /// No description provided for @catalogCategoryDogs.
-  ///
-  /// In es, this message translates to:
-  /// **'Perros'**
-  String get catalogCategoryDogs;
-
-  /// No description provided for @catalogCategoryMore.
-  ///
-  /// In es, this message translates to:
-  /// **'& Más'**
-  String get catalogCategoryMore;
-
-  /// No description provided for @catalogCategoryDrinks.
-  ///
-  /// In es, this message translates to:
-  /// **'Bebidas'**
-  String get catalogCategoryDrinks;
-
-  /// No description provided for @catalogCategoryCombos.
-  ///
-  /// In es, this message translates to:
-  /// **'Combos'**
-  String get catalogCategoryCombos;
-
   /// No description provided for @catalogAddTooltip.
   ///
   /// In es, this message translates to:
@@ -844,12 +820,6 @@ abstract class AppLocalizations {
   /// **'Salsas'**
   String get detailSectionSauces;
 
-  /// No description provided for @detailFreeTag.
-  ///
-  /// In es, this message translates to:
-  /// **'Gratis'**
-  String get detailFreeTag;
-
   /// No description provided for @detailTotalLabel.
   ///
   /// In es, this message translates to:
@@ -861,6 +831,48 @@ abstract class AppLocalizations {
   /// In es, this message translates to:
   /// **'Agregar al carrito'**
   String get detailAddToCart;
+
+  /// Tag en cards/opciones sin disponibilidad
+  ///
+  /// In es, this message translates to:
+  /// **'Agotado'**
+  String get catalogSoldOut;
+
+  /// Título del estado de error del catálogo sin caché
+  ///
+  /// In es, this message translates to:
+  /// **'No pudimos cargar la carta'**
+  String get catalogLoadErrorTitle;
+
+  /// Subtítulo del estado de error del catálogo
+  ///
+  /// In es, this message translates to:
+  /// **'Revisa tu conexión e inténtalo de nuevo.'**
+  String get catalogLoadErrorSubtitle;
+
+  /// Botón de reintento del estado de error
+  ///
+  /// In es, this message translates to:
+  /// **'Reintentar'**
+  String get catalogRetry;
+
+  /// Detalle abierto con slug de producto eliminado o desconocido
+  ///
+  /// In es, this message translates to:
+  /// **'Este producto ya no está en la carta'**
+  String get productUnavailableTitle;
+
+  /// Botón de la vista producto-no-disponible
+  ///
+  /// In es, this message translates to:
+  /// **'Volver al menú'**
+  String get productUnavailableCta;
+
+  /// Botón junto a la X de un ingrediente incluido agotado que despliega los adicionales para reemplazarlo gratis (uno por uno)
+  ///
+  /// In es, this message translates to:
+  /// **'Cambiar'**
+  String get detailSwapCta;
 }
 
 class _AppLocalizationsDelegate

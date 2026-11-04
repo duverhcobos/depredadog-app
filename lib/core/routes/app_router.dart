@@ -1,15 +1,17 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../features/auth/presentation/screens/forgot_password_screen.dart';
 import '../../features/auth/presentation/screens/login_screen.dart';
 import '../../features/auth/presentation/screens/register_screen.dart';
 import '../../features/auth/presentation/screens/verify_email_screen.dart';
-import '../../features/home/presentation/data/catalog_mock.dart';
+import '../../features/home/presentation/cubit/catalog_cubit.dart';
 import '../../features/home/presentation/screens/category_products_screen.dart';
 import '../../features/home/presentation/screens/home_screen.dart';
 import '../../features/home/presentation/screens/product_detail_screen.dart';
 import '../../l10n/app_localizations.dart';
+import '../di/setup_di.dart';
 import '../layout/app_shell_layout.dart';
 import '../screens/module_placeholder_screen.dart';
 import '../screens/splash_screen.dart';
@@ -39,8 +41,15 @@ class AppRouter {
       // se declaran como HIJAS de su branch — NUNCA rutas raíz, porque eso
       // las sacaría del shell (navigation-routing).
       StatefulShellRoute.indexedStack(
-        builder: (context, state, navigationShell) =>
-            AppShellLayout(shell: navigationShell),
+        // CatalogCubit sobre el shell (propuesta 019): las 3 pantallas
+        // de catálogo (home, lista, detalle — rutas hijas dentro de la
+        // branch) comparten la misma instancia y su caché. load() es
+        // no-op si ya hay datos — el refresh real lo gatilla cada
+        // pantalla al entrar.
+        builder: (context, state, navigationShell) => BlocProvider.value(
+          value: locator<CatalogCubit>()..load(),
+          child: AppShellLayout(shell: navigationShell),
+        ),
         branches: [
           StatefulShellBranch(
             routes: [
@@ -50,25 +59,23 @@ class AppRouter {
                     CustomTransitions.fade(state, const HomeScreen()),
                 routes: [
                   GoRoute(
-                    path: 'category/:categoryId',
+                    path: 'category/:categorySlug',
                     pageBuilder: (context, state) => CustomTransitions.slideUp(
                       state,
                       CategoryProductsScreen(
-                        category: CatalogCategoryX.fromSegment(
-                          state.pathParameters['categoryId'] ?? '',
-                        ),
+                        categorySlug:
+                            state.pathParameters['categorySlug'] ?? '',
                       ),
                     ),
                     routes: [
                       GoRoute(
-                        path: 'product/:productId',
+                        path: 'product/:productSlug',
                         pageBuilder: (context, state) =>
                             CustomTransitions.slideUp(
                               state,
                               ProductDetailScreen(
-                                item: catalogItemById(
-                                  state.pathParameters['productId'] ?? '',
-                                ),
+                                productSlug:
+                                    state.pathParameters['productSlug'] ?? '',
                               ),
                             ),
                       ),

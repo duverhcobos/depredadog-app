@@ -23,6 +23,12 @@ import '../../features/auth/presentation/cubit/login_cubit.dart';
 import '../../features/auth/presentation/cubit/register_cubit.dart';
 import '../../features/auth/presentation/cubit/splash_cubit.dart';
 import '../../features/auth/presentation/cubit/verify_email_cubit.dart';
+import '../../features/home/data/datasources/implementations/catalog_remote_datasource_impl.dart';
+import '../../features/home/data/datasources/interfaces/i_catalog_remote_datasource.dart';
+import '../../features/home/data/repositories/catalog_repository_impl.dart';
+import '../../features/home/domain/repositories/i_catalog_repository.dart';
+import '../../features/home/domain/use_cases/get_catalog_menu_use_case.dart';
+import '../../features/home/presentation/cubit/catalog_cubit.dart';
 import '../auth/auth_session.dart';
 import '../auth/token_refresh_service.dart';
 import '../device/implementations/device_info_provider_impl.dart';
@@ -130,6 +136,29 @@ void setupDI() {
       networkInfo: locator<INetworkInfo>(),
       deviceInfoProvider: locator<IDeviceInfoProvider>(),
       googleGateway: locator<IGoogleSignInGateway>(),
+    ),
+  );
+
+  // --- Catálogo (propuesta 019) ---
+  locator.registerLazySingleton<ICatalogRemoteDataSource>(
+    () =>
+        CatalogRemoteDataSourceImpl(networkService: locator<INetworkService>()),
+  );
+  locator.registerLazySingleton<ICatalogRepository>(
+    () => CatalogRepositoryImpl(
+      remoteDataSource: locator<ICatalogRemoteDataSource>(),
+      networkInfo: locator<INetworkInfo>(),
+    ),
+  );
+  locator.registerLazySingleton<GetCatalogMenuUseCase>(
+    () => GetCatalogMenuUseCase(locator<ICatalogRepository>()),
+  );
+  // lazySingleton (regla 9 SOLID): el menú es estado persistente
+  // compartido entre las 3 pantallas — una sola instancia.
+  locator.registerLazySingleton<CatalogCubit>(
+    () => CatalogCubit(
+      getCatalogMenuUseCase: locator<GetCatalogMenuUseCase>(),
+      logger: locator<ILoggerService>(),
     ),
   );
 

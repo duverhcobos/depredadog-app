@@ -3,7 +3,8 @@ import 'package:go_router/go_router.dart';
 
 import '../../../../core/routes/auth_guard.dart';
 import '../../../../l10n/app_localizations.dart';
-import '../data/catalog_mock.dart';
+import '../../domain/entities/catalog_category.dart';
+import '../utils/catalog_assets.dart';
 import 'product_image.dart';
 import 'signature_strip.dart';
 
@@ -11,25 +12,19 @@ import 'signature_strip.dart';
 /// la card nace DENTRO de la franja mostaza y desborda hacia el negro;
 /// la imagen del producto flota sobre el mostaza cruzando el borde de
 /// la card. Nombre + conteo honesto + chevron sobre la zona negra.
-/// Navega con push a /home/category/{segment}.
+/// Navega con push a /home/category/{slug} — desde §019 la categoría
+/// es la entidad de dominio (nombre dato del backend, cover por slug).
 class CategoryCard extends StatelessWidget {
   const CategoryCard({required this.category, super.key});
 
   final CatalogCategory category;
-
-  String _label(AppLocalizations l10n) => switch (category) {
-    CatalogCategory.dogs => l10n.catalogCategoryDogs,
-    CatalogCategory.more => l10n.catalogCategoryMore,
-    CatalogCategory.drinks => l10n.catalogCategoryDrinks,
-    CatalogCategory.combos => l10n.catalogCategoryCombos,
-  };
 
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
     final colors = Theme.of(context).colorScheme;
     final text = Theme.of(context).textTheme;
-    final count = catalogCountOf(category);
+    final count = category.products.length;
     return SizedBox(
       height: 116,
       child: LayoutBuilder(
@@ -56,7 +51,7 @@ class CategoryCard extends StatelessWidget {
                   ),
                   child: InkWell(
                     onTap: () => context.push(
-                      '${AuthGuard.homeRoute}/category/${category.segment}',
+                      '${AuthGuard.homeRoute}/category/${category.slug}',
                     ),
                     child: Padding(
                       // Texto anclado al marco: borde del recuadro +
@@ -76,7 +71,7 @@ class CategoryCard extends StatelessWidget {
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
                                 Text(
-                                  _label(l10n),
+                                  category.name,
                                   maxLines: 1,
                                   overflow: TextOverflow.ellipsis,
                                   style: text.titleMedium?.copyWith(
@@ -114,7 +109,7 @@ class CategoryCard extends StatelessWidget {
                 left: strip * kCardStripInset - kFrameOverhang,
                 child: IgnorePointer(
                   child: ProductImage(
-                    asset: category.coverAsset,
+                    asset: CatalogAssets.categoryCover(category.slug),
                     size: (c.maxHeight - 16) * 0.8,
                   ),
                 ),

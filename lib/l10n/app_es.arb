@@ -170,10 +170,6 @@
   "homePromoTag": "PROMO",
   "homePromoTitle": "2×1 en El Cachorro — solo hoy",
   "homeFeaturedTag": "EL DE LA CASA",
-  "catalogCategoryDogs": "Perros",
-  "catalogCategoryMore": "& Más",
-  "catalogCategoryDrinks": "Bebidas",
-  "catalogCategoryCombos": "Combos",
   "catalogAddTooltip": "Agregar",
   "catalogBackTooltip": "Volver",
   "catalogPromoTooltip": "Ver promo",
@@ -190,7 +186,34 @@
   "detailSectionExtras": "¿Le agregamos algo más?",
   "detailSectionToppings": "Toppings",
   "detailSectionSauces": "Salsas",
-  "detailFreeTag": "Gratis",
   "detailTotalLabel": "Total",
-  "detailAddToCart": "Agregar al carrito"
+  "detailAddToCart": "Agregar al carrito",
+  "catalogSoldOut": "Agotado",
+  "@catalogSoldOut": {
+    "description": "Tag en cards/opciones sin disponibilidad"
+  },
+  "catalogLoadErrorTitle": "No pudimos cargar la carta",
+  "@catalogLoadErrorTitle": {
+    "description": "Título del estado de error del catálogo sin caché"
+  },
+  "catalogLoadErrorSubtitle": "Revisa tu conexión e inténtalo de nuevo.",
+  "@catalogLoadErrorSubtitle": {
+    "description": "Subtítulo del estado de error del catálogo"
+  },
+  "catalogRetry": "Reintentar",
+  "@catalogRetry": {
+    "description": "Botón de reintento del estado de error"
+  },
+  "productUnavailableTitle": "Este producto ya no está en la carta",
+  "@productUnavailableTitle": {
+    "description": "Detalle abierto con slug de producto eliminado o desconocido"
+  },
+  "productUnavailableCta": "Volver al menú",
+  "@productUnavailableCta": {
+    "description": "Botón de la vista producto-no-disponible"
+  },
+  "detailSwapCta": "Cambiar",
+  "@detailSwapCta": {
+    "description": "Botón junto a la X de un ingrediente incluido agotado que despliega los adicionales para reemplazarlo gratis (uno por uno)"
+  }
 }

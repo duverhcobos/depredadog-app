@@ -2,22 +2,33 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../../l10n/app_localizations.dart';
-import '../data/catalog_mock.dart';
+import '../../domain/entities/catalog_product.dart';
+import '../utils/catalog_assets.dart';
+import '../utils/format_cop.dart';
 import 'product_image.dart';
 import 'signature_strip.dart';
 
 /// Card hero del producto insignia (§017 — franja al 40%, dentro de la
-/// lista Perros). Misma firma a caballo que las demás cards pero más
-/// alta, con tag "EL DE LA CASA" + CTA — tap y botón abren el detalle
-/// de personalización (§018).
+/// lista Perros; desde §019 lo decide `isFeatured` del backend). Misma
+/// firma a caballo que las demás cards pero más alta, con tag
+/// "EL DE LA CASA" + CTA — tap y botón abren el detalle de
+/// personalización (§018). Agotado: tag "Agotado" en el slot del CTA
+/// y sin tap — SIN atenuación (la translucidez la descartó el usuario;
+/// el tag solo basta como señal).
 class HeroProductCard extends StatelessWidget {
-  const HeroProductCard({required this.item, super.key});
+  const HeroProductCard({
+    required this.item,
+    required this.categorySlug,
+    super.key,
+  });
 
-  final CatalogItem item;
+  final CatalogProduct item;
 
-  void _openDetail(BuildContext context) => context.push(
-    '/home/category/${item.category.segment}/product/${item.id}',
-  );
+  /// Slug de la categoría dueña — compone la ruta del detalle.
+  final String categorySlug;
+
+  void _openDetail(BuildContext context) =>
+      context.push('/home/category/$categorySlug/product/${item.slug}');
 
   @override
   Widget build(BuildContext context) {
@@ -47,7 +58,7 @@ class HeroProductCard extends StatelessWidget {
                     borderRadius: BorderRadius.circular(16),
                   ),
                   child: InkWell(
-                    onTap: () => _openDetail(context),
+                    onTap: item.isSellable ? () => _openDetail(context) : null,
                     child: Padding(
                       // Texto anclado al marco: borde del recuadro +
                       // 14 — sin restricción de zona negra (§017).
@@ -92,27 +103,46 @@ class HeroProductCard extends StatelessWidget {
                           Row(
                             children: [
                               Text(
-                                formatCop(item.priceCop),
+                                formatCop(item.basePrice),
                                 style: text.titleMedium?.copyWith(
                                   color: colors.primary,
                                   fontWeight: FontWeight.w700,
                                 ),
                               ),
                               const Spacer(),
-                              FilledButton.icon(
-                                // Compacto — la card con margen
-                                // simétrico deja la fila precio+CTA
-                                // justa (§017).
-                                style: FilledButton.styleFrom(
-                                  padding: const EdgeInsets.symmetric(
-                                    horizontal: 12,
+                              if (item.isSellable)
+                                FilledButton.icon(
+                                  // Compacto — la card con margen
+                                  // simétrico deja la fila precio+CTA
+                                  // justa (§017).
+                                  style: FilledButton.styleFrom(
+                                    padding: const EdgeInsets.symmetric(
+                                      horizontal: 12,
+                                    ),
+                                    minimumSize: const Size(0, 40),
                                   ),
-                                  minimumSize: const Size(0, 40),
+                                  onPressed: () => _openDetail(context),
+                                  icon: const Icon(Icons.add_rounded, size: 16),
+                                  label: Text(l10n.catalogAddTooltip),
+                                )
+                              else
+                                Container(
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 10,
+                                    vertical: 6,
+                                  ),
+                                  decoration: BoxDecoration(
+                                    color: colors.errorContainer,
+                                    borderRadius: BorderRadius.circular(8),
+                                  ),
+                                  child: Text(
+                                    l10n.catalogSoldOut,
+                                    style: text.labelSmall?.copyWith(
+                                      color: colors.onErrorContainer,
+                                      fontWeight: FontWeight.w800,
+                                    ),
+                                  ),
                                 ),
-                                onPressed: () => _openDetail(context),
-                                icon: const Icon(Icons.add_rounded, size: 16),
-                                label: Text(l10n.catalogAddTooltip),
-                              ),
                             ],
                           ),
                         ],
@@ -127,7 +157,8 @@ class HeroProductCard extends StatelessWidget {
                 left: strip * kCardStripInset - kFrameOverhang,
                 child: IgnorePointer(
                   child: ProductImage(
-                    asset: item.imageAsset,
+                    asset: CatalogAssets.productAsset(item.slug),
+                    imageUrl: item.imageUrl,
                     size: (c.maxHeight - 16) * 0.8,
                   ),
                 ),

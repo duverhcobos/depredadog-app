@@ -367,18 +367,6 @@ class AppLocalizationsEs extends AppLocalizations {
   String get homeFeaturedTag => 'EL DE LA CASA';
 
   @override
-  String get catalogCategoryDogs => 'Perros';
-
-  @override
-  String get catalogCategoryMore => '& Más';
-
-  @override
-  String get catalogCategoryDrinks => 'Bebidas';
-
-  @override
-  String get catalogCategoryCombos => 'Combos';
-
-  @override
   String get catalogAddTooltip => 'Agregar';
 
   @override
@@ -414,11 +402,30 @@ class AppLocalizationsEs extends AppLocalizations {
   String get detailSectionSauces => 'Salsas';
 
   @override
-  String get detailFreeTag => 'Gratis';
-
-  @override
   String get detailTotalLabel => 'Total';
 
   @override
   String get detailAddToCart => 'Agregar al carrito';
+
+  @override
+  String get catalogSoldOut => 'Agotado';
+
+  @override
+  String get catalogLoadErrorTitle => 'No pudimos cargar la carta';
+
+  @override
+  String get catalogLoadErrorSubtitle =>
+      'Revisa tu conexión e inténtalo de nuevo.';
+
+  @override
+  String get catalogRetry => 'Reintentar';
+
+  @override
+  String get productUnavailableTitle => 'Este producto ya no está en la carta';
+
+  @override
+  String get productUnavailableCta => 'Volver al menú';
+
+  @override
+  String get detailSwapCta => 'Cambiar';
 }

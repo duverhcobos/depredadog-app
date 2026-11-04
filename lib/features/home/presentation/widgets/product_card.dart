@@ -2,7 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../../l10n/app_localizations.dart';
-import '../data/catalog_mock.dart';
+import '../../domain/entities/catalog_product.dart';
+import '../utils/catalog_assets.dart';
+import '../utils/format_cop.dart';
 import 'product_image.dart';
 import 'signature_strip.dart';
 
@@ -11,14 +13,23 @@ import 'signature_strip.dart';
 /// flota sobre la franja cruzando el borde de la card. Nombre, tagline,
 /// precio y "+" van en la zona negra. Tap y "+" abren el detalle de
 /// personalización (§018 — todo es personalizable, decisión del usuario).
+/// §019: `isAvailable=false` → tag "Agotado" en el slot del "+" y sin
+/// tap — SIN atenuación (la translucidez la descartó el usuario; el
+/// tag solo basta como señal).
 class ProductCard extends StatelessWidget {
-  const ProductCard({required this.item, super.key});
+  const ProductCard({
+    required this.item,
+    required this.categorySlug,
+    super.key,
+  });
 
-  final CatalogItem item;
+  final CatalogProduct item;
 
-  void _openDetail(BuildContext context) => context.push(
-    '/home/category/${item.category.segment}/product/${item.id}',
-  );
+  /// Slug de la categoría dueña — compone la ruta del detalle.
+  final String categorySlug;
+
+  void _openDetail(BuildContext context) =>
+      context.push('/home/category/$categorySlug/product/${item.slug}');
 
   @override
   Widget build(BuildContext context) {
@@ -48,7 +59,7 @@ class ProductCard extends StatelessWidget {
                     borderRadius: BorderRadius.circular(14),
                   ),
                   child: InkWell(
-                    onTap: () => _openDetail(context),
+                    onTap: item.isSellable ? () => _openDetail(context) : null,
                     child: Padding(
                       // Texto anclado al marco: borde del recuadro +
                       // 14 — sin restricción de zona negra (§017).
@@ -87,7 +98,7 @@ class ProductCard extends StatelessWidget {
                                 ),
                                 const SizedBox(height: 4),
                                 Text(
-                                  formatCop(item.priceCop),
+                                  formatCop(item.basePrice),
                                   style: text.titleSmall?.copyWith(
                                     color: colors.primary,
                                     fontWeight: FontWeight.w700,
@@ -96,33 +107,57 @@ class ProductCard extends StatelessWidget {
                               ],
                             ),
                           ),
-                          // Hit area 48dp con el círculo visual de 30dp.
+                          // Hit area 48dp: círculo "+" navegable, o
+                          // tag "Agotado" cuando no hay disponibilidad
+                          // (§019 — mismo slot, sin tap; el tag toma
+                          // su ancho natural, no el slot de 48).
                           SizedBox(
-                            width: 48,
+                            width: item.isSellable ? 48 : null,
                             height: 48,
-                            child: Material(
-                              color: Colors.transparent,
-                              child: InkWell(
-                                customBorder: const CircleBorder(),
-                                onTap: () => _openDetail(context),
-                                child: Center(
-                                  child: Container(
-                                    width: 30,
-                                    height: 30,
-                                    decoration: BoxDecoration(
-                                      color: colors.primary,
-                                      shape: BoxShape.circle,
+                            child: item.isSellable
+                                ? Material(
+                                    color: Colors.transparent,
+                                    child: InkWell(
+                                      customBorder: const CircleBorder(),
+                                      onTap: () => _openDetail(context),
+                                      child: Center(
+                                        child: Container(
+                                          width: 30,
+                                          height: 30,
+                                          decoration: BoxDecoration(
+                                            color: colors.primary,
+                                            shape: BoxShape.circle,
+                                          ),
+                                          child: Icon(
+                                            Icons.add_rounded,
+                                            size: 18,
+                                            color: colors.onPrimary,
+                                            semanticLabel:
+                                                l10n.catalogAddTooltip,
+                                          ),
+                                        ),
+                                      ),
                                     ),
-                                    child: Icon(
-                                      Icons.add_rounded,
-                                      size: 18,
-                                      color: colors.onPrimary,
-                                      semanticLabel: l10n.catalogAddTooltip,
+                                  )
+                                : Center(
+                                    child: Container(
+                                      padding: const EdgeInsets.symmetric(
+                                        horizontal: 10,
+                                        vertical: 6,
+                                      ),
+                                      decoration: BoxDecoration(
+                                        color: colors.errorContainer,
+                                        borderRadius: BorderRadius.circular(8),
+                                      ),
+                                      child: Text(
+                                        l10n.catalogSoldOut,
+                                        style: text.labelSmall?.copyWith(
+                                          color: colors.onErrorContainer,
+                                          fontWeight: FontWeight.w800,
+                                        ),
+                                      ),
                                     ),
                                   ),
-                                ),
-                              ),
-                            ),
                           ),
                         ],
                       ),
@@ -136,7 +171,8 @@ class ProductCard extends StatelessWidget {
                 left: strip * kCardStripInset - kFrameOverhang,
                 child: IgnorePointer(
                   child: ProductImage(
-                    asset: item.imageAsset,
+                    asset: CatalogAssets.productAsset(item.slug),
+                    imageUrl: item.imageUrl,
                     size: (c.maxHeight - 16) * 0.8,
                   ),
                 ),
