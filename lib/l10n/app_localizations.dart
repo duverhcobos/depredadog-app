@@ -819,6 +819,48 @@ abstract class AppLocalizations {
   /// In es, this message translates to:
   /// **'{count, plural, =1{1 producto} other{{count} productos}}'**
   String catalogProductsCount(int count);
+
+  /// No description provided for @detailSectionRemove.
+  ///
+  /// In es, this message translates to:
+  /// **'¿Se le quita algo?'**
+  String get detailSectionRemove;
+
+  /// No description provided for @detailSectionExtras.
+  ///
+  /// In es, this message translates to:
+  /// **'¿Le agregamos algo más?'**
+  String get detailSectionExtras;
+
+  /// No description provided for @detailSectionToppings.
+  ///
+  /// In es, this message translates to:
+  /// **'Toppings'**
+  String get detailSectionToppings;
+
+  /// No description provided for @detailSectionSauces.
+  ///
+  /// In es, this message translates to:
+  /// **'Salsas'**
+  String get detailSectionSauces;
+
+  /// No description provided for @detailFreeTag.
+  ///
+  /// In es, this message translates to:
+  /// **'Gratis'**
+  String get detailFreeTag;
+
+  /// No description provided for @detailTotalLabel.
+  ///
+  /// In es, this message translates to:
+  /// **'Total'**
+  String get detailTotalLabel;
+
+  /// No description provided for @detailAddToCart.
+  ///
+  /// In es, this message translates to:
+  /// **'Agregar al carrito'**
+  String get detailAddToCart;
 }
 
 class _AppLocalizationsDelegate

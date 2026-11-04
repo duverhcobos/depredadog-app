@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
 
-import '../../../../core/widgets/app_toast.dart';
 import '../../../../l10n/app_localizations.dart';
 import '../data/catalog_mock.dart';
 import 'product_image.dart';
@@ -9,11 +9,16 @@ import 'signature_strip.dart';
 /// Card de producto de la lista por categoría (§017 — franja al 40%):
 /// la card nace dentro del mostaza y desborda al negro; el producto
 /// flota sobre la franja cruzando el borde de la card. Nombre, tagline,
-/// precio y "+" van en la zona negra. Tap y "+" PROVISIONALES.
+/// precio y "+" van en la zona negra. Tap y "+" abren el detalle de
+/// personalización (§018 — todo es personalizable, decisión del usuario).
 class ProductCard extends StatelessWidget {
   const ProductCard({required this.item, super.key});
 
   final CatalogItem item;
+
+  void _openDetail(BuildContext context) => context.push(
+    '/home/category/${item.category.segment}/product/${item.id}',
+  );
 
   @override
   Widget build(BuildContext context) {
@@ -43,7 +48,7 @@ class ProductCard extends StatelessWidget {
                     borderRadius: BorderRadius.circular(14),
                   ),
                   child: InkWell(
-                    onTap: () => AppToast.info(context, l10n.comingSoon),
+                    onTap: () => _openDetail(context),
                     child: Padding(
                       // Texto anclado al marco: borde del recuadro +
                       // 14 — sin restricción de zona negra (§017).
@@ -99,8 +104,7 @@ class ProductCard extends StatelessWidget {
                               color: Colors.transparent,
                               child: InkWell(
                                 customBorder: const CircleBorder(),
-                                onTap: () =>
-                                    AppToast.info(context, l10n.comingSoon),
+                                onTap: () => _openDetail(context),
                                 child: Center(
                                   child: Container(
                                     width: 30,

@@ -1,18 +1,52 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:go_router/go_router.dart';
 import 'package:depredadog_app/core/theme/app_theme.dart';
 import 'package:depredadog_app/features/home/presentation/data/catalog_mock.dart';
 import 'package:depredadog_app/features/home/presentation/screens/category_products_screen.dart';
+import 'package:depredadog_app/features/home/presentation/screens/product_detail_screen.dart';
 import 'package:depredadog_app/l10n/app_localizations.dart';
 
 void main() {
-  Future<void> pumpList(WidgetTester tester, CatalogCategory c) {
+  GoRouter buildRouter() {
+    return GoRouter(
+      initialLocation: '/home/category/combos',
+      routes: [
+        GoRoute(
+          path: '/home',
+          builder: (context, state) => const Scaffold(),
+          routes: [
+            GoRoute(
+              path: 'category/:categoryId',
+              builder: (context, state) => CategoryProductsScreen(
+                category: CatalogCategoryX.fromSegment(
+                  state.pathParameters['categoryId'] ?? '',
+                ),
+              ),
+              routes: [
+                GoRoute(
+                  path: 'product/:productId',
+                  builder: (context, state) => ProductDetailScreen(
+                    item: catalogItemById(
+                      state.pathParameters['productId'] ?? '',
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ],
+        ),
+      ],
+    );
+  }
+
+  Future<void> pumpList(WidgetTester tester, String initialLocation) {
+    final router = buildRouter()..go(initialLocation);
     return tester.pumpWidget(
-      MaterialApp(
+      MaterialApp.router(
         theme: AppTheme.dark(),
-        home: CategoryProductsScreen(category: c),
+        routerConfig: router,
         localizationsDelegates: const [
           AppLocalizations.delegate,
           GlobalMaterialLocalizations.delegate,
@@ -28,39 +62,25 @@ void main() {
   testWidgets('categoría vacía muestra Disponible próximamente', (
     tester,
   ) async {
-    await pumpList(tester, CatalogCategory.combos);
+    await pumpList(tester, '/home/category/combos');
     await tester.pumpAndSettle();
 
     expect(find.text('Combos'), findsOneWidget);
     expect(find.text('Disponible próximamente'), findsOneWidget);
   });
 
-  testWidgets('agregar dispara toast provisional', (tester) async {
-    const channel = MethodChannel('PonnamKarthik/fluttertoast');
-    final calls = <MethodCall>[];
-    tester.binding.defaultBinaryMessenger.setMockMethodCallHandler(
-      channel,
-      (call) async {
-        calls.add(call);
-        return true;
-      },
-    );
-    addTearDown(
-      () => tester.binding.defaultBinaryMessenger.setMockMethodCallHandler(
-        channel,
-        null,
-      ),
-    );
-
-    await pumpList(tester, CatalogCategory.more);
+  testWidgets('tap en card de producto abre el detalle de personalización', (
+    tester,
+  ) async {
+    await pumpList(tester, '/home/category/mas');
     await tester.pumpAndSettle();
     expect(find.text('Manada de Papas'), findsOneWidget);
 
-    await tester.tap(find.byIcon(Icons.add_rounded).first);
-    await tester.pump();
-    expect(calls, hasLength(1));
-    expect(calls.first.arguments['msg'], 'Disponible próximamente');
+    await tester.tap(find.text('Manada de Papas'));
+    await tester.pumpAndSettle();
 
-    await tester.pump(const Duration(seconds: 2));
+    // Detalle abierto: CTA en footer + sección de adicionales visible.
+    expect(find.text('Agregar al carrito'), findsOneWidget);
+    expect(find.text('¿Le agregamos algo más?'), findsOneWidget);
   });
 }

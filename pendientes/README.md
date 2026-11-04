@@ -14,3 +14,4 @@
 | 006 | [Google OAuth prod: client IDs + SHA-1 release](006-google-oauth.md) | 🔴 PENDIENTE | condicional (si Google login entra al MVP) |
 | 007 | [Restaurar sesión al abrir la app](007-restaurar-sesion.md) | 🟢 RESUELTO | recomendado |
 | 008 | [Expulsión de sesión a mitad de uso no navega sola](008-expulsion-mid-session.md) | 🔴 PENDIENTE | recomendado |
+| 009 | [Catálogo real de toppings y salsas (datos de negocio)](009-catalogo-toppings-salsas-real.md) | 🔴 PENDIENTE | bloqueante |

@@ -185,5 +185,12 @@
         "type": "int"
       }
     }
-  }
+  },
+  "detailSectionRemove": "¿Se le quita algo?",
+  "detailSectionExtras": "¿Le agregamos algo más?",
+  "detailSectionToppings": "Toppings",
+  "detailSectionSauces": "Salsas",
+  "detailFreeTag": "Gratis",
+  "detailTotalLabel": "Total",
+  "detailAddToCart": "Agregar al carrito"
 }

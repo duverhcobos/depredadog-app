@@ -400,4 +400,25 @@ class AppLocalizationsEs extends AppLocalizations {
     );
     return '$_temp0';
   }
+
+  @override
+  String get detailSectionRemove => '¿Se le quita algo?';
+
+  @override
+  String get detailSectionExtras => '¿Le agregamos algo más?';
+
+  @override
+  String get detailSectionToppings => 'Toppings';
+
+  @override
+  String get detailSectionSauces => 'Salsas';
+
+  @override
+  String get detailFreeTag => 'Gratis';
+
+  @override
+  String get detailTotalLabel => 'Total';
+
+  @override
+  String get detailAddToCart => 'Agregar al carrito';
 }

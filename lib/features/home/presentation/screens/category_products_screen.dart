@@ -37,17 +37,18 @@ class CategoryProductsScreen extends StatelessWidget {
       body: Stack(
         children: [
           const SignatureStrip(fraction: kSignatureStripFraction),
-          Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
+          ListView(
+            padding: const EdgeInsets.only(bottom: 24),
             children: [
               // Encabezado — nombre Anton mostaza que NACE de la
               // franja: el borde de la caja apenas entra al mostaza
               // (mismo color → el filo de la primera letra se funde y
               // el texto parece emerger de la firma — punto exacto
-              // calibrado por el usuario). La flecha va APARTE
-              // (Positioned). Align externo: dentro de un Column el
-              // FractionallySizedBox solo recibe restricción suelta y
-              // caería a la izquierda.
+              // calibrado por el usuario). Va DENTRO del scroll
+              // (decisión del usuario): sale de pantalla al bajar; la
+              // flecha queda fija aparte (Positioned). Align externo:
+              // dentro del ListView el FractionallySizedBox solo
+              // recibe restricción suelta y caería a la izquierda.
               Align(
                 alignment: Alignment.centerRight,
                 child: FractionallySizedBox(
@@ -70,112 +71,99 @@ class CategoryProductsScreen extends StatelessWidget {
                   ),
                 ),
               ),
-              Expanded(
-                child: ListView(
-                  padding: const EdgeInsets.only(bottom: 24),
-                  children: [
-                    if (category == CatalogCategory.dogs)
-                      const HeroProductCard(item: depredadorItem),
-                    if (items.isEmpty)
-                      // Cupo fantasma a caballo: la misma cuna que una
-                      // card de producto (card nace en la franja, cover
-                      // cruza el límite, textos en el eje universal) pero
-                      // sin affordance — el gesto persiste aun sin
-                      // productos y la franja no corre vacía.
-                      SizedBox(
-                        height: MediaQuery.sizeOf(context).height * 0.55,
-                        child: Center(
-                          child: SizedBox(
-                            height: 144,
-                            child: LayoutBuilder(
-                              builder: (context, c) {
-                                final strip =
-                                    c.maxWidth * kSignatureStripFraction;
-                                return Stack(
-                                  alignment: Alignment.centerLeft,
-                                  children: [
-                                    Positioned(
-                                      left: strip * kCardStripInset,
-                                      top: 8,
-                                      bottom: 8,
-                                      right: blackZoneMargin(c.maxWidth),
-                                      child: Card(
-                                        margin: EdgeInsets.zero,
-                                        color: colors.surfaceContainerLow,
-                                        clipBehavior: Clip.antiAlias,
-                                        shape: RoundedRectangleBorder(
-                                          borderRadius: BorderRadius.circular(
-                                            14,
-                                          ),
-                                        ),
-                                        child: Padding(
-                                          padding: EdgeInsets.only(
-                                            left:
-                                                (c.maxHeight - 16) * 0.8 -
-                                                kFrameOverhang +
-                                                kFrameTextGap,
-                                            right: 16,
-                                          ),
-                                          child: Column(
-                                            mainAxisAlignment:
-                                                MainAxisAlignment.center,
-                                            crossAxisAlignment:
-                                                CrossAxisAlignment.start,
-                                            children: [
-                                              Text(
-                                                l10n.comingSoon,
-                                                maxLines: 1,
-                                                overflow: TextOverflow.ellipsis,
-                                                style: text.titleMedium
-                                                    ?.copyWith(
-                                                      fontWeight:
-                                                          FontWeight.w700,
-                                                    ),
-                                              ),
-                                              const SizedBox(height: 4),
-                                              Text(
-                                                l10n.catalogEmptySubtitle,
-                                                style: text.bodySmall?.copyWith(
-                                                  color: colors.onSurface
-                                                      .withValues(alpha: 0.6),
-                                                ),
-                                              ),
-                                            ],
-                                          ),
-                                        ),
-                                      ),
-                                    ),
-                                    Positioned(
+              if (category == CatalogCategory.dogs)
+                const HeroProductCard(item: depredadorItem),
+              if (items.isEmpty)
+                // Cupo fantasma a caballo: la misma cuna que una
+                // card de producto (card nace en la franja, cover
+                // cruza el límite, textos en el eje universal) pero
+                // sin affordance — el gesto persiste aun sin
+                // productos y la franja no corre vacía.
+                SizedBox(
+                  height: MediaQuery.sizeOf(context).height * 0.55,
+                  child: Center(
+                    child: SizedBox(
+                      height: 144,
+                      child: LayoutBuilder(
+                        builder: (context, c) {
+                          final strip = c.maxWidth * kSignatureStripFraction;
+                          return Stack(
+                            alignment: Alignment.centerLeft,
+                            children: [
+                              Positioned(
+                                left: strip * kCardStripInset,
+                                top: 8,
+                                bottom: 8,
+                                right: blackZoneMargin(c.maxWidth),
+                                child: Card(
+                                  margin: EdgeInsets.zero,
+                                  color: colors.surfaceContainerLow,
+                                  clipBehavior: Clip.antiAlias,
+                                  shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(14),
+                                  ),
+                                  child: Padding(
+                                    padding: EdgeInsets.only(
                                       left:
-                                          strip * kCardStripInset -
-                                          kFrameOverhang,
-                                      child: IgnorePointer(
-                                        child: ProductImage(
-                                          asset: category.coverAsset,
-                                          size: (c.maxHeight - 16) * 0.8,
-                                        ),
-                                      ),
+                                          (c.maxHeight - 16) * 0.8 -
+                                          kFrameOverhang +
+                                          kFrameTextGap,
+                                      right: 16,
                                     ),
-                                  ],
-                                );
-                              },
-                            ),
-                          ),
-                        ),
-                      )
-                    else
-                      for (final item in items)
-                        if (item != depredadorItem ||
-                            category != CatalogCategory.dogs)
-                          ProductCard(item: item),
-                  ],
-                ),
-              ),
+                                    child: Column(
+                                      mainAxisAlignment:
+                                          MainAxisAlignment.center,
+                                      crossAxisAlignment:
+                                          CrossAxisAlignment.start,
+                                      children: [
+                                        Text(
+                                          l10n.comingSoon,
+                                          maxLines: 1,
+                                          overflow: TextOverflow.ellipsis,
+                                          style: text.titleMedium?.copyWith(
+                                            fontWeight: FontWeight.w700,
+                                          ),
+                                        ),
+                                        const SizedBox(height: 4),
+                                        Text(
+                                          l10n.catalogEmptySubtitle,
+                                          style: text.bodySmall?.copyWith(
+                                            color: colors.onSurface.withValues(
+                                              alpha: 0.6,
+                                            ),
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                ),
+                              ),
+                              Positioned(
+                                left: strip * kCardStripInset - kFrameOverhang,
+                                child: IgnorePointer(
+                                  child: ProductImage(
+                                    asset: category.coverAsset,
+                                    size: (c.maxHeight - 16) * 0.8,
+                                  ),
+                                ),
+                              ),
+                            ],
+                          );
+                        },
+                      ),
+                    ),
+                  ),
+                )
+              else
+                for (final item in items)
+                  if (item != depredadorItem ||
+                      category != CatalogCategory.dogs)
+                    ProductCard(item: item),
             ],
           ),
           // Flecha de regreso SOBRE la franja mostaza (§017 — decisión
-          // del usuario): icono oscuro para contraste; el título queda
-          // en la zona negra.
+          // del usuario): fija en el Stack — NO entra al scroll; el
+          // título sí (primer ítem del ListView).
           Positioned(
             top: 12,
             left: 4,

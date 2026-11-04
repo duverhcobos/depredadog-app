@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
 
-import '../../../../core/widgets/app_toast.dart';
 import '../../../../l10n/app_localizations.dart';
 import '../data/catalog_mock.dart';
 import 'product_image.dart';
@@ -8,11 +8,16 @@ import 'signature_strip.dart';
 
 /// Card hero del producto insignia (§017 — franja al 40%, dentro de la
 /// lista Perros). Misma firma a caballo que las demás cards pero más
-/// alta, con tag "EL DE LA CASA" + CTA provisional.
+/// alta, con tag "EL DE LA CASA" + CTA — tap y botón abren el detalle
+/// de personalización (§018).
 class HeroProductCard extends StatelessWidget {
   const HeroProductCard({required this.item, super.key});
 
   final CatalogItem item;
+
+  void _openDetail(BuildContext context) => context.push(
+    '/home/category/${item.category.segment}/product/${item.id}',
+  );
 
   @override
   Widget build(BuildContext context) {
@@ -42,7 +47,7 @@ class HeroProductCard extends StatelessWidget {
                     borderRadius: BorderRadius.circular(16),
                   ),
                   child: InkWell(
-                    onTap: () => AppToast.info(context, l10n.comingSoon),
+                    onTap: () => _openDetail(context),
                     child: Padding(
                       // Texto anclado al marco: borde del recuadro +
                       // 14 — sin restricción de zona negra (§017).
@@ -104,8 +109,7 @@ class HeroProductCard extends StatelessWidget {
                                   ),
                                   minimumSize: const Size(0, 40),
                                 ),
-                                onPressed: () =>
-                                    AppToast.info(context, l10n.comingSoon),
+                                onPressed: () => _openDetail(context),
                                 icon: const Icon(Icons.add_rounded, size: 16),
                                 label: Text(l10n.catalogAddTooltip),
                               ),
