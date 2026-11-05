@@ -1,7 +1,7 @@
 # Pendiente: Catálogo real de toppings y salsas (datos de negocio)
 
-> **Estado: 🔴 PENDIENTE** — el usuario aún no tiene la lista real; las
-> actuales en la app son datos mock inventados
+> **Estado: � RESUELTO** (backend propuesta 012) — el dueño entregó la
+> carta real; la app la consume por GET /catalog sin cambios propios
 > **Producto:** ambos
 > **Bloqueo:** bloqueante — antes de lanzar el catálogo debe reflejar el
 > menú real del negocio
