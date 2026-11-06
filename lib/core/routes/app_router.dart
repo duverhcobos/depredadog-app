@@ -9,6 +9,8 @@ import '../../features/auth/presentation/screens/verify_email_screen.dart';
 import '../../features/cart/domain/entities/cart_item.dart';
 import '../../features/cart/presentation/cubit/cart_cubit.dart';
 import '../../features/cart/presentation/screens/cart_screen.dart';
+import '../../features/checkout/presentation/cubit/checkout_cubit.dart';
+import '../../features/checkout/presentation/screens/checkout_screen.dart';
 import '../../features/home/presentation/cubit/catalog_cubit.dart';
 import '../../features/home/presentation/screens/category_products_screen.dart';
 import '../../features/home/presentation/screens/home_screen.dart';
@@ -115,6 +117,26 @@ class AppRouter {
                             ),
                           );
                         },
+                      ),
+                      // Checkout (§022): hija de cart — conserva shell
+                      // + nav; slideUp. CheckoutCubit factory por
+                      // apertura (estado de pantalla). Carrito VACÍO →
+                      // back al carrito: un deep link directo a
+                      // confirmar sin ítems no tiene sentido.
+                      GoRoute(
+                        path: 'checkout',
+                        redirect: (context, state) =>
+                            locator<CartCubit>().state.isEmpty
+                            ? AuthGuard.cartRoute
+                            : null,
+                        pageBuilder: (context, state) =>
+                            CustomTransitions.slideUp(
+                              state,
+                              BlocProvider(
+                                create: (_) => locator<CheckoutCubit>(),
+                                child: const CheckoutScreen(),
+                              ),
+                            ),
                       ),
                     ],
                   ),

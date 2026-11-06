@@ -24,6 +24,7 @@ import '../../features/auth/presentation/cubit/register_cubit.dart';
 import '../../features/auth/presentation/cubit/splash_cubit.dart';
 import '../../features/auth/presentation/cubit/verify_email_cubit.dart';
 import '../../features/cart/presentation/cubit/cart_cubit.dart';
+import '../../features/checkout/presentation/cubit/checkout_cubit.dart';
 import '../../features/home/data/datasources/implementations/catalog_remote_datasource_impl.dart';
 import '../../features/home/data/datasources/interfaces/i_catalog_remote_datasource.dart';
 import '../../features/home/data/repositories/catalog_repository_impl.dart';
@@ -167,6 +168,17 @@ void setupDI() {
   // entre badge, pantalla y checkout futuro; una sola instancia.
   // En memoria: no persiste entre arranques (decisión MVP).
   locator.registerLazySingleton<CartCubit>(() => CartCubit());
+
+  // --- Checkout (propuesta 022): factory por apertura — es estado de
+  // pantalla, no se comparte. LEE el CartCubit (ítems/subtotal — nunca
+  // lo muta) y AuthSession (prefill del celular Nequi con el phone de
+  // la cuenta, editable).
+  locator.registerFactory<CheckoutCubit>(
+    () => CheckoutCubit(
+      cartCubit: locator<CartCubit>(),
+      authSession: locator<AuthSession>(),
+    ),
+  );
 
   // --- Use Cases (auth) ---
   locator.registerLazySingleton<LoginUseCase>(

@@ -21,8 +21,8 @@ import '../widgets/cart_item_tile.dart';
 /// − del stepper en 1, y el ícono de basura del tile (affordance
 /// + accesibilidad, revisor-ui §020) — todas con toast de feedback.
 ///
-/// El CTA "Ir a pagar" sigue provisional (toast) hasta §021
-/// checkout — el footer ya muestra el subtotal real.
+/// El CTA "Ir a pagar" hace push a /home/cart/checkout (§022 —
+/// conserva el stack: volver del checkout regresa al carrito).
 class CartScreen extends StatelessWidget {
   const CartScreen({super.key});
 
@@ -159,9 +159,11 @@ class CartScreen extends StatelessWidget {
                               const SizedBox(width: 16),
                               Expanded(
                                 child: FilledButton(
-                                  // PROVISIONAL hasta §021 checkout.
+                                  // §022: push (no go) — volver del
+                                  // checkout regresa al carrito con
+                                  // sus ítems intactos.
                                   onPressed: () =>
-                                      AppToast.info(context, l10n.comingSoon),
+                                      context.push(AuthGuard.checkoutRoute),
                                   child: Text(l10n.cartCheckoutCta),
                                 ),
                               ),

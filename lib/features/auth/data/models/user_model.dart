@@ -11,6 +11,7 @@ class UserModel extends User {
     super.secondName,
     required super.firstLastName,
     super.secondLastName,
+    super.phone,
     required super.role,
     required super.status,
   });
@@ -22,6 +23,7 @@ class UserModel extends User {
     secondName: json['secondName'] as String?,
     firstLastName: json['firstLastName'] as String,
     secondLastName: json['secondLastName'] as String?,
+    phone: json['phone'] as String?,
     role: json['role'] as String,
     status: json['status'] as String,
   );

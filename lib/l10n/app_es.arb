@@ -380,5 +380,161 @@
   "cartEditDiscardLeave": "Descartar",
   "@cartEditDiscardLeave": {
     "description": "Diálogo descartar — salir sin guardar"
+  },
+  "checkoutTitle": "Confirmar pedido",
+  "@checkoutTitle": {
+    "description": "Título naciente (scrolling_title) de la pantalla de checkout (§022)"
+  },
+  "checkoutOrderTypeSection": "Tipo de pedido",
+  "@checkoutOrderTypeSection": {
+    "description": "Título de la card sección 1 — recoger en el local o domicilio"
+  },
+  "checkoutPickupOption": "Local",
+  "@checkoutPickupOption": {
+    "description": "Opción del toggle segmentado — pedido para recoger"
+  },
+  "checkoutDeliveryOption": "Domicilio",
+  "@checkoutDeliveryOption": {
+    "description": "Opción del toggle segmentado — pedido a domicilio"
+  },
+  "checkoutPickupAtLabel": "Lo recoges en",
+  "@checkoutPickupAtLabel": {
+    "description": "Etiqueta sobre la dirección del local en modo recoger"
+  },
+  "checkoutPickupNotice": "Te avisamos cuando esté listo",
+  "@checkoutPickupNotice": {
+    "description": "Aclaración bajo la dirección del local en modo recoger"
+  },
+  "checkoutNewAddress": "Nueva ubicación",
+  "@checkoutNewAddress": {
+    "description": "Opción de ubicación que despliega el formulario inline (§022a — puntos de referencia)"
+  },
+  "checkoutNeighborhoodLabel": "Barrio o sector (opcional)",
+  "@checkoutNeighborhoodLabel": {
+    "description": "Label del campo barrio/sector — OPCIONAL en zonas sin división formal (§022a)"
+  },
+  "checkoutNeighborhoodHint": "Ej: La Esperanza",
+  "@checkoutNeighborhoodHint": {
+    "description": "Hint interior del campo barrio"
+  },
+  "checkoutSaveAddress": "Guardar esta ubicación",
+  "@checkoutSaveAddress": {
+    "description": "Checkbox mock de la nueva ubicación (§022 — sin persistencia)"
+  },
+  "checkoutAddressTypeLabel": "¿Qué lugar es?",
+  "@checkoutAddressTypeLabel": {
+    "description": "Checkout: etiqueta del selector de tipo (aparece solo al marcar guardar) — §022b"
+  },
+  "checkoutAddressTypeHome": "Casa",
+  "@checkoutAddressTypeHome": {
+    "description": "Checkout: chip de tipo casa"
+  },
+  "checkoutAddressTypeWork": "Trabajo",
+  "@checkoutAddressTypeWork": {
+    "description": "Checkout: chip de tipo trabajo"
+  },
+  "checkoutAddressTypeOther": "Otro",
+  "@checkoutAddressTypeOther": {
+    "description": "Checkout: chip de tipo otro — revela el campo Nombre del lugar"
+  },
+  "checkoutAddressNameLabel": "Nombre del lugar",
+  "@checkoutAddressNameLabel": {
+    "description": "Checkout: nombre propio cuando el tipo es 'otro' (ej: casa de mi mamá)"
+  },
+  "checkoutAddressNameHint": "Ej: casa de mi mamá",
+  "@checkoutAddressNameHint": {
+    "description": "Checkout: hint del campo Nombre del lugar"
+  },
+  "checkoutAddressRequired": "Elige una ubicación",
+  "@checkoutAddressRequired": {
+    "description": "Error inline de la sección dirección cuando no hay selección al confirmar"
+  },
+  "checkoutLandmarkLabel": "Punto de referencia *",
+  "@checkoutLandmarkLabel": {
+    "description": "Label del campo principal de la nueva ubicación — la zona no tiene direcciones, se guía por puntos de referencia (§022a)"
+  },
+  "checkoutLandmarkHint": "Ej: casa blanca frente a la cancha",
+  "@checkoutLandmarkHint": {
+    "description": "Hint interior del punto de referencia"
+  },
+  "checkoutLandmarkRequired": "Ingresa el punto de referencia",
+  "@checkoutLandmarkRequired": {
+    "description": "Error inline del punto de referencia — único campo requerido del form (§022a)"
+  },
+  "checkoutAttachLocation": "Adjuntar ubicación de Google",
+  "@checkoutAttachLocation": {
+    "description": "Botón del form nueva ubicación — adjunta el pin de Google Maps (mock §022a)"
+  },
+  "checkoutLocationAttached": "Ubicación adjunta",
+  "@checkoutLocationAttached": {
+    "description": "Estado tras adjuntar el pin de Google Maps — muestra el link debajo"
+  },
+  "checkoutRemoveLocation": "Quitar ubicación",
+  "@checkoutRemoveLocation": {
+    "description": "Tooltip del botón que quita el pin adjunto"
+  },
+  "checkoutDeliveryFree": "Gratis",
+  "@checkoutDeliveryFree": {
+    "description": "Valor de la fila Domicilio cuando el fee es 0 — el domicilio ES gratis y debe decirse (§022a)"
+  },
+  "checkoutPaymentSection": "Pago",
+  "@checkoutPaymentSection": {
+    "description": "Título de la card sección 2 — método de pago"
+  },
+  "checkoutPickupTransferNote": "En el local el pago es solo por transferencia",
+  "@checkoutPickupTransferNote": {
+    "description": "Nota bajo la opción Nequi en modo Local (§022c): no hay pago en efectivo al recoger — regla del negocio"
+  },
+  "checkoutPayNequi": "Nequi",
+  "@checkoutPayNequi": {
+    "description": "Opción de pago Nequi"
+  },
+  "checkoutNequiPhoneLabel": "Celular Nequi",
+  "@checkoutNequiPhoneLabel": {
+    "description": "Label del campo de celular al que llega el push de Nequi — prellenado con el de la cuenta, editable"
+  },
+  "checkoutNequiPhoneHint": "Ej: 300 123 4567",
+  "@checkoutNequiPhoneHint": {
+    "description": "Hint interior del campo celular Nequi (mismo del registro)"
+  },
+  "checkoutNequiPhoneError": "Celular incorrecto",
+  "@checkoutNequiPhoneError": {
+    "description": "Error inline genérico del celular Nequi (vacío o formato inválido — misma regla ^3\\\\d{9}$ del registro)"
+  },
+  "checkoutPayOnDelivery": "Pagar al recibir tu pedido",
+  "@checkoutPayOnDelivery": {
+    "description": "Opción de pago contra entrega en modo domicilio"
+  },
+  "checkoutNoteSection": "Observación",
+  "@checkoutNoteSection": {
+    "description": "Título de la card Observación — nota opcional a nivel pedido, justo bajo Tipo de pedido (§022a)"
+  },
+  "checkoutNoteHint": "¿Algo que debamos saber? — p. ej. pago con billete de 50, traer cambio",
+  "@checkoutNoteHint": {
+    "description": "Hint interior de la observación — ejemplo acorde a la zona (efectivo/cambio, §022a)"
+  },
+  "checkoutSummarySection": "Tu pedido",
+  "@checkoutSummarySection": {
+    "description": "Título de la card sección 4 — resumen de ítems y totales"
+  },
+  "checkoutDeliveryFeeLabel": "Domicilio",
+  "@checkoutDeliveryFeeLabel": {
+    "description": "Etiqueta de la fila del fee en el resumen — valor 'Gratis' cuando es 0 (§022a)"
+  },
+  "checkoutConfirmCta": "Confirmar pedido",
+  "@checkoutConfirmCta": {
+    "description": "CTA del footer del checkout — dispara la confirmación"
+  },
+  "checkoutConfirmedTitle": "¡Pedido confirmado!",
+  "@checkoutConfirmedTitle": {
+    "description": "Título del diálogo de éxito tras confirmar (flujo simulado §022)"
+  },
+  "checkoutConfirmedSubtitle": "Te avisamos cuando esté listo",
+  "@checkoutConfirmedSubtitle": {
+    "description": "Subtítulo del diálogo de éxito — SIN número de orden (§022b: el consecutivo revela el volumen de ventas del negocio, no se expone al cliente)"
+  },
+  "checkoutViewOrdersCta": "Ver mis pedidos",
+  "@checkoutViewOrdersCta": {
+    "description": "CTA del diálogo de éxito — cierra, vacía el carrito y navega a Pedidos"
   }
 }

@@ -1083,6 +1083,240 @@ abstract class AppLocalizations {
   /// In es, this message translates to:
   /// **'Descartar'**
   String get cartEditDiscardLeave;
+
+  /// Título naciente (scrolling_title) de la pantalla de checkout (§022)
+  ///
+  /// In es, this message translates to:
+  /// **'Confirmar pedido'**
+  String get checkoutTitle;
+
+  /// Título de la card sección 1 — recoger en el local o domicilio
+  ///
+  /// In es, this message translates to:
+  /// **'Tipo de pedido'**
+  String get checkoutOrderTypeSection;
+
+  /// Opción del toggle segmentado — pedido para recoger
+  ///
+  /// In es, this message translates to:
+  /// **'Local'**
+  String get checkoutPickupOption;
+
+  /// Opción del toggle segmentado — pedido a domicilio
+  ///
+  /// In es, this message translates to:
+  /// **'Domicilio'**
+  String get checkoutDeliveryOption;
+
+  /// Etiqueta sobre la dirección del local en modo recoger
+  ///
+  /// In es, this message translates to:
+  /// **'Lo recoges en'**
+  String get checkoutPickupAtLabel;
+
+  /// Aclaración bajo la dirección del local en modo recoger
+  ///
+  /// In es, this message translates to:
+  /// **'Te avisamos cuando esté listo'**
+  String get checkoutPickupNotice;
+
+  /// Opción de ubicación que despliega el formulario inline (§022a — puntos de referencia)
+  ///
+  /// In es, this message translates to:
+  /// **'Nueva ubicación'**
+  String get checkoutNewAddress;
+
+  /// Label del campo barrio/sector — OPCIONAL en zonas sin división formal (§022a)
+  ///
+  /// In es, this message translates to:
+  /// **'Barrio o sector (opcional)'**
+  String get checkoutNeighborhoodLabel;
+
+  /// Hint interior del campo barrio
+  ///
+  /// In es, this message translates to:
+  /// **'Ej: La Esperanza'**
+  String get checkoutNeighborhoodHint;
+
+  /// Checkbox mock de la nueva ubicación (§022 — sin persistencia)
+  ///
+  /// In es, this message translates to:
+  /// **'Guardar esta ubicación'**
+  String get checkoutSaveAddress;
+
+  /// Checkout: etiqueta del selector de tipo (aparece solo al marcar guardar) — §022b
+  ///
+  /// In es, this message translates to:
+  /// **'¿Qué lugar es?'**
+  String get checkoutAddressTypeLabel;
+
+  /// Checkout: chip de tipo casa
+  ///
+  /// In es, this message translates to:
+  /// **'Casa'**
+  String get checkoutAddressTypeHome;
+
+  /// Checkout: chip de tipo trabajo
+  ///
+  /// In es, this message translates to:
+  /// **'Trabajo'**
+  String get checkoutAddressTypeWork;
+
+  /// Checkout: chip de tipo otro — revela el campo Nombre del lugar
+  ///
+  /// In es, this message translates to:
+  /// **'Otro'**
+  String get checkoutAddressTypeOther;
+
+  /// Checkout: nombre propio cuando el tipo es 'otro' (ej: casa de mi mamá)
+  ///
+  /// In es, this message translates to:
+  /// **'Nombre del lugar'**
+  String get checkoutAddressNameLabel;
+
+  /// Checkout: hint del campo Nombre del lugar
+  ///
+  /// In es, this message translates to:
+  /// **'Ej: casa de mi mamá'**
+  String get checkoutAddressNameHint;
+
+  /// Error inline de la sección dirección cuando no hay selección al confirmar
+  ///
+  /// In es, this message translates to:
+  /// **'Elige una ubicación'**
+  String get checkoutAddressRequired;
+
+  /// Label del campo principal de la nueva ubicación — la zona no tiene direcciones, se guía por puntos de referencia (§022a)
+  ///
+  /// In es, this message translates to:
+  /// **'Punto de referencia *'**
+  String get checkoutLandmarkLabel;
+
+  /// Hint interior del punto de referencia
+  ///
+  /// In es, this message translates to:
+  /// **'Ej: casa blanca frente a la cancha'**
+  String get checkoutLandmarkHint;
+
+  /// Error inline del punto de referencia — único campo requerido del form (§022a)
+  ///
+  /// In es, this message translates to:
+  /// **'Ingresa el punto de referencia'**
+  String get checkoutLandmarkRequired;
+
+  /// Botón del form nueva ubicación — adjunta el pin de Google Maps (mock §022a)
+  ///
+  /// In es, this message translates to:
+  /// **'Adjuntar ubicación de Google'**
+  String get checkoutAttachLocation;
+
+  /// Estado tras adjuntar el pin de Google Maps — muestra el link debajo
+  ///
+  /// In es, this message translates to:
+  /// **'Ubicación adjunta'**
+  String get checkoutLocationAttached;
+
+  /// Tooltip del botón que quita el pin adjunto
+  ///
+  /// In es, this message translates to:
+  /// **'Quitar ubicación'**
+  String get checkoutRemoveLocation;
+
+  /// Valor de la fila Domicilio cuando el fee es 0 — el domicilio ES gratis y debe decirse (§022a)
+  ///
+  /// In es, this message translates to:
+  /// **'Gratis'**
+  String get checkoutDeliveryFree;
+
+  /// Título de la card sección 2 — método de pago
+  ///
+  /// In es, this message translates to:
+  /// **'Pago'**
+  String get checkoutPaymentSection;
+
+  /// Nota bajo la opción Nequi en modo Local (§022c): no hay pago en efectivo al recoger — regla del negocio
+  ///
+  /// In es, this message translates to:
+  /// **'En el local el pago es solo por transferencia'**
+  String get checkoutPickupTransferNote;
+
+  /// Opción de pago Nequi
+  ///
+  /// In es, this message translates to:
+  /// **'Nequi'**
+  String get checkoutPayNequi;
+
+  /// Label del campo de celular al que llega el push de Nequi — prellenado con el de la cuenta, editable
+  ///
+  /// In es, this message translates to:
+  /// **'Celular Nequi'**
+  String get checkoutNequiPhoneLabel;
+
+  /// Hint interior del campo celular Nequi (mismo del registro)
+  ///
+  /// In es, this message translates to:
+  /// **'Ej: 300 123 4567'**
+  String get checkoutNequiPhoneHint;
+
+  /// Error inline genérico del celular Nequi (vacío o formato inválido — misma regla ^3\\d{9}$ del registro)
+  ///
+  /// In es, this message translates to:
+  /// **'Celular incorrecto'**
+  String get checkoutNequiPhoneError;
+
+  /// Opción de pago contra entrega en modo domicilio
+  ///
+  /// In es, this message translates to:
+  /// **'Pagar al recibir tu pedido'**
+  String get checkoutPayOnDelivery;
+
+  /// Título de la card Observación — nota opcional a nivel pedido, justo bajo Tipo de pedido (§022a)
+  ///
+  /// In es, this message translates to:
+  /// **'Observación'**
+  String get checkoutNoteSection;
+
+  /// Hint interior de la observación — ejemplo acorde a la zona (efectivo/cambio, §022a)
+  ///
+  /// In es, this message translates to:
+  /// **'¿Algo que debamos saber? — p. ej. pago con billete de 50, traer cambio'**
+  String get checkoutNoteHint;
+
+  /// Título de la card sección 4 — resumen de ítems y totales
+  ///
+  /// In es, this message translates to:
+  /// **'Tu pedido'**
+  String get checkoutSummarySection;
+
+  /// Etiqueta de la fila del fee en el resumen — valor 'Gratis' cuando es 0 (§022a)
+  ///
+  /// In es, this message translates to:
+  /// **'Domicilio'**
+  String get checkoutDeliveryFeeLabel;
+
+  /// CTA del footer del checkout — dispara la confirmación
+  ///
+  /// In es, this message translates to:
+  /// **'Confirmar pedido'**
+  String get checkoutConfirmCta;
+
+  /// Título del diálogo de éxito tras confirmar (flujo simulado §022)
+  ///
+  /// In es, this message translates to:
+  /// **'¡Pedido confirmado!'**
+  String get checkoutConfirmedTitle;
+
+  /// Subtítulo del diálogo de éxito — SIN número de orden (§022b: el consecutivo revela el volumen de ventas del negocio, no se expone al cliente)
+  ///
+  /// In es, this message translates to:
+  /// **'Te avisamos cuando esté listo'**
+  String get checkoutConfirmedSubtitle;
+
+  /// CTA del diálogo de éxito — cierra, vacía el carrito y navega a Pedidos
+  ///
+  /// In es, this message translates to:
+  /// **'Ver mis pedidos'**
+  String get checkoutViewOrdersCta;
 }
 
 class _AppLocalizationsDelegate

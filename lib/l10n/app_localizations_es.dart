@@ -549,4 +549,123 @@ class AppLocalizationsEs extends AppLocalizations {
 
   @override
   String get cartEditDiscardLeave => 'Descartar';
+
+  @override
+  String get checkoutTitle => 'Confirmar pedido';
+
+  @override
+  String get checkoutOrderTypeSection => 'Tipo de pedido';
+
+  @override
+  String get checkoutPickupOption => 'Local';
+
+  @override
+  String get checkoutDeliveryOption => 'Domicilio';
+
+  @override
+  String get checkoutPickupAtLabel => 'Lo recoges en';
+
+  @override
+  String get checkoutPickupNotice => 'Te avisamos cuando esté listo';
+
+  @override
+  String get checkoutNewAddress => 'Nueva ubicación';
+
+  @override
+  String get checkoutNeighborhoodLabel => 'Barrio o sector (opcional)';
+
+  @override
+  String get checkoutNeighborhoodHint => 'Ej: La Esperanza';
+
+  @override
+  String get checkoutSaveAddress => 'Guardar esta ubicación';
+
+  @override
+  String get checkoutAddressTypeLabel => '¿Qué lugar es?';
+
+  @override
+  String get checkoutAddressTypeHome => 'Casa';
+
+  @override
+  String get checkoutAddressTypeWork => 'Trabajo';
+
+  @override
+  String get checkoutAddressTypeOther => 'Otro';
+
+  @override
+  String get checkoutAddressNameLabel => 'Nombre del lugar';
+
+  @override
+  String get checkoutAddressNameHint => 'Ej: casa de mi mamá';
+
+  @override
+  String get checkoutAddressRequired => 'Elige una ubicación';
+
+  @override
+  String get checkoutLandmarkLabel => 'Punto de referencia *';
+
+  @override
+  String get checkoutLandmarkHint => 'Ej: casa blanca frente a la cancha';
+
+  @override
+  String get checkoutLandmarkRequired => 'Ingresa el punto de referencia';
+
+  @override
+  String get checkoutAttachLocation => 'Adjuntar ubicación de Google';
+
+  @override
+  String get checkoutLocationAttached => 'Ubicación adjunta';
+
+  @override
+  String get checkoutRemoveLocation => 'Quitar ubicación';
+
+  @override
+  String get checkoutDeliveryFree => 'Gratis';
+
+  @override
+  String get checkoutPaymentSection => 'Pago';
+
+  @override
+  String get checkoutPickupTransferNote =>
+      'En el local el pago es solo por transferencia';
+
+  @override
+  String get checkoutPayNequi => 'Nequi';
+
+  @override
+  String get checkoutNequiPhoneLabel => 'Celular Nequi';
+
+  @override
+  String get checkoutNequiPhoneHint => 'Ej: 300 123 4567';
+
+  @override
+  String get checkoutNequiPhoneError => 'Celular incorrecto';
+
+  @override
+  String get checkoutPayOnDelivery => 'Pagar al recibir tu pedido';
+
+  @override
+  String get checkoutNoteSection => 'Observación';
+
+  @override
+  String get checkoutNoteHint =>
+      '¿Algo que debamos saber? — p. ej. pago con billete de 50, traer cambio';
+
+  @override
+  String get checkoutSummarySection => 'Tu pedido';
+
+  @override
+  String get checkoutDeliveryFeeLabel => 'Domicilio';
+
+  @override
+  String get checkoutConfirmCta => 'Confirmar pedido';
+
+  @override
+  String get checkoutConfirmedTitle => '¡Pedido confirmado!';
+
+  @override
+  String get checkoutConfirmedSubtitle => 'Te avisamos cuando esté listo';
+
+  @override
+  String get checkoutViewOrdersCta => 'Ver mis pedidos';
 }

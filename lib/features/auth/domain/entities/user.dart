@@ -1,7 +1,7 @@
 import 'package:equatable/equatable.dart';
 
 /// SOLID (SRP): representa al usuario autenticado — solo los campos que la
-/// app usa hoy (MVP). El resto de UserResponseDto (phone, emailVerifiedAt,
+/// app usa hoy (MVP). El resto de UserResponseDto (emailVerifiedAt,
 /// referralCode, marketingOptIn, createdAt) se suma cuando una pantalla
 /// real los necesite, sin romper este contrato.
 ///
@@ -16,6 +16,7 @@ class User extends Equatable {
     this.secondName,
     required this.firstLastName,
     this.secondLastName,
+    this.phone,
     required this.role,
     required this.status,
   });
@@ -26,6 +27,10 @@ class User extends Equatable {
   final String? secondName;
   final String firstLastName;
   final String? secondLastName;
+
+  /// Celular opcional del registro (10 dígitos, 3XX XXX XXXX) — checkout
+  /// lo prellena como celular Nequi (§022). Null si no lo diligenció.
+  final String? phone;
 
   /// Valores del backend: 'customer' | 'admin'.
   final String role;
@@ -41,6 +46,7 @@ class User extends Equatable {
     secondName,
     firstLastName,
     secondLastName,
+    phone,
     role,
     status,
   ];
