@@ -15,6 +15,10 @@ import '../../features/home/presentation/cubit/catalog_cubit.dart';
 import '../../features/home/presentation/screens/category_products_screen.dart';
 import '../../features/home/presentation/screens/home_screen.dart';
 import '../../features/home/presentation/screens/product_detail_screen.dart';
+import '../../features/orders/domain/entities/customer_order.dart';
+import '../../features/orders/presentation/cubit/orders_cubit.dart';
+import '../../features/orders/presentation/screens/order_detail_screen.dart';
+import '../../features/orders/presentation/screens/orders_screen.dart';
 import '../../l10n/app_localizations.dart';
 import '../di/setup_di.dart';
 import '../layout/app_shell_layout.dart';
@@ -150,11 +154,33 @@ class AppRouter {
                 path: AuthGuard.ordersRoute,
                 pageBuilder: (context, state) => CustomTransitions.fade(
                   state,
-                  ModulePlaceholderScreen(
-                    icon: Icons.receipt_long_rounded,
-                    moduleLabel: AppLocalizations.of(context)!.shellTabOrders,
+                  BlocProvider.value(
+                    value: locator<OrdersCubit>(),
+                    child: const OrdersScreen(),
                   ),
                 ),
+                routes: [
+                  // Detalle del pedido (§023 drill-down) — hija del
+                  // tab, conserva shell + nav; extra = CustomerOrder.
+                  // Deep link sin extra → al tab (igual que cart/edit).
+                  GoRoute(
+                    path: ':id',
+                    redirect: (context, state) => state.extra is CustomerOrder
+                        ? null
+                        : AuthGuard.ordersRoute,
+                    pageBuilder: (context, state) => CustomTransitions.slideUp(
+                      state,
+                      // Mismo OrdersCubit singleton del tab — el
+                      // detalle cancela sobre la misma instancia.
+                      BlocProvider.value(
+                        value: locator<OrdersCubit>(),
+                        child: OrderDetailScreen(
+                          order: state.extra! as CustomerOrder,
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
               ),
             ],
           ),

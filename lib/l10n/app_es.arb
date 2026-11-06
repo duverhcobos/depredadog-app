@@ -536,5 +536,194 @@
   "checkoutViewOrdersCta": "Ver mis pedidos",
   "@checkoutViewOrdersCta": {
     "description": "CTA del diálogo de éxito — cierra, vacía el carrito y navega a Pedidos"
+  },
+  "ordersTitle": "Pedidos",
+  "@ordersTitle": {
+    "description": "Título naciente (scrolling_title) del tab Pedidos (§023)"
+  },
+  "ordersSectionHistory": "Historial",
+  "@ordersSectionHistory": {
+    "description": "Título de la sección de pedidos terminados del tab (§023)"
+  },
+  "ordersEmptyTitle": "Aún no has pedido",
+  "@ordersEmptyTitle": {
+    "description": "Título del estado vacío del tab Pedidos — no repite 'Pedidos' (ya está en el título)"
+  },
+  "ordersEmptySubtitle": "Tu próximo antojo empieza en el menú",
+  "@ordersEmptySubtitle": {
+    "description": "Subtítulo del estado vacío del tab Pedidos"
+  },
+  "ordersBrowseMenu": "Ver el menú",
+  "@ordersBrowseMenu": {
+    "description": "CTA del estado vacío que lleva al menú (mismo texto del carrito vacío)"
+  },
+  "orderServicePickup": "Local",
+  "@orderServicePickup": {
+    "description": "Label del servicio de recogida en el local (§023)"
+  },
+  "orderServiceDelivery": "Domicilio",
+  "@orderServiceDelivery": {
+    "description": "Label del servicio a domicilio (§023)"
+  },
+  "orderStatusReceived": "Recibido",
+  "@orderStatusReceived": {
+    "description": "Chip/paso: pedido recibido por el local (pending del backend — única ventana de cancelación)"
+  },
+  "orderStatusConfirmed": "Confirmado",
+  "@orderStatusConfirmed": {
+    "description": "Chip/paso: pedido confirmado por el local"
+  },
+  "orderStatusPreparing": "En la plancha",
+  "@orderStatusPreparing": {
+    "description": "Chip/paso: pedido en preparación (preparing del backend)"
+  },
+  "orderStatusReady": "Listo",
+  "@orderStatusReady": {
+    "description": "Chip terminal done en servicio Local (§023 — el paso final se lee 'Listo', no 'Entregado')"
+  },
+  "orderStatusDelivered": "Entregado",
+  "@orderStatusDelivered": {
+    "description": "Chip terminal done en servicio Domicilio"
+  },
+  "orderStatusCancelled": "Cancelado",
+  "@orderStatusCancelled": {
+    "description": "Chip terminal cancelled — también label del stepper cuando el pedido quedó cancelado"
+  },
+  "orderStepReceived": "Recibido",
+  "@orderStepReceived": {
+    "description": "Label del paso actual del stepper — recibido"
+  },
+  "orderStepConfirmed": "Confirmado",
+  "@orderStepConfirmed": {
+    "description": "Label del paso actual del stepper — confirmado"
+  },
+  "orderStepPreparing": "En la plancha",
+  "@orderStepPreparing": {
+    "description": "Label del paso actual del stepper — en preparación"
+  },
+  "orderStepReady": "Listo — ya puedes pasar",
+  "@orderStepReady": {
+    "description": "Label del paso actual del stepper en done Local — cue de acción para pasar a recoger (§023)"
+  },
+  "orderStepDelivered": "Entregado",
+  "@orderStepDelivered": {
+    "description": "Label del paso actual del stepper en done Domicilio"
+  },
+  "orderPickupAtStore": "Lo recoges en el local",
+  "@orderPickupAtStore": {
+    "description": "Línea de entrega del pedido en servicio Local (card activa y detalle)"
+  },
+  "orderWithLocationPin": "Con ubicación de Google",
+  "@orderWithLocationPin": {
+    "description": "Indicador de que el pedido lleva el pin de Google Maps adjunto (§022d)"
+  },
+  "orderPaymentNequiPaid": "Nequi · pagado",
+  "@orderPaymentNequiPaid": {
+    "description": "Línea de pago — transferencia Nequi ya pagada"
+  },
+  "orderPaymentNequiPending": "Nequi · pago pendiente",
+  "@orderPaymentNequiPending": {
+    "description": "Línea de pago — transferencia Nequi pendiente de pago"
+  },
+  "orderPaymentOnDelivery": "Pagas al recibir",
+  "@orderPaymentOnDelivery": {
+    "description": "Línea de pago — contra entrega (solo domicilio, §022c)"
+  },
+  "orderPaymentOnDeliveryPast": "Pagaste al recibir",
+  "@orderPaymentOnDeliveryPast": {
+    "description": "Línea de pago en estados terminales — la obligación ya pasó (revisor-ui §023)"
+  },
+  "orderPlacedAt": "Pedido el {date}",
+  "@orderPlacedAt": {
+    "description": "Fecha de creación del pedido en el detalle — prefijada para no leerse como fecha del cambio de estado (revisor-ui §023)",
+    "placeholders": {
+      "date": {
+        "type": "String"
+      }
+    }
+  },
+  "orderStepProgress": "Paso {current} de {total}: {step}",
+  "@orderStepProgress": {
+    "description": "Etiqueta semántica del stepper — comunica el progreso a TalkBack (revisor-ui §023)",
+    "placeholders": {
+      "current": {
+        "type": "int"
+      },
+      "total": {
+        "type": "int"
+      },
+      "step": {
+        "type": "String"
+      }
+    }
+  },
+  "orderCancelledToast": "Pedido cancelado",
+  "@orderCancelledToast": {
+    "description": "Toast tras cancelar un pedido — feedback mínimo ante destrucción sin deshacer (convención AppToast)"
+  },
+  "orderItemsCount": "{count, plural, =1{1 ítem} other{{count} ítems}}",
+  "@orderItemsCount": {
+    "description": "Conteo de ítems de la fila del historial (misma sintaxis plural de catalogProductsCount)",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "orderCancelCta": "Cancelar pedido",
+  "@orderCancelCta": {
+    "description": "Botón de cancelar en la card del pedido — solo visible en 'Recibido' (regla backend 015)"
+  },
+  "orderCancelTitle": "¿Cancelar el pedido?",
+  "@orderCancelTitle": {
+    "description": "Título del diálogo de confirmación de cancelación"
+  },
+  "orderCancelBody": "El local aún no lo confirma — puedes cancelar sin problema.",
+  "@orderCancelBody": {
+    "description": "Cuerpo del diálogo de confirmación — explica la ventana de cancelación"
+  },
+  "orderCancelConfirm": "Sí, cancelar",
+  "@orderCancelConfirm": {
+    "description": "Acción destructiva del diálogo — confirma la cancelación"
+  },
+  "orderCancelKeep": "No, dejarlo",
+  "@orderCancelKeep": {
+    "description": "Acción del diálogo que conserva el pedido"
+  },
+  "orderDetailTitle": "Detalle del pedido",
+  "@orderDetailTitle": {
+    "description": "Título naciente (scrolling_title) del detalle del pedido (§023)"
+  },
+  "orderDetailStatusSection": "Estado",
+  "@orderDetailStatusSection": {
+    "description": "Sección del detalle — fecha, chip y stepper del pedido"
+  },
+  "orderDetailItemsSection": "Tu pedido",
+  "@orderDetailItemsSection": {
+    "description": "Sección del detalle — ítems completos con modificadores y totales (mismo título del resumen del checkout)"
+  },
+  "orderDetailDeliverySection": "Entrega y pago",
+  "@orderDetailDeliverySection": {
+    "description": "Sección del detalle — servicio, referencia/barrio/pin y método + estado de pago"
+  },
+  "orderDetailNoteSection": "Observación",
+  "@orderDetailNoteSection": {
+    "description": "Sección del detalle — observación del cliente para el local (§022a; solo si existe)"
+  },
+  "orderSummarySubtotal": "Subtotal",
+  "@orderSummarySubtotal": {
+    "description": "Fila del subtotal en los totales del detalle"
+  },
+  "orderSummaryDelivery": "Domicilio",
+  "@orderSummaryDelivery": {
+    "description": "Fila del fee de domicilio en los totales del detalle (solo servicio domicilio)"
+  },
+  "orderSummaryFree": "Gratis",
+  "@orderSummaryFree": {
+    "description": "Valor de la fila Domicilio cuando el fee es 0 (primary — igual que checkout)"
+  },
+  "orderSummaryTotal": "Total",
+  "@orderSummaryTotal": {
+    "description": "Fila del total en los totales del detalle"
   }
 }

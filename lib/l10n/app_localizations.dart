@@ -1317,6 +1317,258 @@ abstract class AppLocalizations {
   /// In es, this message translates to:
   /// **'Ver mis pedidos'**
   String get checkoutViewOrdersCta;
+
+  /// Título naciente (scrolling_title) del tab Pedidos (§023)
+  ///
+  /// In es, this message translates to:
+  /// **'Pedidos'**
+  String get ordersTitle;
+
+  /// Título de la sección de pedidos terminados del tab (§023)
+  ///
+  /// In es, this message translates to:
+  /// **'Historial'**
+  String get ordersSectionHistory;
+
+  /// Título del estado vacío del tab Pedidos — no repite 'Pedidos' (ya está en el título)
+  ///
+  /// In es, this message translates to:
+  /// **'Aún no has pedido'**
+  String get ordersEmptyTitle;
+
+  /// Subtítulo del estado vacío del tab Pedidos
+  ///
+  /// In es, this message translates to:
+  /// **'Tu próximo antojo empieza en el menú'**
+  String get ordersEmptySubtitle;
+
+  /// CTA del estado vacío que lleva al menú (mismo texto del carrito vacío)
+  ///
+  /// In es, this message translates to:
+  /// **'Ver el menú'**
+  String get ordersBrowseMenu;
+
+  /// Label del servicio de recogida en el local (§023)
+  ///
+  /// In es, this message translates to:
+  /// **'Local'**
+  String get orderServicePickup;
+
+  /// Label del servicio a domicilio (§023)
+  ///
+  /// In es, this message translates to:
+  /// **'Domicilio'**
+  String get orderServiceDelivery;
+
+  /// Chip/paso: pedido recibido por el local (pending del backend — única ventana de cancelación)
+  ///
+  /// In es, this message translates to:
+  /// **'Recibido'**
+  String get orderStatusReceived;
+
+  /// Chip/paso: pedido confirmado por el local
+  ///
+  /// In es, this message translates to:
+  /// **'Confirmado'**
+  String get orderStatusConfirmed;
+
+  /// Chip/paso: pedido en preparación (preparing del backend)
+  ///
+  /// In es, this message translates to:
+  /// **'En la plancha'**
+  String get orderStatusPreparing;
+
+  /// Chip terminal done en servicio Local (§023 — el paso final se lee 'Listo', no 'Entregado')
+  ///
+  /// In es, this message translates to:
+  /// **'Listo'**
+  String get orderStatusReady;
+
+  /// Chip terminal done en servicio Domicilio
+  ///
+  /// In es, this message translates to:
+  /// **'Entregado'**
+  String get orderStatusDelivered;
+
+  /// Chip terminal cancelled — también label del stepper cuando el pedido quedó cancelado
+  ///
+  /// In es, this message translates to:
+  /// **'Cancelado'**
+  String get orderStatusCancelled;
+
+  /// Label del paso actual del stepper — recibido
+  ///
+  /// In es, this message translates to:
+  /// **'Recibido'**
+  String get orderStepReceived;
+
+  /// Label del paso actual del stepper — confirmado
+  ///
+  /// In es, this message translates to:
+  /// **'Confirmado'**
+  String get orderStepConfirmed;
+
+  /// Label del paso actual del stepper — en preparación
+  ///
+  /// In es, this message translates to:
+  /// **'En la plancha'**
+  String get orderStepPreparing;
+
+  /// Label del paso actual del stepper en done Local — cue de acción para pasar a recoger (§023)
+  ///
+  /// In es, this message translates to:
+  /// **'Listo — ya puedes pasar'**
+  String get orderStepReady;
+
+  /// Label del paso actual del stepper en done Domicilio
+  ///
+  /// In es, this message translates to:
+  /// **'Entregado'**
+  String get orderStepDelivered;
+
+  /// Línea de entrega del pedido en servicio Local (card activa y detalle)
+  ///
+  /// In es, this message translates to:
+  /// **'Lo recoges en el local'**
+  String get orderPickupAtStore;
+
+  /// Indicador de que el pedido lleva el pin de Google Maps adjunto (§022d)
+  ///
+  /// In es, this message translates to:
+  /// **'Con ubicación de Google'**
+  String get orderWithLocationPin;
+
+  /// Línea de pago — transferencia Nequi ya pagada
+  ///
+  /// In es, this message translates to:
+  /// **'Nequi · pagado'**
+  String get orderPaymentNequiPaid;
+
+  /// Línea de pago — transferencia Nequi pendiente de pago
+  ///
+  /// In es, this message translates to:
+  /// **'Nequi · pago pendiente'**
+  String get orderPaymentNequiPending;
+
+  /// Línea de pago — contra entrega (solo domicilio, §022c)
+  ///
+  /// In es, this message translates to:
+  /// **'Pagas al recibir'**
+  String get orderPaymentOnDelivery;
+
+  /// Línea de pago en estados terminales — la obligación ya pasó (revisor-ui §023)
+  ///
+  /// In es, this message translates to:
+  /// **'Pagaste al recibir'**
+  String get orderPaymentOnDeliveryPast;
+
+  /// Fecha de creación del pedido en el detalle — prefijada para no leerse como fecha del cambio de estado (revisor-ui §023)
+  ///
+  /// In es, this message translates to:
+  /// **'Pedido el {date}'**
+  String orderPlacedAt(String date);
+
+  /// Etiqueta semántica del stepper — comunica el progreso a TalkBack (revisor-ui §023)
+  ///
+  /// In es, this message translates to:
+  /// **'Paso {current} de {total}: {step}'**
+  String orderStepProgress(int current, int total, String step);
+
+  /// Toast tras cancelar un pedido — feedback mínimo ante destrucción sin deshacer (convención AppToast)
+  ///
+  /// In es, this message translates to:
+  /// **'Pedido cancelado'**
+  String get orderCancelledToast;
+
+  /// Conteo de ítems de la fila del historial (misma sintaxis plural de catalogProductsCount)
+  ///
+  /// In es, this message translates to:
+  /// **'{count, plural, =1{1 ítem} other{{count} ítems}}'**
+  String orderItemsCount(int count);
+
+  /// Botón de cancelar en la card del pedido — solo visible en 'Recibido' (regla backend 015)
+  ///
+  /// In es, this message translates to:
+  /// **'Cancelar pedido'**
+  String get orderCancelCta;
+
+  /// Título del diálogo de confirmación de cancelación
+  ///
+  /// In es, this message translates to:
+  /// **'¿Cancelar el pedido?'**
+  String get orderCancelTitle;
+
+  /// Cuerpo del diálogo de confirmación — explica la ventana de cancelación
+  ///
+  /// In es, this message translates to:
+  /// **'El local aún no lo confirma — puedes cancelar sin problema.'**
+  String get orderCancelBody;
+
+  /// Acción destructiva del diálogo — confirma la cancelación
+  ///
+  /// In es, this message translates to:
+  /// **'Sí, cancelar'**
+  String get orderCancelConfirm;
+
+  /// Acción del diálogo que conserva el pedido
+  ///
+  /// In es, this message translates to:
+  /// **'No, dejarlo'**
+  String get orderCancelKeep;
+
+  /// Título naciente (scrolling_title) del detalle del pedido (§023)
+  ///
+  /// In es, this message translates to:
+  /// **'Detalle del pedido'**
+  String get orderDetailTitle;
+
+  /// Sección del detalle — fecha, chip y stepper del pedido
+  ///
+  /// In es, this message translates to:
+  /// **'Estado'**
+  String get orderDetailStatusSection;
+
+  /// Sección del detalle — ítems completos con modificadores y totales (mismo título del resumen del checkout)
+  ///
+  /// In es, this message translates to:
+  /// **'Tu pedido'**
+  String get orderDetailItemsSection;
+
+  /// Sección del detalle — servicio, referencia/barrio/pin y método + estado de pago
+  ///
+  /// In es, this message translates to:
+  /// **'Entrega y pago'**
+  String get orderDetailDeliverySection;
+
+  /// Sección del detalle — observación del cliente para el local (§022a; solo si existe)
+  ///
+  /// In es, this message translates to:
+  /// **'Observación'**
+  String get orderDetailNoteSection;
+
+  /// Fila del subtotal en los totales del detalle
+  ///
+  /// In es, this message translates to:
+  /// **'Subtotal'**
+  String get orderSummarySubtotal;
+
+  /// Fila del fee de domicilio en los totales del detalle (solo servicio domicilio)
+  ///
+  /// In es, this message translates to:
+  /// **'Domicilio'**
+  String get orderSummaryDelivery;
+
+  /// Valor de la fila Domicilio cuando el fee es 0 (primary — igual que checkout)
+  ///
+  /// In es, this message translates to:
+  /// **'Gratis'**
+  String get orderSummaryFree;
+
+  /// Fila del total en los totales del detalle
+  ///
+  /// In es, this message translates to:
+  /// **'Total'**
+  String get orderSummaryTotal;
 }
 
 class _AppLocalizationsDelegate

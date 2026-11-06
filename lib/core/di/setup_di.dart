@@ -31,6 +31,7 @@ import '../../features/home/data/repositories/catalog_repository_impl.dart';
 import '../../features/home/domain/repositories/i_catalog_repository.dart';
 import '../../features/home/domain/use_cases/get_catalog_menu_use_case.dart';
 import '../../features/home/presentation/cubit/catalog_cubit.dart';
+import '../../features/orders/presentation/cubit/orders_cubit.dart';
 import '../auth/auth_session.dart';
 import '../auth/token_refresh_service.dart';
 import '../device/implementations/device_info_provider_impl.dart';
@@ -179,6 +180,13 @@ void setupDI() {
       authSession: locator<AuthSession>(),
     ),
   );
+
+  // Pedidos (§023): factory por apertura del tab — estado de pantalla
+  // con mocks hasta la integración de GET /orders (backend 015).
+  // Singleton como CartCubit: el tab y su detalle /orders/:id
+  // comparten la MISMA instancia (el detalle puede cancelar y el
+  // tab refleja la migración al historial — revisor-ui §023).
+  locator.registerLazySingleton<OrdersCubit>(() => OrdersCubit());
 
   // --- Use Cases (auth) ---
   locator.registerLazySingleton<LoginUseCase>(

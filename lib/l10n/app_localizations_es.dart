@@ -668,4 +668,143 @@ class AppLocalizationsEs extends AppLocalizations {
 
   @override
   String get checkoutViewOrdersCta => 'Ver mis pedidos';
+
+  @override
+  String get ordersTitle => 'Pedidos';
+
+  @override
+  String get ordersSectionHistory => 'Historial';
+
+  @override
+  String get ordersEmptyTitle => 'Aún no has pedido';
+
+  @override
+  String get ordersEmptySubtitle => 'Tu próximo antojo empieza en el menú';
+
+  @override
+  String get ordersBrowseMenu => 'Ver el menú';
+
+  @override
+  String get orderServicePickup => 'Local';
+
+  @override
+  String get orderServiceDelivery => 'Domicilio';
+
+  @override
+  String get orderStatusReceived => 'Recibido';
+
+  @override
+  String get orderStatusConfirmed => 'Confirmado';
+
+  @override
+  String get orderStatusPreparing => 'En la plancha';
+
+  @override
+  String get orderStatusReady => 'Listo';
+
+  @override
+  String get orderStatusDelivered => 'Entregado';
+
+  @override
+  String get orderStatusCancelled => 'Cancelado';
+
+  @override
+  String get orderStepReceived => 'Recibido';
+
+  @override
+  String get orderStepConfirmed => 'Confirmado';
+
+  @override
+  String get orderStepPreparing => 'En la plancha';
+
+  @override
+  String get orderStepReady => 'Listo — ya puedes pasar';
+
+  @override
+  String get orderStepDelivered => 'Entregado';
+
+  @override
+  String get orderPickupAtStore => 'Lo recoges en el local';
+
+  @override
+  String get orderWithLocationPin => 'Con ubicación de Google';
+
+  @override
+  String get orderPaymentNequiPaid => 'Nequi · pagado';
+
+  @override
+  String get orderPaymentNequiPending => 'Nequi · pago pendiente';
+
+  @override
+  String get orderPaymentOnDelivery => 'Pagas al recibir';
+
+  @override
+  String get orderPaymentOnDeliveryPast => 'Pagaste al recibir';
+
+  @override
+  String orderPlacedAt(String date) {
+    return 'Pedido el $date';
+  }
+
+  @override
+  String orderStepProgress(int current, int total, String step) {
+    return 'Paso $current de $total: $step';
+  }
+
+  @override
+  String get orderCancelledToast => 'Pedido cancelado';
+
+  @override
+  String orderItemsCount(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count ítems',
+      one: '1 ítem',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get orderCancelCta => 'Cancelar pedido';
+
+  @override
+  String get orderCancelTitle => '¿Cancelar el pedido?';
+
+  @override
+  String get orderCancelBody =>
+      'El local aún no lo confirma — puedes cancelar sin problema.';
+
+  @override
+  String get orderCancelConfirm => 'Sí, cancelar';
+
+  @override
+  String get orderCancelKeep => 'No, dejarlo';
+
+  @override
+  String get orderDetailTitle => 'Detalle del pedido';
+
+  @override
+  String get orderDetailStatusSection => 'Estado';
+
+  @override
+  String get orderDetailItemsSection => 'Tu pedido';
+
+  @override
+  String get orderDetailDeliverySection => 'Entrega y pago';
+
+  @override
+  String get orderDetailNoteSection => 'Observación';
+
+  @override
+  String get orderSummarySubtotal => 'Subtotal';
+
+  @override
+  String get orderSummaryDelivery => 'Domicilio';
+
+  @override
+  String get orderSummaryFree => 'Gratis';
+
+  @override
+  String get orderSummaryTotal => 'Total';
 }
