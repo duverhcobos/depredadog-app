@@ -4,8 +4,12 @@ import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:go_router/go_router.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:depredadog_app/core/theme/app_theme.dart';
+import 'package:depredadog_app/features/cart/domain/entities/cart_item.dart';
+import 'package:depredadog_app/features/cart/domain/entities/cart_modifier.dart';
+import 'package:depredadog_app/features/cart/presentation/cubit/cart_cubit.dart';
 import 'package:depredadog_app/features/home/domain/entities/catalog_category.dart';
 import 'package:depredadog_app/features/home/domain/entities/catalog_product.dart';
 import 'package:depredadog_app/features/home/domain/entities/modifier_group.dart';
@@ -166,24 +170,89 @@ CatalogState _stateWith(CatalogProduct product) => CatalogState(
 
 void main() {
   late MockCatalogCubit cubit;
+  // CartCubit real (§020): sus métodos son síncronos — no hace
+  // falta mock, se observa el estado directo.
+  late CartCubit cartCubit;
 
   setUp(() {
     cubit = MockCatalogCubit();
+    cartCubit = CartCubit();
     when(() => cubit.refresh()).thenAnswer((_) async {});
   });
+
+  tearDown(() => cartCubit.close());
 
   Future<void> pumpDetail(
     WidgetTester tester,
     String slug,
-    CatalogState state,
-  ) {
+    CatalogState state, {
+    CartItem? editingItem,
+  }) {
     whenListen(cubit, const Stream<CatalogState>.empty(), initialState: state);
     return tester.pumpWidget(
-      BlocProvider<CatalogCubit>.value(
-        value: cubit,
+      MultiBlocProvider(
+        providers: [
+          BlocProvider<CatalogCubit>.value(value: cubit),
+          BlocProvider<CartCubit>.value(value: cartCubit),
+        ],
         child: MaterialApp(
           theme: AppTheme.dark(),
-          home: ProductDetailScreen(productSlug: slug),
+          home: ProductDetailScreen(
+            productSlug: slug,
+            editingItem: editingItem,
+          ),
+          localizationsDelegates: const [
+            AppLocalizations.delegate,
+            GlobalMaterialLocalizations.delegate,
+            GlobalWidgetsLocalizations.delegate,
+            GlobalCupertinoLocalizations.delegate,
+          ],
+          supportedLocales: AppLocalizations.supportedLocales,
+          locale: const Locale('es'),
+        ),
+      ),
+    );
+  }
+
+  /// Variante con GoRouter real (§020): el CTA hace context.pop() —
+  /// la extensión exige un GoRouter en el árbol ("No GoRouter found"),
+  /// así que este caso monta la ruta '/detalle' hija de '/' para
+  /// verificar también que la pantalla se desapila a la carta.
+  Future<void> pumpDetailWithRouter(
+    WidgetTester tester,
+    String slug,
+    CatalogState state, {
+    CartItem? editingItem,
+  }) {
+    whenListen(cubit, const Stream<CatalogState>.empty(), initialState: state);
+    final router = GoRouter(
+      initialLocation: '/detalle',
+      routes: [
+        GoRoute(
+          path: '/',
+          builder: (_, _) => const Scaffold(body: Text('CARTA')),
+          routes: [
+            GoRoute(
+              path: 'detalle',
+              builder: (_, _) => ProductDetailScreen(
+                productSlug: slug,
+                editingItem: editingItem,
+              ),
+            ),
+          ],
+        ),
+      ],
+    );
+    addTearDown(router.dispose);
+    return tester.pumpWidget(
+      MultiBlocProvider(
+        providers: [
+          BlocProvider<CatalogCubit>.value(value: cubit),
+          BlocProvider<CartCubit>.value(value: cartCubit),
+        ],
+        child: MaterialApp.router(
+          theme: AppTheme.dark(),
+          routerConfig: router,
           localizationsDelegates: const [
             AppLocalizations.delegate,
             GlobalMaterialLocalizations.delegate,
@@ -452,7 +521,186 @@ void main() {
     expect(cta.onPressed, isNull);
   });
 
-  testWidgets('CTA dispara toast provisional', (tester) async {
+  testWidgets(
+    'CTA agrega al carrito con la personalización y vuelve a la carta',
+    (tester) async {
+      tester.view.physicalSize = const Size(800, 1600);
+      tester.view.devicePixelRatio = 1;
+      addTearDown(tester.view.reset);
+
+      // El toast es canal de plataforma — se captura para verificar
+      // el mensaje de confirmación (§020).
+      const channel = MethodChannel('PonnamKarthik/fluttertoast');
+      final calls = <MethodCall>[];
+      tester.binding.defaultBinaryMessenger.setMockMethodCallHandler(channel, (
+        call,
+      ) async {
+        calls.add(call);
+        return true;
+      });
+      addTearDown(
+        () => tester.binding.defaultBinaryMessenger.setMockMethodCallHandler(
+          channel,
+          null,
+        ),
+      );
+
+      await pumpDetailWithRouter(tester, 'cachorro', _stateWith(_cachorro()));
+      await tester.pumpAndSettle();
+
+      // Un quitado + un adicional del fixture → 2 filas CartModifier.
+      await tester.tap(find.text('Huevo de codorniz'));
+      await tester.pump();
+      await tester.tap(find.text('Tocineta crocante'));
+      await tester.pump();
+
+      await tester.tap(find.text('Agregar al carrito'));
+      await tester.pumpAndSettle();
+
+      // El ítem llegó al cubit con los snapshots esperados.
+      expect(cartCubit.state.items, hasLength(1));
+      final item = cartCubit.state.items.single;
+      expect(item.productId, 'p-cachorro');
+      expect(item.productName, 'El Cachorro');
+      expect(item.unitBase, 14000);
+      expect(item.quantity, 1);
+      expect(item.modifiers, [
+        const CartModifier(
+          optionId: 'o-huevo',
+          optionName: 'Huevo de codorniz',
+          action: CartModifierAction.removed,
+          priceDelta: 0,
+          group: CartModifierGroup.ingredient,
+        ),
+        const CartModifier(
+          optionId: 'o-tocineta',
+          optionName: 'Tocineta crocante',
+          action: CartModifierAction.added,
+          priceDelta: 4000,
+          group: CartModifierGroup.extra,
+        ),
+      ]);
+      expect(item.unitPrice, 18000);
+
+      // Toast de éxito + pop a la carta (decisión del usuario §020).
+      expect(calls, hasLength(1));
+      expect(calls.first.arguments['msg'], 'Agregado al carrito');
+      expect(find.text('CARTA'), findsOneWidget);
+      expect(find.byType(ProductDetailScreen), findsNothing);
+
+      await tester.pump(const Duration(seconds: 2));
+    },
+  );
+
+  testWidgets('slug desconocido → vista "no disponible" con salida', (
+    tester,
+  ) async {
+    await pumpDetail(tester, 'inexistente', _stateWith(_cachorro()));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Este producto ya no está en la carta'), findsOneWidget);
+    expect(find.text('Volver al menú'), findsOneWidget);
+  });
+
+  testWidgets(
+    'modo edición precarga los sets y el CTA dice "Guardar cambios"',
+    (tester) async {
+      tester.view.physicalSize = const Size(800, 1600);
+      tester.view.devicePixelRatio = 1;
+      addTearDown(tester.view.reset);
+
+      // Ítem del carrito con un quitado, un extra cobrado, un
+      // topping y una salsa — DetailSelections los reconstruye.
+      const editing = CartItem(
+        id: 'cart-9',
+        productId: 'p-cachorro',
+        productSlug: 'cachorro',
+        productName: 'El Cachorro',
+        unitBase: 14000,
+        includedNames: ['Pan artesanal', 'Salchicha americana'],
+        modifiers: [
+          CartModifier(
+            optionId: 'o-huevo',
+            optionName: 'Huevo de codorniz',
+            action: CartModifierAction.removed,
+            priceDelta: 0,
+          ),
+          CartModifier(
+            optionId: 'o-tocineta',
+            optionName: 'Tocineta crocante',
+            action: CartModifierAction.added,
+            priceDelta: 4000,
+          ),
+          CartModifier(
+            optionId: 'o-ripio',
+            optionName: 'Papa ripio',
+            action: CartModifierAction.added,
+            priceDelta: 0,
+          ),
+          CartModifier(
+            optionId: 'o-ketchup',
+            optionName: 'Ketchup',
+            action: CartModifierAction.added,
+            priceDelta: 0,
+          ),
+        ],
+      );
+
+      await pumpDetail(
+        tester,
+        'cachorro',
+        _stateWith(_cachorro()),
+        editingItem: editing,
+      );
+      await tester.pumpAndSettle();
+
+      // CTA del modo edición (§021) — nada de "Agregar al carrito".
+      expect(find.text('Guardar cambios'), findsOneWidget);
+      expect(find.text('Agregar al carrito'), findsNothing);
+      // Cue de orientación: el título naciente anuncia la edición.
+      expect(find.text('Editando · El Cachorro'), findsOneWidget);
+
+      // Quitado precargado → la fila del huevo arranca tachada.
+      final huevo = tester.widget<Text>(find.text('Huevo de codorniz'));
+      expect(huevo.style?.decoration, TextDecoration.lineThrough);
+
+      // Extra precargado → OptionRow seleccionada + total con su
+      // +$4.000 (14.000 + 4.000).
+      final tocineta = tester.widget<OptionRow>(
+        find.ancestor(
+          of: find.text('Tocineta crocante'),
+          matching: find.byType(OptionRow),
+        ),
+      );
+      expect(tocineta.selected, isTrue);
+      expect(find.text(r'$18.000'), findsOneWidget);
+
+      // Chips precargados — las secciones de abajo son lazy.
+      await tester.scrollUntilVisible(find.text('Salsas'), 200);
+      final ripio = tester.widget<SelectChip>(
+        find.ancestor(
+          of: find.text('Papa ripio'),
+          matching: find.byType(SelectChip),
+        ),
+      );
+      final ketchup = tester.widget<SelectChip>(
+        find.ancestor(
+          of: find.text('Ketchup'),
+          matching: find.byType(SelectChip),
+        ),
+      );
+      expect(ripio.selected, isTrue);
+      expect(ketchup.selected, isTrue);
+    },
+  );
+
+  testWidgets('guardar con qty 1 llama editItem y hace pop', (tester) async {
+    tester.view.physicalSize = const Size(800, 1600);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.reset);
+
+    // El toast es canal de plataforma — se captura para verificar el
+    // mensaje "Cambios guardados" (§021).
     const channel = MethodChannel('PonnamKarthik/fluttertoast');
     final calls = <MethodCall>[];
     tester.binding.defaultBinaryMessenger.setMockMethodCallHandler(channel, (
@@ -468,24 +716,312 @@ void main() {
       ),
     );
 
-    await pumpDetail(tester, 'cachorro', _stateWith(_cachorro()));
+    // La fila editada ya vive en el cubit (id cart-1, qty 1 — sin
+    // sheet de alcance).
+    cartCubit.addItem(
+      productId: 'p-cachorro',
+      productSlug: 'cachorro',
+      productName: 'El Cachorro',
+      unitBase: 14000,
+      modifiers: const [
+        CartModifier(
+          optionId: 'o-huevo',
+          optionName: 'Huevo de codorniz',
+          action: CartModifierAction.removed,
+          priceDelta: 0,
+        ),
+      ],
+      includedNames: const ['Pan artesanal', 'Salchicha americana'],
+    );
+    final editing = cartCubit.state.items.single;
+
+    await pumpDetailWithRouter(
+      tester,
+      'cachorro',
+      _stateWith(_cachorro()),
+      editingItem: editing,
+    );
     await tester.pumpAndSettle();
 
-    await tester.tap(find.text('Agregar al carrito'));
+    // Edición real: se devuelve el huevo y se agrega tocineta.
+    await tester.tap(find.text('Huevo de codorniz'));
     await tester.pump();
+    await tester.tap(find.text('Tocineta crocante'));
+    await tester.pump();
+
+    await tester.tap(find.text('Guardar cambios'));
+    await tester.pumpAndSettle();
+
+    // editItem reemplazó la config de la fila — una sola queda.
+    expect(cartCubit.state.items, hasLength(1));
+    final item = cartCubit.state.items.single;
+    expect(item.modifiers, [
+      const CartModifier(
+        optionId: 'o-tocineta',
+        optionName: 'Tocineta crocante',
+        action: CartModifierAction.added,
+        priceDelta: 4000,
+        group: CartModifierGroup.extra,
+      ),
+    ]);
+    // El snapshot "Lleva:" se recapturó — el huevo volvió al perro.
+    expect(item.includedNames, contains('Huevo de codorniz'));
+
+    // Toast de edición + pop de vuelta.
     expect(calls, hasLength(1));
-    expect(calls.first.arguments['msg'], 'Disponible próximamente');
+    expect(calls.first.arguments['msg'], 'Cambios guardados');
+    expect(find.text('CARTA'), findsOneWidget);
+    expect(find.byType(ProductDetailScreen), findsNothing);
 
     await tester.pump(const Duration(seconds: 2));
   });
 
-  testWidgets('slug desconocido → vista "no disponible" con salida', (
+  testWidgets(
+    'editar ítem con reemplazo no duplica la fila removed del agotado',
+    (tester) async {
+      tester.view.physicalSize = const Size(800, 1600);
+      tester.view.devicePixelRatio = 1;
+      addTearDown(tester.view.reset);
+
+      const channel = MethodChannel('PonnamKarthik/fluttertoast');
+      tester.binding.defaultBinaryMessenger.setMockMethodCallHandler(
+        channel,
+        (call) async => true,
+      );
+      addTearDown(
+        () => tester.binding.defaultBinaryMessenger.setMockMethodCallHandler(
+          channel,
+          null,
+        ),
+      );
+
+      // Ítem con par de reemplazo gratis: mozzarella agotada →
+      // tocineta a $0 con replacesOptionId (§021).
+      cartCubit.addItem(
+        productId: 'p-cachorro',
+        productSlug: 'cachorro',
+        productName: 'El Cachorro',
+        unitBase: 14000,
+        modifiers: const [
+          CartModifier(
+            optionId: 'o-mozzarella',
+            optionName: 'Queso mozzarella',
+            action: CartModifierAction.removed,
+            priceDelta: 0,
+          ),
+          CartModifier(
+            optionId: 'o-tocineta',
+            optionName: 'Tocineta crocante',
+            action: CartModifierAction.added,
+            priceDelta: 0,
+            replacesOptionId: 'o-mozzarella',
+          ),
+        ],
+        includedNames: const [
+          'Pan artesanal',
+          'Salchicha americana',
+          'Huevo de codorniz',
+        ],
+      );
+      final editing = cartCubit.state.items.single;
+
+      await pumpDetailWithRouter(
+        tester,
+        'cachorro',
+        _stateWith(_cachorro(mozzarellaAvailable: false)),
+        editingItem: editing,
+      );
+      await tester.pumpAndSettle();
+
+      // Un cambio real para que el guardado no sea no-op: quitar
+      // el huevo (la regresión emitía el removed de mozzarella 2×).
+      await tester.tap(find.text('Huevo de codorniz'));
+      await tester.pump();
+      await tester.tap(find.text('Guardar cambios'));
+      await tester.pumpAndSettle();
+
+      final mods = cartCubit.state.items.single.modifiers;
+      expect(
+        mods.where(
+          (m) =>
+              m.optionId == 'o-mozzarella' &&
+              m.action == CartModifierAction.removed,
+        ),
+        hasLength(1),
+      );
+      expect(mods, hasLength(3)); // quita huevo + par del reemplazo
+      expect(
+        mods
+            .singleWhere(
+              (m) =>
+                  m.optionId == 'o-tocineta' &&
+                  m.action == CartModifierAction.added,
+            )
+            .replacesOptionId,
+        'o-mozzarella',
+      );
+
+      await tester.pump(const Duration(seconds: 2));
+    },
+  );
+
+  testWidgets(
+    'producto agotado en modo edición → "Guardar cambios" sigue habilitado',
+    (tester) async {
+      const editing = CartItem(
+        id: 'cart-9',
+        productId: 'p-cachorro',
+        productSlug: 'cachorro',
+        productName: 'El Cachorro',
+        unitBase: 14000,
+        modifiers: [],
+      );
+
+      await pumpDetail(
+        tester,
+        'cachorro',
+        _stateWith(_cachorro(productAvailable: false)),
+        editingItem: editing,
+      );
+      await tester.pumpAndSettle();
+
+      // El ítem ya vive en el carrito — el agotado no bloquea guardar
+      // (la revalidación real es del backend al crear la orden).
+      final cta = tester.widget<FilledButton>(
+        find.widgetWithText(FilledButton, 'Guardar cambios'),
+      );
+      expect(cta.onPressed, isNotNull);
+      expect(find.text('Agotado'), findsNothing);
+    },
+  );
+
+  testWidgets(
+    'guardar sin cambios con qty>1 → pop directo, sin sheet ni toast',
+    (tester) async {
+      tester.view.physicalSize = const Size(800, 1600);
+      tester.view.devicePixelRatio = 1;
+      addTearDown(tester.view.reset);
+
+      const channel = MethodChannel('PonnamKarthik/fluttertoast');
+      final calls = <MethodCall>[];
+      tester.binding.defaultBinaryMessenger.setMockMethodCallHandler(channel, (
+        call,
+      ) async {
+        calls.add(call);
+        return true;
+      });
+      addTearDown(
+        () => tester.binding.defaultBinaryMessenger.setMockMethodCallHandler(
+          channel,
+          null,
+        ),
+      );
+
+      // qty 2 → normalmente preguntaría el alcance; sin cambios no.
+      cartCubit
+        ..addItem(
+          productId: 'p-cachorro',
+          productSlug: 'cachorro',
+          productName: 'El Cachorro',
+          unitBase: 14000,
+          modifiers: const [
+            CartModifier(
+              optionId: 'o-huevo',
+              optionName: 'Huevo de codorniz',
+              action: CartModifierAction.removed,
+              priceDelta: 0,
+            ),
+          ],
+          includedNames: const ['Pan artesanal', 'Salchicha americana'],
+        )
+        ..addItem(
+          productId: 'p-cachorro',
+          productSlug: 'cachorro',
+          productName: 'El Cachorro',
+          unitBase: 14000,
+          modifiers: const [
+            CartModifier(
+              optionId: 'o-huevo',
+              optionName: 'Huevo de codorniz',
+              action: CartModifierAction.removed,
+              priceDelta: 0,
+            ),
+          ],
+          includedNames: const ['Pan artesanal', 'Salchicha americana'],
+        );
+      final editing = cartCubit.state.items.single;
+      expect(editing.quantity, 2);
+
+      await pumpDetailWithRouter(
+        tester,
+        'cachorro',
+        _stateWith(_cachorro()),
+        editingItem: editing,
+      );
+      await tester.pumpAndSettle();
+
+      // Label del footer: en edición con qty>1 el total es por unidad.
+      expect(find.text('Total por unidad'), findsOneWidget);
+
+      // Guardar sin tocar nada → misma config → vuelve sin preguntar.
+      await tester.tap(find.text('Guardar cambios'));
+      await tester.pumpAndSettle();
+
+      expect(find.text('¿A cuántos aplicar los cambios?'), findsNothing);
+      expect(calls, isEmpty);
+      expect(find.text('CARTA'), findsOneWidget);
+      expect(find.byType(ProductDetailScreen), findsNothing);
+      // La fila quedó intacta.
+      expect(cartCubit.state.items.single.quantity, 2);
+    },
+  );
+
+  testWidgets('back con cambios sin guardar → diálogo de descarte', (
     tester,
   ) async {
-    await pumpDetail(tester, 'inexistente', _stateWith(_cachorro()));
+    tester.view.physicalSize = const Size(800, 1600);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.reset);
+
+    const editing = CartItem(
+      id: 'cart-9',
+      productId: 'p-cachorro',
+      productSlug: 'cachorro',
+      productName: 'El Cachorro',
+      unitBase: 14000,
+      modifiers: [],
+    );
+
+    await pumpDetailWithRouter(
+      tester,
+      'cachorro',
+      _stateWith(_cachorro()),
+      editingItem: editing,
+    );
     await tester.pumpAndSettle();
 
-    expect(find.text('Este producto ya no está en la carta'), findsOneWidget);
-    expect(find.text('Volver al menú'), findsOneWidget);
+    // Sin cambios el back sale directo — primero provocar uno.
+    await tester.tap(find.text('Huevo de codorniz'));
+    await tester.pump();
+    await tester.tap(find.byIcon(Icons.arrow_back_rounded));
+    await tester.pumpAndSettle();
+
+    expect(find.text('¿Descartar los cambios?'), findsOneWidget);
+    expect(find.text('Seguir editando'), findsOneWidget);
+    expect(find.text('Descartar'), findsOneWidget);
+
+    // "Seguir editando" cierra el diálogo y se queda en la pantalla.
+    await tester.tap(find.text('Seguir editando'));
+    await tester.pumpAndSettle();
+    expect(find.byType(ProductDetailScreen), findsOneWidget);
+
+    // "Descartar" autoriza la salida — el pop se reintenta en el
+    // frame donde el PopScope ya relee canPop.
+    await tester.tap(find.byIcon(Icons.arrow_back_rounded));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Descartar'));
+    await tester.pumpAndSettle();
+    expect(find.text('CARTA'), findsOneWidget);
+    expect(find.byType(ProductDetailScreen), findsNothing);
   });
 }

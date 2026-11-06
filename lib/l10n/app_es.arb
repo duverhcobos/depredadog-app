@@ -187,6 +187,19 @@
   "detailSectionToppings": "Toppings",
   "detailSectionSauces": "Salsas",
   "detailTotalLabel": "Total",
+  "detailTotalPerUnitLabel": "Total por unidad",
+  "@detailTotalPerUnitLabel": {
+    "description": "Label del footer del detalle en modo edición con quantity>1 (§021 — el total es por unidad, no por fila)"
+  },
+  "detailEditingTitle": "Editando · {name}",
+  "@detailEditingTitle": {
+    "description": "Título naciente del detalle en modo edición — cue de orientación (§021)",
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
   "detailAddToCart": "Agregar al carrito",
   "catalogSoldOut": "Agotado",
   "@catalogSoldOut": {
@@ -215,5 +228,157 @@
   "detailSwapCta": "Cambiar",
   "@detailSwapCta": {
     "description": "Botón junto a la X de un ingrediente incluido agotado que despliega los adicionales para reemplazarlo gratis (uno por uno)"
+  },
+  "cartTitle": "Tu carrito",
+  "@cartTitle": {
+    "description": "Título de la pantalla del carrito"
+  },
+  "cartEmptyTitle": "Nada por acá todavía",
+  "@cartEmptyTitle": {
+    "description": "Título del estado vacío del carrito — no repite 'Tu carrito' (ya está en el título de la pantalla)"
+  },
+  "cartEmptySubtitle": "Suma algo rico del menú",
+  "@cartEmptySubtitle": {
+    "description": "Subtítulo del estado vacío del carrito"
+  },
+  "cartEmptyCta": "Ver el menú",
+  "@cartEmptyCta": {
+    "description": "Botón del estado vacío que lleva al menú"
+  },
+  "cartBrowseMore": "¿Se te antoja algo más?",
+  "@cartBrowseMore": {
+    "description": "Ghost card al final del carrito no-vacío que invita a seguir pidiendo"
+  },
+  "cartSubtotalLabel": "Subtotal",
+  "@cartSubtotalLabel": {
+    "description": "Etiqueta del subtotal en el footer del carrito"
+  },
+  "cartCheckoutCta": "Ir a pagar",
+  "@cartCheckoutCta": {
+    "description": "Botón del footer del carrito — provisional hasta checkout (§021)"
+  },
+  "cartItemAdded": "Agregado al carrito",
+  "@cartItemAdded": {
+    "description": "Toast de confirmación tras agregar desde el detalle"
+  },
+  "cartItemRemoved": "{name} eliminado del carrito",
+  "@cartItemRemoved": {
+    "description": "Toast de feedback al eliminar un ítem del carrito (swipe, stepper en 1 o ícono de basura)",
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "cartRemoveTooltip": "Quitar del carrito",
+  "@cartRemoveTooltip": {
+    "description": "Tooltip/semántica del ícono de basura en la fila del carrito"
+  },
+  "cartStepperRemove": "Quitar uno",
+  "@cartStepperRemove": {
+    "description": "Tooltip/semántica del botón − del stepper de cantidad"
+  },
+  "cartStepperAdd": "Agregar uno",
+  "@cartStepperAdd": {
+    "description": "Tooltip/semántica del botón + del stepper de cantidad"
+  },
+  "cartStepperQty": "Cantidad: {count}",
+  "@cartStepperQty": {
+    "description": "Label semántico del número del stepper de cantidad",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "cartBadgeA11y": "{count, plural, =1{Carrito, 1 ítem} other{Carrito, {count} ítems}}",
+  "@cartBadgeA11y": {
+    "description": "Label semántico combinado del botón del carrito con badge (accesibilidad)",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "cartItemAsIs": "Tal cual de la carta",
+  "@cartItemAsIs": {
+    "description": "Fallback del panel cuando el ítem no tiene snapshot ni modificadores (§021b)"
+  },
+  "cartDetailIngredients": "Ingredientes",
+  "@cartDetailIngredients": {
+    "description": "Sección del panel — ingredientes que lleva el ítem"
+  },
+  "cartDetailRemoved": "Se le quitó",
+  "@cartDetailRemoved": {
+    "description": "Sección del panel — ingredientes quitados (con vínculo '→' al reemplazo gratis)"
+  },
+  "cartDetailExtras": "Adicionales",
+  "@cartDetailExtras": {
+    "description": "Sección del panel — agregados cobrados del ítem"
+  },
+  "cartDetailToppings": "Toppings",
+  "@cartDetailToppings": {
+    "description": "Sección del panel — toppings gratis del ítem"
+  },
+  "cartDetailSauces": "Salsas",
+  "@cartDetailSauces": {
+    "description": "Sección del panel — salsas gratis del ítem"
+  },
+  "cartItemDetail": "Detalle",
+  "@cartItemDetail": {
+    "description": "Texto del chip del tile que despliega el detalle del ítem (§021b)"
+  },
+  "cartItemEdit": "Editar",
+  "@cartItemEdit": {
+    "description": "Botón del panel que abre la edición del ítem"
+  },
+  "cartEditSaveCta": "Guardar cambios",
+  "@cartEditSaveCta": {
+    "description": "CTA del detalle en modo edición (reemplaza 'Agregar al carrito')"
+  },
+  "cartEditSaved": "Cambios guardados",
+  "@cartEditSaved": {
+    "description": "Toast al guardar la edición del ítem"
+  },
+  "cartEditScopeTitle": "¿A cuántos aplicar los cambios?",
+  "@cartEditScopeTitle": {
+    "description": "Título del bottom sheet de alcance al editar qty>1"
+  },
+  "cartEditScopeOne": "Solo 1",
+  "@cartEditScopeOne": {
+    "description": "Opción del sheet — aplicar a una sola unidad"
+  },
+  "cartEditScopeAll": "Las {count}",
+  "@cartEditScopeAll": {
+    "description": "Opción del sheet — aplicar a todas las unidades",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "cartItemDetailToggle": "Detalle del perro",
+  "@cartItemDetailToggle": {
+    "description": "Label semántico del desplegable del tile (TalkBack anuncia el estado expandible aparte)"
+  },
+  "cartEditMerged": "Se combinó con la fila igual",
+  "@cartEditMerged": {
+    "description": "Toast cuando la edición coincide con otra fila del carrito y se fusionan cantidades"
+  },
+  "cartEditBackToCart": "Volver al carrito",
+  "@cartEditBackToCart": {
+    "description": "CTA de la vista 'producto no disponible' cuando se llegó desde el carrito (modo edición)"
+  },
+  "cartEditDiscardTitle": "¿Descartar los cambios?",
+  "@cartEditDiscardTitle": {
+    "description": "Título del diálogo al salir del modo edición con cambios sin guardar"
+  },
+  "cartEditDiscardStay": "Seguir editando",
+  "@cartEditDiscardStay": {
+    "description": "Diálogo descartar — quedarse en la edición"
+  },
+  "cartEditDiscardLeave": "Descartar",
+  "@cartEditDiscardLeave": {
+    "description": "Diálogo descartar — salir sin guardar"
   }
 }

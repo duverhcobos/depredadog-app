@@ -18,6 +18,11 @@ class AuthGuard {
   // no entran a defaultPublicRoutes.
   static const String ordersRoute = '/orders';
   static const String profileRoute = '/profile';
+  // Carrito — hijo de la rama home (dentro del shell, §020).
+  static const String cartRoute = '/home/cart';
+  // Edición de la personalización de un ítem del carrito (§021) —
+  // hija de cart; extra = CartItem.
+  static const String cartEditRoute = '/home/cart/edit';
 
   // Rutas de la feature auth — declaradas ya para que el guard las
   // conozca; se registran en app_router cuando existan sus pantallas.

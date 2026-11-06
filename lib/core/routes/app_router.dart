@@ -6,6 +6,9 @@ import '../../features/auth/presentation/screens/forgot_password_screen.dart';
 import '../../features/auth/presentation/screens/login_screen.dart';
 import '../../features/auth/presentation/screens/register_screen.dart';
 import '../../features/auth/presentation/screens/verify_email_screen.dart';
+import '../../features/cart/domain/entities/cart_item.dart';
+import '../../features/cart/presentation/cubit/cart_cubit.dart';
+import '../../features/cart/presentation/screens/cart_screen.dart';
 import '../../features/home/presentation/cubit/catalog_cubit.dart';
 import '../../features/home/presentation/screens/category_products_screen.dart';
 import '../../features/home/presentation/screens/home_screen.dart';
@@ -45,9 +48,14 @@ class AppRouter {
         // de catálogo (home, lista, detalle — rutas hijas dentro de la
         // branch) comparten la misma instancia y su caché. load() es
         // no-op si ya hay datos — el refresh real lo gatilla cada
-        // pantalla al entrar.
-        builder: (context, state, navigationShell) => BlocProvider.value(
-          value: locator<CatalogCubit>()..load(),
+        // pantalla al entrar. CartCubit (§020) comparte la posición:
+        // una sola instancia sirve badge del header, pantalla de
+        // carrito y el futuro checkout.
+        builder: (context, state, navigationShell) => MultiBlocProvider(
+          providers: [
+            BlocProvider.value(value: locator<CatalogCubit>()..load()),
+            BlocProvider.value(value: locator<CartCubit>()),
+          ],
           child: AppShellLayout(shell: navigationShell),
         ),
         branches: [
@@ -78,6 +86,35 @@ class AppRouter {
                                     state.pathParameters['productSlug'] ?? '',
                               ),
                             ),
+                      ),
+                    ],
+                  ),
+                  // Carrito (§020): hijo de la branch home — conserva
+                  // header y nav bar del shell; misma transición
+                  // slideUp del detalle.
+                  GoRoute(
+                    path: 'cart',
+                    pageBuilder: (context, state) =>
+                        CustomTransitions.slideUp(state, const CartScreen()),
+                    routes: [
+                      // Edición del ítem (§021) — extra = CartItem.
+                      // Sin extra válido (deep link, estado
+                      // restaurado) → back al carrito, no crash.
+                      GoRoute(
+                        path: 'edit',
+                        redirect: (context, state) => state.extra is CartItem
+                            ? null
+                            : AuthGuard.cartRoute,
+                        pageBuilder: (context, state) {
+                          final item = state.extra as CartItem;
+                          return CustomTransitions.slideUp(
+                            state,
+                            ProductDetailScreen(
+                              productSlug: item.productSlug,
+                              editingItem: item,
+                            ),
+                          );
+                        },
                       ),
                     ],
                   ),

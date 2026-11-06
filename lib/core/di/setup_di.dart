@@ -23,6 +23,7 @@ import '../../features/auth/presentation/cubit/login_cubit.dart';
 import '../../features/auth/presentation/cubit/register_cubit.dart';
 import '../../features/auth/presentation/cubit/splash_cubit.dart';
 import '../../features/auth/presentation/cubit/verify_email_cubit.dart';
+import '../../features/cart/presentation/cubit/cart_cubit.dart';
 import '../../features/home/data/datasources/implementations/catalog_remote_datasource_impl.dart';
 import '../../features/home/data/datasources/interfaces/i_catalog_remote_datasource.dart';
 import '../../features/home/data/repositories/catalog_repository_impl.dart';
@@ -161,6 +162,11 @@ void setupDI() {
       logger: locator<ILoggerService>(),
     ),
   );
+
+  // --- Carrito (propuesta 020): lazySingleton — estado compartido
+  // entre badge, pantalla y checkout futuro; una sola instancia.
+  // En memoria: no persiste entre arranques (decisión MVP).
+  locator.registerLazySingleton<CartCubit>(() => CartCubit());
 
   // --- Use Cases (auth) ---
   locator.registerLazySingleton<LoginUseCase>(

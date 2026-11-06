@@ -405,6 +405,14 @@ class AppLocalizationsEs extends AppLocalizations {
   String get detailTotalLabel => 'Total';
 
   @override
+  String get detailTotalPerUnitLabel => 'Total por unidad';
+
+  @override
+  String detailEditingTitle(String name) {
+    return 'Editando · $name';
+  }
+
+  @override
   String get detailAddToCart => 'Agregar al carrito';
 
   @override
@@ -428,4 +436,117 @@ class AppLocalizationsEs extends AppLocalizations {
 
   @override
   String get detailSwapCta => 'Cambiar';
+
+  @override
+  String get cartTitle => 'Tu carrito';
+
+  @override
+  String get cartEmptyTitle => 'Nada por acá todavía';
+
+  @override
+  String get cartEmptySubtitle => 'Suma algo rico del menú';
+
+  @override
+  String get cartEmptyCta => 'Ver el menú';
+
+  @override
+  String get cartBrowseMore => '¿Se te antoja algo más?';
+
+  @override
+  String get cartSubtotalLabel => 'Subtotal';
+
+  @override
+  String get cartCheckoutCta => 'Ir a pagar';
+
+  @override
+  String get cartItemAdded => 'Agregado al carrito';
+
+  @override
+  String cartItemRemoved(String name) {
+    return '$name eliminado del carrito';
+  }
+
+  @override
+  String get cartRemoveTooltip => 'Quitar del carrito';
+
+  @override
+  String get cartStepperRemove => 'Quitar uno';
+
+  @override
+  String get cartStepperAdd => 'Agregar uno';
+
+  @override
+  String cartStepperQty(int count) {
+    return 'Cantidad: $count';
+  }
+
+  @override
+  String cartBadgeA11y(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'Carrito, $count ítems',
+      one: 'Carrito, 1 ítem',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get cartItemAsIs => 'Tal cual de la carta';
+
+  @override
+  String get cartDetailIngredients => 'Ingredientes';
+
+  @override
+  String get cartDetailRemoved => 'Se le quitó';
+
+  @override
+  String get cartDetailExtras => 'Adicionales';
+
+  @override
+  String get cartDetailToppings => 'Toppings';
+
+  @override
+  String get cartDetailSauces => 'Salsas';
+
+  @override
+  String get cartItemDetail => 'Detalle';
+
+  @override
+  String get cartItemEdit => 'Editar';
+
+  @override
+  String get cartEditSaveCta => 'Guardar cambios';
+
+  @override
+  String get cartEditSaved => 'Cambios guardados';
+
+  @override
+  String get cartEditScopeTitle => '¿A cuántos aplicar los cambios?';
+
+  @override
+  String get cartEditScopeOne => 'Solo 1';
+
+  @override
+  String cartEditScopeAll(int count) {
+    return 'Las $count';
+  }
+
+  @override
+  String get cartItemDetailToggle => 'Detalle del perro';
+
+  @override
+  String get cartEditMerged => 'Se combinó con la fila igual';
+
+  @override
+  String get cartEditBackToCart => 'Volver al carrito';
+
+  @override
+  String get cartEditDiscardTitle => '¿Descartar los cambios?';
+
+  @override
+  String get cartEditDiscardStay => 'Seguir editando';
+
+  @override
+  String get cartEditDiscardLeave => 'Descartar';
 }

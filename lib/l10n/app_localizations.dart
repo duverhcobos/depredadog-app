@@ -826,6 +826,18 @@ abstract class AppLocalizations {
   /// **'Total'**
   String get detailTotalLabel;
 
+  /// Label del footer del detalle en modo edición con quantity>1 (§021 — el total es por unidad, no por fila)
+  ///
+  /// In es, this message translates to:
+  /// **'Total por unidad'**
+  String get detailTotalPerUnitLabel;
+
+  /// Título naciente del detalle en modo edición — cue de orientación (§021)
+  ///
+  /// In es, this message translates to:
+  /// **'Editando · {name}'**
+  String detailEditingTitle(String name);
+
   /// No description provided for @detailAddToCart.
   ///
   /// In es, this message translates to:
@@ -873,6 +885,204 @@ abstract class AppLocalizations {
   /// In es, this message translates to:
   /// **'Cambiar'**
   String get detailSwapCta;
+
+  /// Título de la pantalla del carrito
+  ///
+  /// In es, this message translates to:
+  /// **'Tu carrito'**
+  String get cartTitle;
+
+  /// Título del estado vacío del carrito — no repite 'Tu carrito' (ya está en el título de la pantalla)
+  ///
+  /// In es, this message translates to:
+  /// **'Nada por acá todavía'**
+  String get cartEmptyTitle;
+
+  /// Subtítulo del estado vacío del carrito
+  ///
+  /// In es, this message translates to:
+  /// **'Suma algo rico del menú'**
+  String get cartEmptySubtitle;
+
+  /// Botón del estado vacío que lleva al menú
+  ///
+  /// In es, this message translates to:
+  /// **'Ver el menú'**
+  String get cartEmptyCta;
+
+  /// Ghost card al final del carrito no-vacío que invita a seguir pidiendo
+  ///
+  /// In es, this message translates to:
+  /// **'¿Se te antoja algo más?'**
+  String get cartBrowseMore;
+
+  /// Etiqueta del subtotal en el footer del carrito
+  ///
+  /// In es, this message translates to:
+  /// **'Subtotal'**
+  String get cartSubtotalLabel;
+
+  /// Botón del footer del carrito — provisional hasta checkout (§021)
+  ///
+  /// In es, this message translates to:
+  /// **'Ir a pagar'**
+  String get cartCheckoutCta;
+
+  /// Toast de confirmación tras agregar desde el detalle
+  ///
+  /// In es, this message translates to:
+  /// **'Agregado al carrito'**
+  String get cartItemAdded;
+
+  /// Toast de feedback al eliminar un ítem del carrito (swipe, stepper en 1 o ícono de basura)
+  ///
+  /// In es, this message translates to:
+  /// **'{name} eliminado del carrito'**
+  String cartItemRemoved(String name);
+
+  /// Tooltip/semántica del ícono de basura en la fila del carrito
+  ///
+  /// In es, this message translates to:
+  /// **'Quitar del carrito'**
+  String get cartRemoveTooltip;
+
+  /// Tooltip/semántica del botón − del stepper de cantidad
+  ///
+  /// In es, this message translates to:
+  /// **'Quitar uno'**
+  String get cartStepperRemove;
+
+  /// Tooltip/semántica del botón + del stepper de cantidad
+  ///
+  /// In es, this message translates to:
+  /// **'Agregar uno'**
+  String get cartStepperAdd;
+
+  /// Label semántico del número del stepper de cantidad
+  ///
+  /// In es, this message translates to:
+  /// **'Cantidad: {count}'**
+  String cartStepperQty(int count);
+
+  /// Label semántico combinado del botón del carrito con badge (accesibilidad)
+  ///
+  /// In es, this message translates to:
+  /// **'{count, plural, =1{Carrito, 1 ítem} other{Carrito, {count} ítems}}'**
+  String cartBadgeA11y(int count);
+
+  /// Fallback del panel cuando el ítem no tiene snapshot ni modificadores (§021b)
+  ///
+  /// In es, this message translates to:
+  /// **'Tal cual de la carta'**
+  String get cartItemAsIs;
+
+  /// Sección del panel — ingredientes que lleva el ítem
+  ///
+  /// In es, this message translates to:
+  /// **'Ingredientes'**
+  String get cartDetailIngredients;
+
+  /// Sección del panel — ingredientes quitados (con vínculo '→' al reemplazo gratis)
+  ///
+  /// In es, this message translates to:
+  /// **'Se le quitó'**
+  String get cartDetailRemoved;
+
+  /// Sección del panel — agregados cobrados del ítem
+  ///
+  /// In es, this message translates to:
+  /// **'Adicionales'**
+  String get cartDetailExtras;
+
+  /// Sección del panel — toppings gratis del ítem
+  ///
+  /// In es, this message translates to:
+  /// **'Toppings'**
+  String get cartDetailToppings;
+
+  /// Sección del panel — salsas gratis del ítem
+  ///
+  /// In es, this message translates to:
+  /// **'Salsas'**
+  String get cartDetailSauces;
+
+  /// Texto del chip del tile que despliega el detalle del ítem (§021b)
+  ///
+  /// In es, this message translates to:
+  /// **'Detalle'**
+  String get cartItemDetail;
+
+  /// Botón del panel que abre la edición del ítem
+  ///
+  /// In es, this message translates to:
+  /// **'Editar'**
+  String get cartItemEdit;
+
+  /// CTA del detalle en modo edición (reemplaza 'Agregar al carrito')
+  ///
+  /// In es, this message translates to:
+  /// **'Guardar cambios'**
+  String get cartEditSaveCta;
+
+  /// Toast al guardar la edición del ítem
+  ///
+  /// In es, this message translates to:
+  /// **'Cambios guardados'**
+  String get cartEditSaved;
+
+  /// Título del bottom sheet de alcance al editar qty>1
+  ///
+  /// In es, this message translates to:
+  /// **'¿A cuántos aplicar los cambios?'**
+  String get cartEditScopeTitle;
+
+  /// Opción del sheet — aplicar a una sola unidad
+  ///
+  /// In es, this message translates to:
+  /// **'Solo 1'**
+  String get cartEditScopeOne;
+
+  /// Opción del sheet — aplicar a todas las unidades
+  ///
+  /// In es, this message translates to:
+  /// **'Las {count}'**
+  String cartEditScopeAll(int count);
+
+  /// Label semántico del desplegable del tile (TalkBack anuncia el estado expandible aparte)
+  ///
+  /// In es, this message translates to:
+  /// **'Detalle del perro'**
+  String get cartItemDetailToggle;
+
+  /// Toast cuando la edición coincide con otra fila del carrito y se fusionan cantidades
+  ///
+  /// In es, this message translates to:
+  /// **'Se combinó con la fila igual'**
+  String get cartEditMerged;
+
+  /// CTA de la vista 'producto no disponible' cuando se llegó desde el carrito (modo edición)
+  ///
+  /// In es, this message translates to:
+  /// **'Volver al carrito'**
+  String get cartEditBackToCart;
+
+  /// Título del diálogo al salir del modo edición con cambios sin guardar
+  ///
+  /// In es, this message translates to:
+  /// **'¿Descartar los cambios?'**
+  String get cartEditDiscardTitle;
+
+  /// Diálogo descartar — quedarse en la edición
+  ///
+  /// In es, this message translates to:
+  /// **'Seguir editando'**
+  String get cartEditDiscardStay;
+
+  /// Diálogo descartar — salir sin guardar
+  ///
+  /// In es, this message translates to:
+  /// **'Descartar'**
+  String get cartEditDiscardLeave;
 }
 
 class _AppLocalizationsDelegate

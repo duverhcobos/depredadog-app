@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
@@ -7,9 +8,18 @@ import 'package:depredadog_app/core/layout/app_shell_layout.dart';
 import 'package:depredadog_app/core/routes/auth_guard.dart';
 import 'package:depredadog_app/core/screens/module_placeholder_screen.dart';
 import 'package:depredadog_app/core/theme/app_theme.dart';
+import 'package:depredadog_app/features/cart/presentation/cubit/cart_cubit.dart';
+import 'package:depredadog_app/features/cart/presentation/screens/cart_screen.dart';
 import 'package:depredadog_app/l10n/app_localizations.dart';
 
 void main() {
+  // CartCubit real (§020): el badge del header lee sus unidades con
+  // context.select — los métodos síncronos no necesitan mock.
+  late CartCubit cartCubit;
+
+  setUp(() => cartCubit = CartCubit());
+  tearDown(() => cartCubit.close());
+
   GoRouter buildShellRouter() {
     // Misma estructura que app_router (§016) pero sin AuthGuard — la
     // protección de rutas ya se ejerce en test/core/routes/auth_guard_test.
@@ -28,6 +38,15 @@ void main() {
                     icon: Icons.home_rounded,
                     moduleLabel: AppLocalizations.of(context)!.shellTabHome,
                   ),
+                  routes: [
+                    // Carrito real (§020) — el tap del icono del
+                    // header navega acá con push() (preserva el
+                    // stack del detalle, revisor-ui §020).
+                    GoRoute(
+                      path: 'cart',
+                      builder: (context, state) => const CartScreen(),
+                    ),
+                  ],
                 ),
               ],
             ),
@@ -61,17 +80,20 @@ void main() {
 
   Future<void> pumpShell(WidgetTester tester) {
     return tester.pumpWidget(
-      MaterialApp.router(
-        theme: AppTheme.dark(),
-        routerConfig: buildShellRouter(),
-        localizationsDelegates: const [
-          AppLocalizations.delegate,
-          GlobalMaterialLocalizations.delegate,
-          GlobalWidgetsLocalizations.delegate,
-          GlobalCupertinoLocalizations.delegate,
-        ],
-        supportedLocales: AppLocalizations.supportedLocales,
-        locale: const Locale('es'),
+      BlocProvider<CartCubit>.value(
+        value: cartCubit,
+        child: MaterialApp.router(
+          theme: AppTheme.dark(),
+          routerConfig: buildShellRouter(),
+          localizationsDelegates: const [
+            AppLocalizations.delegate,
+            GlobalMaterialLocalizations.delegate,
+            GlobalWidgetsLocalizations.delegate,
+            GlobalCupertinoLocalizations.delegate,
+          ],
+          supportedLocales: AppLocalizations.supportedLocales,
+          locale: const Locale('es'),
+        ),
       ),
     );
   }
@@ -87,8 +109,20 @@ void main() {
     expect(find.byType(IconButton), findsNWidgets(2));
     expect(find.byTooltip('Notificaciones'), findsOneWidget);
     expect(find.byTooltip('Carrito'), findsOneWidget);
-    // Badge mock "2" del carrito (PROVISIONAL §016 — revisión visual).
-    expect(find.text('2'), findsOneWidget);
+    // Badge real del carrito (§020): vacío → sin etiqueta visible.
+    expect(tester.widget<Badge>(find.byType(Badge)).isLabelVisible, isFalse);
+    // Con una unidad en el cubit el badge muestra el conteo.
+    cartCubit.addItem(
+      productId: 'p-cachorro',
+      productSlug: 'cachorro',
+      productName: 'El Cachorro',
+      unitBase: 14000,
+      modifiers: const [],
+    );
+    // El emit llega al select por el stream del bloc (microtarea) —
+    // pumpAndSettle garantiza el rebuild del header.
+    await tester.pumpAndSettle();
+    expect(find.text('1'), findsOneWidget);
 
     // NavigationBar M3 con los 3 destinos del shell.
     expect(find.byType(NavigationDestination), findsNWidgets(3));
@@ -174,44 +208,48 @@ void main() {
     );
   });
 
-  testWidgets('campana y carrito disparan AppToast "Disponible próximamente"', (
-    tester,
-  ) async {
-    // fluttertoast no pinta en el árbol de widgets — va por MethodChannel;
-    // se intercepta el canal y se verifica el mensaje real (mismo patrón
-    // que login_screen_test).
-    const channel = MethodChannel('PonnamKarthik/fluttertoast');
-    final calls = <MethodCall>[];
-    tester.binding.defaultBinaryMessenger.setMockMethodCallHandler(channel, (
-      call,
-    ) async {
-      calls.add(call);
-      return true;
-    });
-    addTearDown(
-      () => tester.binding.defaultBinaryMessenger.setMockMethodCallHandler(
-        channel,
-        null,
-      ),
-    );
+  testWidgets(
+    'campana dispara AppToast "Disponible próximamente"; carrito navega a /home/cart',
+    (tester) async {
+      // fluttertoast no pinta en el árbol de widgets — va por MethodChannel;
+      // se intercepta el canal y se verifica el mensaje real (mismo patrón
+      // que login_screen_test).
+      const channel = MethodChannel('PonnamKarthik/fluttertoast');
+      final calls = <MethodCall>[];
+      tester.binding.defaultBinaryMessenger.setMockMethodCallHandler(channel, (
+        call,
+      ) async {
+        calls.add(call);
+        return true;
+      });
+      addTearDown(
+        () => tester.binding.defaultBinaryMessenger.setMockMethodCallHandler(
+          channel,
+          null,
+        ),
+      );
 
-    await pumpShell(tester);
-    await tester.pumpAndSettle();
+      await pumpShell(tester);
+      await tester.pumpAndSettle();
 
-    await tester.tap(find.byIcon(Icons.notifications_outlined));
-    await tester.pump();
-    await tester.tap(find.byIcon(Icons.shopping_cart_outlined));
-    await tester.pump();
+      await tester.tap(find.byIcon(Icons.notifications_outlined));
+      await tester.pump();
 
-    expect(calls, hasLength(2));
-    expect(calls.first.method, 'showToast');
-    expect(calls.first.arguments['msg'], 'Disponible próximamente');
-    expect(calls.last.method, 'showToast');
-    expect(calls.last.arguments['msg'], 'Disponible próximamente');
+      // El carrito ya no es toast (§020): navega a /home/cart DENTRO
+      // del shell — la NavBar y el header se conservan.
+      await tester.tap(find.byIcon(Icons.shopping_cart_outlined));
+      await tester.pumpAndSettle();
 
-    // fluttertoast agenda un Future.delayed interno para reactivar su flag
-    // isCurrentlyShowingToast — se deja expirar para no terminar con
-    // timers pendientes.
-    await tester.pump(const Duration(seconds: 2));
-  });
+      expect(calls, hasLength(1));
+      expect(calls.first.method, 'showToast');
+      expect(calls.first.arguments['msg'], 'Disponible próximamente');
+      expect(find.text('Tu carrito'), findsOneWidget);
+      expect(find.byType(NavigationBar), findsOneWidget);
+
+      // fluttertoast agenda un Future.delayed interno para reactivar su flag
+      // isCurrentlyShowingToast — se deja expirar para no terminar con
+      // timers pendientes.
+      await tester.pump(const Duration(seconds: 2));
+    },
+  );
 }
