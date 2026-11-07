@@ -61,6 +61,8 @@ void main() {
       expect(cubit.state.paymentMethod, CheckoutPaymentMethod.nequi);
       expect(cubit.state.addressId, 'addr-casa');
       expect(cubit.state.nequiPhone, '3001234567');
+      // §024 — el contacto de entrega prellena con el mismo phone.
+      expect(cubit.state.contactPhone, '3001234567');
       expect(cubit.state.savedAddresses, hasLength(2));
       // Domicilio gratis (§022a) — el fee queda en 0.
       expect(cubit.state.store.deliveryFee, 0);
@@ -72,6 +74,7 @@ void main() {
       addTearDown(cubit.close);
 
       expect(cubit.state.nequiPhone, '');
+      expect(cubit.state.contactPhone, '');
     });
   });
 
@@ -243,6 +246,49 @@ void main() {
     );
 
     blocTest<CheckoutCubit, CheckoutState>(
+      'delivery + celular de contacto vacío → showContactPhoneError '
+      '(§024)',
+      build: buildCubit,
+      act: (cubit) async {
+        cubit.setOrderType(CheckoutOrderType.delivery);
+        cubit.contactPhoneChanged('');
+        await cubit.confirm();
+      },
+      verify: (cubit) {
+        expect(cubit.state.showContactPhoneError, isTrue);
+        expect(cubit.state.orderConfirmed, isFalse);
+        expect(cubit.state.confirmInProgress, isFalse);
+      },
+    );
+
+    blocTest<CheckoutCubit, CheckoutState>(
+      'celular de contacto que no es 3XXXXXXXXX → error (§024)',
+      build: buildCubit,
+      act: (cubit) async {
+        cubit.setOrderType(CheckoutOrderType.delivery);
+        cubit.contactPhoneChanged('12345');
+        await cubit.confirm();
+      },
+      verify: (cubit) {
+        expect(cubit.state.showContactPhoneError, isTrue);
+        expect(cubit.state.orderConfirmed, isFalse);
+      },
+    );
+
+    blocTest<CheckoutCubit, CheckoutState>(
+      'en pickup el contacto no se exige aunque esté vacío (§024)',
+      build: buildCubit,
+      act: (cubit) async {
+        cubit.contactPhoneChanged('');
+        await cubit.confirm();
+      },
+      verify: (cubit) {
+        expect(cubit.state.showContactPhoneError, isFalse);
+        expect(cubit.state.orderConfirmed, isTrue);
+      },
+    );
+
+    blocTest<CheckoutCubit, CheckoutState>(
       'Nequi con celular vacío → showNequiPhoneError',
       build: buildCubit,
       act: (cubit) async {
@@ -358,6 +404,18 @@ void main() {
 
       cubit.nequiPhoneChanged('3109876543');
       expect(cubit.state.showNequiPhoneError, isFalse);
+    });
+
+    test('editar el contacto limpia showContactPhoneError (§024)', () {
+      final cubit = buildCubit();
+      addTearDown(cubit.close);
+      cubit.setOrderType(CheckoutOrderType.delivery);
+      cubit.contactPhoneChanged('');
+      cubit.confirm();
+      expect(cubit.state.showContactPhoneError, isTrue);
+
+      cubit.contactPhoneChanged('3109876543');
+      expect(cubit.state.showContactPhoneError, isFalse);
     });
 
     test('volver a pickup limpia el error de dirección', () {

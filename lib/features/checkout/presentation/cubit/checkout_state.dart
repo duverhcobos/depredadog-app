@@ -38,11 +38,13 @@ class CheckoutState extends Equatable {
     this.newAddressLabel = '',
     this.paymentMethod = CheckoutPaymentMethod.nequi,
     this.nequiPhone = '',
+    this.contactPhone = '',
     this.note = '',
     this.confirmInProgress = false,
     this.orderConfirmed = false,
     this.showAddressError = false,
     this.showNequiPhoneError = false,
+    this.showContactPhoneError = false,
   });
 
   /// Direcciones guardadas (mock §022 — en integración vendrán del
@@ -95,6 +97,14 @@ class CheckoutState extends Equatable {
   /// cuenta (editable, decisión del usuario §022).
   final String nequiPhone;
 
+  /// Celular de quién RECIBE el pedido (§024 — requerimiento del
+  /// usuario). Solo aplica a domicilio: el repartidor lo llama si no
+  /// encuentra la casa o nadie sale. Prefill del `phone` de la cuenta;
+  /// editable porque quien recibe puede ser otra persona.
+  /// Quien PAGA ya está cubierto: Nequi → [nequiPhone]; efectivo →
+  /// quien recibe paga al recibir.
+  final String contactPhone;
+
   /// Nota opcional para el local (a nivel pedido, §013).
   final String note;
 
@@ -109,6 +119,10 @@ class CheckoutState extends Equatable {
   /// o con formato inválido. Se limpian al editar el campo afectado.
   final bool showAddressError;
   final bool showNequiPhoneError;
+
+  /// Error inline tras confirm inválido: en domicilio el celular de
+  /// contacto es requerido y debe ser celular colombiano.
+  final bool showContactPhoneError;
 
   /// La entrega está resuelta: modo pickup, dirección guardada
   /// elegida, o form nuevo con los campos requeridos completos.
@@ -135,11 +149,13 @@ class CheckoutState extends Equatable {
     String? newAddressLabel,
     CheckoutPaymentMethod? paymentMethod,
     String? nequiPhone,
+    String? contactPhone,
     String? note,
     bool? confirmInProgress,
     bool? orderConfirmed,
     bool? showAddressError,
     bool? showNequiPhoneError,
+    bool? showContactPhoneError,
   }) => CheckoutState(
     savedAddresses: savedAddresses,
     store: store,
@@ -156,11 +172,13 @@ class CheckoutState extends Equatable {
     newAddressLabel: newAddressLabel ?? this.newAddressLabel,
     paymentMethod: paymentMethod ?? this.paymentMethod,
     nequiPhone: nequiPhone ?? this.nequiPhone,
+    contactPhone: contactPhone ?? this.contactPhone,
     note: note ?? this.note,
     confirmInProgress: confirmInProgress ?? this.confirmInProgress,
     orderConfirmed: orderConfirmed ?? this.orderConfirmed,
     showAddressError: showAddressError ?? this.showAddressError,
     showNequiPhoneError: showNequiPhoneError ?? this.showNequiPhoneError,
+    showContactPhoneError: showContactPhoneError ?? this.showContactPhoneError,
   );
 
   @override
@@ -178,10 +196,12 @@ class CheckoutState extends Equatable {
     newAddressLabel,
     paymentMethod,
     nequiPhone,
+    contactPhone,
     note,
     confirmInProgress,
     orderConfirmed,
     showAddressError,
     showNequiPhoneError,
+    showContactPhoneError,
   ];
 }

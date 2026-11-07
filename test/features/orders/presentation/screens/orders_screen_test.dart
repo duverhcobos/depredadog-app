@@ -342,6 +342,11 @@ void main() {
       expect(find.text('Casa blanca frente a la cancha'), findsOneWidget);
       expect(find.text('Vereda El Carmen'), findsOneWidget);
       expect(find.text('Con ubicación de Google'), findsOneWidget);
+      // §024 — línea "Recibe:" con el celular de contacto formateado
+      // 3XX XXX XXXX (solo delivery).
+      await scrollTo(tester, find.text('Recibe: 300 123 4567'));
+      await tester.pumpAndSettle();
+      expect(find.text('Recibe: 300 123 4567'), findsOneWidget);
       expect(find.text('Nequi · pagado'), findsWidgets);
 
       // Observación (solo existe porque el pedido la tiene).
@@ -379,6 +384,9 @@ void main() {
         find.text('Depredadog — Costado norte del parque principal'),
         findsOneWidget,
       );
+      // §024 — pickup no lleva celular de contacto: la línea
+      // "Recibe:" no existe.
+      expect(find.textContaining('Recibe:'), findsNothing);
     });
 
     testWidgets('cancelado: chip + razón SIN stepper ni observación', (

@@ -83,6 +83,7 @@ class CustomerOrder extends Equatable {
     this.neighborhood,
     this.hasLocationPin = false,
     this.storeReference,
+    this.contactPhone,
     this.note,
     this.cancelReason,
   });
@@ -115,6 +116,9 @@ class CustomerOrder extends Equatable {
   /// reemplaza a la frase genérica "lo recoges en el local"
   /// (revisor-estetico §023).
   final String? storeReference;
+
+  /// Celular de quién recibe (§024) — solo pedidos delivery.
+  final String? contactPhone;
 
   /// Observación del cliente para el local (§022a).
   final String? note;
@@ -152,6 +156,7 @@ class CustomerOrder extends Equatable {
     neighborhood: neighborhood,
     hasLocationPin: hasLocationPin,
     storeReference: storeReference,
+    contactPhone: contactPhone,
     note: note,
     cancelReason: cancelReason ?? this.cancelReason,
   );
@@ -173,6 +178,7 @@ class CustomerOrder extends Equatable {
     neighborhood,
     hasLocationPin,
     storeReference,
+    contactPhone,
     note,
     cancelReason,
   ];

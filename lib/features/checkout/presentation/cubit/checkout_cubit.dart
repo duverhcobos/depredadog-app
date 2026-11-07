@@ -56,8 +56,11 @@ class CheckoutCubit extends Cubit<CheckoutState> {
            // Prefills que reducen fricción (§022): primera dirección
            // guardada para cuando elija domicilio; celular de la cuenta
            // para el push de Nequi (vacío si no lo registró).
+           // §024: el mismo phone prellena el contacto de entrega —
+           // quien recibe puede ser otra persona, por eso es editable.
            addressId: kCheckoutMockAddresses.first.id,
            nequiPhone: authSession.currentUser?.phone ?? '',
+           contactPhone: authSession.currentUser?.phone ?? '',
          ),
        );
 
@@ -167,12 +170,17 @@ class CheckoutCubit extends Cubit<CheckoutState> {
   void nequiPhoneChanged(String value) =>
       emit(state.copyWith(nequiPhone: value, showNequiPhoneError: false));
 
+  /// Celular de quién recibe (§024 — solo domicilio lo exige).
+  void contactPhoneChanged(String value) =>
+      emit(state.copyWith(contactPhone: value, showContactPhoneError: false));
+
   void noteChanged(String value) => emit(state.copyWith(note: value));
 
-  /// Validación al confirmar (§022 — solo dos reglas, sin mínimo):
-  /// delivery exige ubicación elegida o form nuevo con su punto de
-  /// referencia (§022a — barrio/pin opcionales); Nequi exige celular
-  /// colombiano válido.
+  /// Validación al confirmar (§022 + §024 — sin mínimo): delivery
+  /// exige ubicación elegida o form nuevo con su punto de referencia
+  /// (§022a — barrio/pin opcionales) y el celular de quién recibe
+  /// (§024 — el repartidor necesita a quién llamar); Nequi exige
+  /// celular colombiano válido.
   /// Inválido → errores INLINE (flags, la UI los pinta bajo el campo/
   /// sección); válido → delay mock → `orderConfirmed` dispara el
   /// diálogo de éxito.
@@ -182,11 +190,18 @@ class CheckoutCubit extends Cubit<CheckoutState> {
     final phoneOk =
         state.paymentMethod != CheckoutPaymentMethod.nequi ||
         _colombianMobile.hasMatch(state.nequiPhone.trim());
-    if (!addressOk || !phoneOk) {
+    // §024 — quién recibe: requerido solo en domicilio (en el local
+    // quien recoge se identifica en el mostrador). Misma regla
+    // celular colombiano del Nequi/registro.
+    final contactOk =
+        state.orderType == CheckoutOrderType.pickup ||
+        _colombianMobile.hasMatch(state.contactPhone.trim());
+    if (!addressOk || !phoneOk || !contactOk) {
       emit(
         state.copyWith(
           showAddressError: !addressOk,
           showNequiPhoneError: !phoneOk,
+          showContactPhoneError: !contactOk,
           // §022d — si el error es del form colapsado, hay que
           // reabrirlo para que el usuario vea el error inline.
           newAddressExpanded:

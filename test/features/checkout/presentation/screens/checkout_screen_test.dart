@@ -369,6 +369,54 @@ void main() {
     expect(find.text('¡Pedido confirmado!'), findsNothing);
   });
 
+  testWidgets('celular de contacto (§024): no existe en Local; en Domicilio '
+      'viene prellenado y su error es inline', (tester) async {
+    await pumpCheckout(tester);
+    await tester.pumpAndSettle();
+
+    // En Local el bloque de entrega no se monta — el campo no
+    // existe en el árbol (§024: solo domicilio lo exige).
+    await scrollTo(tester, find.text('Tu pedido'));
+    await tester.pumpAndSettle();
+    expect(find.text('Celular de quien recibe'), findsNothing);
+
+    await scrollTo(tester, find.text('Domicilio'), delta: -120);
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Domicilio'));
+    await tester.pumpAndSettle();
+
+    // Tercera división del bloque de entrega — el hint '3XX XXX
+    // XXXX' lo distingue del campo Nequi ('Ej: 300 123 4567');
+    // prellenado con el celular de la cuenta (mismo origen).
+    final contactField = find.widgetWithText(TextField, '3XX XXX XXXX');
+    await scrollTo(tester, contactField);
+    await tester.pumpAndSettle();
+    expect(find.text('Celular de quien recibe'), findsOneWidget);
+    expect(
+      tester.widget<TextField>(contactField).controller?.text,
+      '3001234567',
+    );
+
+    // Vaciarlo y confirmar → error inline bajo el campo + no
+    // confirma (la dirección guardada sí es válida: el único
+    // fallo es el contacto).
+    await tester.enterText(contactField, '');
+    await tester.pumpAndSettle();
+    expect(checkoutCubit.state.contactPhone, '');
+    await tester.tap(find.widgetWithText(FilledButton, 'Confirmar pedido'));
+    await tester.pumpAndSettle();
+    await scrollTo(
+      tester,
+      find.text('Necesitamos el celular de quien recibe el pedido'),
+    );
+    await tester.pumpAndSettle();
+    expect(
+      find.text('Necesitamos el celular de quien recibe el pedido'),
+      findsOneWidget,
+    );
+    expect(find.text('¡Pedido confirmado!'), findsNothing);
+  });
+
   testWidgets('confirmación válida → diálogo → vacía carrito y va a Pedidos', (
     tester,
   ) async {

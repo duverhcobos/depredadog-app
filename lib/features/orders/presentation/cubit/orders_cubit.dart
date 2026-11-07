@@ -80,6 +80,7 @@ final kMockOrderDelivery = CustomerOrder(
   landmark: 'Casa blanca frente a la cancha',
   neighborhood: 'Vereda El Carmen',
   hasLocationPin: true,
+  contactPhone: '3001234567',
   note: 'pago con billete de 50, traer cambio',
 );
 
@@ -155,6 +156,9 @@ final kMockOrderDeliveryCash = CustomerOrder(
   addressLabel: 'Casa de mi mamá',
   landmark: 'Portón negro frente a la tienda',
   neighborhood: 'Vereda El Carmen',
+  // §024 — recibe otra persona (el celular de la mamá): se ve que no
+  // es el de la cuenta.
+  contactPhone: '3109876543',
   note: 'Traer cambio de 20',
 );
 

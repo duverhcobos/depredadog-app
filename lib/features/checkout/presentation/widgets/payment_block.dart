@@ -53,12 +53,15 @@ class _PaymentBlockState extends State<PaymentBlock> {
     final isNequi = state.paymentMethod == CheckoutPaymentMethod.nequi;
     return BlocListener<CheckoutCubit, CheckoutState>(
       // Foco al campo inválido tras un confirm fallido — patrón
-      // login/register (revisor-ui). Si además falló la dirección,
-      // ella tiene prioridad (va antes en la pantalla).
+      // login/register (revisor-ui). Si además falló la dirección o
+      // el contacto de entrega (§024), ellos tienen prioridad — van
+      // antes en la pantalla.
       listenWhen: (prev, curr) =>
           !prev.showNequiPhoneError && curr.showNequiPhoneError,
       listener: (context, state) {
-        if (state.showAddressError) return;
+        if (state.showAddressError || state.showContactPhoneError) {
+          return;
+        }
         _phoneFocus.requestFocus();
       },
       child: Column(

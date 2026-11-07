@@ -1222,6 +1222,24 @@ abstract class AppLocalizations {
   /// **'Quitar ubicación'**
   String get checkoutRemoveLocation;
 
+  /// Label del campo celular de contacto de la entrega — tercera división del bloque de domicilio (§024); prellenado con el phone de la cuenta, editable porque quien recibe puede ser otra persona
+  ///
+  /// In es, this message translates to:
+  /// **'Celular de quien recibe'**
+  String get checkoutContactPhoneLabel;
+
+  /// Hint interior del campo celular de contacto (§024)
+  ///
+  /// In es, this message translates to:
+  /// **'3XX XXX XXXX'**
+  String get checkoutContactPhoneHint;
+
+  /// Error inline del celular de contacto — requerido en domicilio, debe ser celular colombiano (§024)
+  ///
+  /// In es, this message translates to:
+  /// **'Necesitamos el celular de quien recibe el pedido'**
+  String get checkoutContactPhoneRequired;
+
   /// Valor de la fila Domicilio cuando el fee es 0 — el domicilio ES gratis y debe decirse (§022a)
   ///
   /// In es, this message translates to:
@@ -1437,6 +1455,12 @@ abstract class AppLocalizations {
   /// In es, this message translates to:
   /// **'Con ubicación de Google'**
   String get orderWithLocationPin;
+
+  /// Línea del detalle — celular de quién recibe el pedido (§024, solo delivery; phone ya viene con máscara '3XX XXX XXXX')
+  ///
+  /// In es, this message translates to:
+  /// **'Recibe: {phone}'**
+  String orderContactPhone(String phone);
 
   /// Línea de pago — transferencia Nequi ya pagada
   ///

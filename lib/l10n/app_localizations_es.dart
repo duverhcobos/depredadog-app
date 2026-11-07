@@ -620,6 +620,16 @@ class AppLocalizationsEs extends AppLocalizations {
   String get checkoutRemoveLocation => 'Quitar ubicación';
 
   @override
+  String get checkoutContactPhoneLabel => 'Celular de quien recibe';
+
+  @override
+  String get checkoutContactPhoneHint => '3XX XXX XXXX';
+
+  @override
+  String get checkoutContactPhoneRequired =>
+      'Necesitamos el celular de quien recibe el pedido';
+
+  @override
   String get checkoutDeliveryFree => 'Gratis';
 
   @override
@@ -728,6 +738,11 @@ class AppLocalizationsEs extends AppLocalizations {
 
   @override
   String get orderWithLocationPin => 'Con ubicación de Google';
+
+  @override
+  String orderContactPhone(String phone) {
+    return 'Recibe: $phone';
+  }
 
   @override
   String get orderPaymentNequiPaid => 'Nequi · pagado';

@@ -473,6 +473,18 @@
   "@checkoutRemoveLocation": {
     "description": "Tooltip del botón que quita el pin adjunto"
   },
+  "checkoutContactPhoneLabel": "Celular de quien recibe",
+  "@checkoutContactPhoneLabel": {
+    "description": "Label del campo celular de contacto de la entrega — tercera división del bloque de domicilio (§024); prellenado con el phone de la cuenta, editable porque quien recibe puede ser otra persona"
+  },
+  "checkoutContactPhoneHint": "3XX XXX XXXX",
+  "@checkoutContactPhoneHint": {
+    "description": "Hint interior del campo celular de contacto (§024)"
+  },
+  "checkoutContactPhoneRequired": "Necesitamos el celular de quien recibe el pedido",
+  "@checkoutContactPhoneRequired": {
+    "description": "Error inline del celular de contacto — requerido en domicilio, debe ser celular colombiano (§024)"
+  },
   "checkoutDeliveryFree": "Gratis",
   "@checkoutDeliveryFree": {
     "description": "Valor de la fila Domicilio cuando el fee es 0 — el domicilio ES gratis y debe decirse (§022a)"
@@ -616,6 +628,15 @@
   "orderWithLocationPin": "Con ubicación de Google",
   "@orderWithLocationPin": {
     "description": "Indicador de que el pedido lleva el pin de Google Maps adjunto (§022d)"
+  },
+  "orderContactPhone": "Recibe: {phone}",
+  "@orderContactPhone": {
+    "description": "Línea del detalle — celular de quién recibe el pedido (§024, solo delivery; phone ya viene con máscara '3XX XXX XXXX')",
+    "placeholders": {
+      "phone": {
+        "type": "String"
+      }
+    }
   },
   "orderPaymentNequiPaid": "Nequi · pagado",
   "@orderPaymentNequiPaid": {
