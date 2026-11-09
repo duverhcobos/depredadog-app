@@ -23,6 +23,12 @@ class OrderSummaryBlock extends StatelessWidget {
     final cartState = context.watch<CartCubit>().state;
     final checkout = context.watch<CheckoutCubit>();
     final isDelivery = checkout.state.orderType == CheckoutOrderType.delivery;
+    // §025 — el fee real viene de /store/config: mientras carga o si
+    // falló, el fee y el total en domicilio no se conocen → "—" (nunca
+    // "Gratis" ni un total fabricado con el placeholder de 0).
+    final feeUnresolved =
+        isDelivery &&
+        (checkout.state.dataLoading || checkout.state.storeFailed);
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 14),
       child: Column(
@@ -70,15 +76,17 @@ class OrderSummaryBlock extends StatelessWidget {
               label: l10n.checkoutDeliveryFeeLabel,
               // Domicilio gratis → la fila lo DICE ("Gratis" en
               // primary, §022a) en vez de mostrar $0 o esconderse.
-              value: checkout.deliveryFee == 0
+              value: feeUnresolved
+                  ? '—'
+                  : checkout.deliveryFee == 0
                   ? l10n.checkoutDeliveryFree
                   : formatCop(checkout.deliveryFee),
-              valueAccent: checkout.deliveryFee == 0,
+              valueAccent: !feeUnresolved && checkout.deliveryFee == 0,
             ),
           const SizedBox(height: 2),
           _TotalRow(
             label: l10n.detailTotalLabel,
-            value: formatCop(checkout.total),
+            value: feeUnresolved ? '—' : formatCop(checkout.total),
             highlight: true,
           ),
           const SizedBox(height: 4),

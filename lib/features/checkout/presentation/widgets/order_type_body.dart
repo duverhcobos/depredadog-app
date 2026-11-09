@@ -38,7 +38,9 @@ class OrderTypeBody extends StatelessWidget {
   }
 }
 
-/// "Lo recoges en" + dirección del local + aviso (§022).
+/// "Lo recoges en" + dirección del local + aviso (§022). La línea del
+/// local cae a "—" mientras carga o si GET /store/config falló (§025 —
+/// el retry vive en el banner sobre el footer).
 class _PickupInfo extends StatelessWidget {
   const _PickupInfo({super.key});
 
@@ -47,7 +49,8 @@ class _PickupInfo extends StatelessWidget {
     final l10n = AppLocalizations.of(context)!;
     final colors = Theme.of(context).colorScheme;
     final text = Theme.of(context).textTheme;
-    final store = context.read<CheckoutCubit>().state.store;
+    final state = context.watch<CheckoutCubit>().state;
+    final store = state.store;
     return Padding(
       padding: const EdgeInsets.fromLTRB(14, 10, 14, 8),
       child: Row(
@@ -66,7 +69,11 @@ class _PickupInfo extends StatelessWidget {
                   ),
                 ),
                 Text(
-                  '${store.name} — ${store.address}',
+                  state.dataLoading || state.storeFailed
+                      ? '—'
+                      : store.address.isEmpty
+                      ? store.name
+                      : '${store.name} — ${store.address}',
                   style: text.bodyMedium?.copyWith(fontWeight: FontWeight.w600),
                 ),
                 const SizedBox(height: 2),

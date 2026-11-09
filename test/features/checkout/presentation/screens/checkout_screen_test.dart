@@ -1,14 +1,20 @@
+import 'package:dartz/dartz.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
+import 'package:mocktail/mocktail.dart';
 import 'package:depredadog_app/core/auth/auth_session.dart';
 import 'package:depredadog_app/core/theme/app_theme.dart';
 import 'package:depredadog_app/features/auth/domain/entities/user.dart';
 import 'package:depredadog_app/features/cart/presentation/cubit/cart_cubit.dart';
+import 'package:depredadog_app/features/checkout/domain/entities/checkout_store.dart';
 import 'package:depredadog_app/features/checkout/domain/entities/saved_address.dart';
+import 'package:depredadog_app/features/checkout/domain/failures/checkout_failure.dart';
+import 'package:depredadog_app/features/checkout/domain/use_cases/load_checkout_data_use_case.dart';
+import 'package:depredadog_app/features/checkout/domain/use_cases/save_address_use_case.dart';
 import 'package:depredadog_app/features/checkout/presentation/cubit/checkout_cubit.dart';
 import 'package:depredadog_app/features/checkout/presentation/cubit/checkout_state.dart';
 import 'package:depredadog_app/features/checkout/presentation/screens/checkout_screen.dart';
@@ -25,13 +31,54 @@ const _userWithPhone = User(
   status: 'active',
 );
 
+const _addresses = <SavedAddress>[
+  SavedAddress(
+    id: 'addr-casa',
+    label: 'Casa',
+    landmark: 'Casa blanca frente a la cancha',
+    neighborhood: 'Vereda El Carmen',
+    type: SavedAddressType.home,
+  ),
+  SavedAddress(
+    id: 'addr-trabajo',
+    label: 'Trabajo',
+    landmark: 'Segundo local del puente hacia arriba',
+    neighborhood: 'Centro',
+    type: SavedAddressType.work,
+  ),
+];
+
+const _storeOpen = CheckoutStore(
+  name: 'Depredadog',
+  address: 'Costado norte del parque principal',
+  deliveryFee: 0,
+);
+
+const _storeClosed = CheckoutStore(
+  name: 'Depredadog',
+  address: 'Costado norte del parque principal',
+  deliveryFee: 0,
+  isOpen: false,
+);
+
+class MockLoadCheckoutData extends Mock implements LoadCheckoutDataUseCase {}
+
+class MockSaveAddress extends Mock implements SaveAddressUseCase {}
+
 void main() {
   late CartCubit cartCubit;
   late AuthSession session;
   late CheckoutCubit checkoutCubit;
   late GoRouter router;
+  late MockLoadCheckoutData loadData;
+  late MockSaveAddress saveAddress;
+  late CheckoutDataResult loadResult;
 
-  setUp(() {
+  setUpAll(() {
+    registerFallbackValue(SavedAddressType.home);
+  });
+
+  setUp(() async {
     cartCubit = CartCubit()
       ..addItem(
         productId: 'p-cachorro',
@@ -41,12 +88,42 @@ void main() {
         modifiers: const [],
       );
     session = AuthSession()..markAuthenticated(_userWithPhone);
+    loadData = MockLoadCheckoutData();
+    saveAddress = MockSaveAddress();
+    loadResult = const CheckoutDataResult(
+      addresses: Right(_addresses),
+      store: Right(_storeOpen),
+    );
+    when(() => loadData.call()).thenAnswer((_) async => loadResult);
+    when(
+      () => saveAddress.call(
+        label: any(named: 'label'),
+        landmark: any(named: 'landmark'),
+        neighborhood: any(named: 'neighborhood'),
+        type: any(named: 'type'),
+      ),
+    ).thenAnswer(
+      (_) async => const Right(
+        SavedAddress(
+          id: 'addr-nueva',
+          label: 'Casa',
+          landmark: 'Casa de teja',
+          type: SavedAddressType.home,
+        ),
+      ),
+    );
     // confirmDelay cero: la pantalla llega al diálogo en el mismo pump.
     checkoutCubit = CheckoutCubit(
       cartCubit: cartCubit,
       authSession: session,
+      loadCheckoutDataUseCase: loadData,
+      saveAddressUseCase: saveAddress,
       confirmDelay: Duration.zero,
     );
+    // §025 — la carga real corre en el create del BlocProvider del
+    // router; el harness la gatilla igual que la app (datos cargados
+    // antes de pintar).
+    await checkoutCubit.loadCheckoutData();
     // GoRouter mínimo (harness): /home/cart/checkout como ruta hija
     // real — el back-arrow tiene stack que pop y la confirmación
     // navega a /orders.
@@ -495,4 +572,79 @@ void main() {
       expect(checkoutCubit.state.note, 'Pago con billete de 50');
     },
   );
+
+  testWidgets('local cerrado (isOpen=false) → banner + CTA '
+      'deshabilitado (§025)', (tester) async {
+    loadResult = const CheckoutDataResult(
+      addresses: Right(_addresses),
+      store: Right(_storeClosed),
+    );
+    await checkoutCubit.loadCheckoutData();
+    await pumpCheckout(tester);
+    await tester.pumpAndSettle();
+
+    expect(find.text('El local está cerrado ahora'), findsOneWidget);
+    final cta = tester.widget<FilledButton>(
+      find.widgetWithText(FilledButton, 'Confirmar pedido'),
+    );
+    expect(cta.onPressed, isNull);
+  });
+
+  testWidgets('store/config falla → aviso con Reintentar sobre el '
+      'footer y CTA bloqueado; el retry recupera (§025)', (tester) async {
+    loadResult = const CheckoutDataResult(
+      addresses: Right(_addresses),
+      store: Left(CheckoutServerFailure('boom')),
+    );
+    await checkoutCubit.loadCheckoutData();
+    await pumpCheckout(tester);
+    await tester.pumpAndSettle();
+
+    expect(find.text('No pudimos cargar los datos del local'), findsOneWidget);
+    expect(find.text('Reintentar'), findsOneWidget);
+    // Cerrado por defecto = seguro: el placeholder del store fallido
+    // bloquea el CTA aunque no sea el banner de cerrado.
+    final cta = tester.widget<FilledButton>(
+      find.widgetWithText(FilledButton, 'Confirmar pedido'),
+    );
+    expect(cta.onPressed, isNull);
+
+    loadResult = const CheckoutDataResult(
+      addresses: Right(_addresses),
+      store: Right(_storeOpen),
+    );
+    await tester.tap(find.text('Reintentar'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('No pudimos cargar los datos del local'), findsNothing);
+    expect(
+      tester
+          .widget<FilledButton>(
+            find.widgetWithText(FilledButton, 'Confirmar pedido'),
+          )
+          .onPressed,
+      isNotNull,
+    );
+  });
+
+  testWidgets('addresses falla → aviso con retry + Nueva ubicación '
+      'como única opción del domicilio (§025)', (tester) async {
+    loadResult = const CheckoutDataResult(
+      addresses: Left(CheckoutServerFailure('boom')),
+      store: Right(_storeOpen),
+    );
+    await checkoutCubit.loadCheckoutData();
+    await pumpCheckout(tester);
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.text('Domicilio'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('No pudimos cargar tus ubicaciones'), findsOneWidget);
+    expect(find.text('Nueva ubicación'), findsOneWidget);
+    // Fallback: el form arranca expandido — es la única vía de
+    // entrega a domicilio.
+    expect(find.text('Punto de referencia *'), findsOneWidget);
+    expect(checkoutCubit.state.addressId, kCheckoutNewAddressId);
+  });
 }

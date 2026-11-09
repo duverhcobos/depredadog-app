@@ -1,31 +1,33 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
 import '../../../../l10n/app_localizations.dart';
-import '../../../auth/presentation/widgets/custom_text_field.dart';
-import '../../../home/presentation/widgets/customization_section.dart';
 import '../../domain/entities/saved_address.dart';
 import '../cubit/checkout_cubit.dart';
 import '../cubit/checkout_state.dart';
 import 'checkout_option_row.dart';
+import 'delivery_address/addresses_status_rows.dart';
+import 'delivery_address/contact_phone_field.dart';
+import 'delivery_address/delivery_location_pin.dart';
+import 'delivery_address/new_address_form.dart';
 
-/// Bloque de entrega del checkout en modo domicilio (§022): filas de
-/// ubicaciones guardadas (ícono por tipo + label + detalle + círculo
-/// de selección — mismo idioma OptionRow) + "Nueva ubicación" como
-/// toggle de expandir/colapsar (§022d — el segundo tap NO desmarca,
-/// solo colapsa; la selección sobrevive) con AnimatedSize 180ms
-/// easeOutCubic top-anchored. Debajo, separada por hairline, vive la
-/// fila del pin de Google del PEDIDO (§022d — sirve para dirección
-/// nueva o guardada).
+/// Bloque de entrega del checkout en modo domicilio (§022 + §025):
+/// filas de ubicaciones guardadas (ícono por tipo + label + detalle +
+/// círculo de selección — mismo idioma OptionRow) + "Nueva ubicación"
+/// como toggle de expandir/colapsar (§022d — el segundo tap NO
+/// desmarca, solo colapsa; la selección sobrevive) con AnimatedSize
+/// 180ms easeOutCubic top-anchored. Debajo, separadas por hairline, la
+/// fila del pin de Google del PEDIDO y el celular de quién recibe
+/// (§024). Mientras corre la carga inicial (§025) la zona de filas
+/// muestra un spinner chico; si GET /addresses falla, aviso inline
+/// con retry y "Nueva ubicación" como única opción.
 ///
 /// La zona no tiene nomenclatura de calles (§022a): el form pide el
 /// PUNTO DE REFERENCIA (único requerido) y barrio/sector opcional.
 ///
 /// Errores inline al confirmar: sin selección → texto bajo el bloque;
 /// form nuevo incompleto → error en el campo requerido (sin toast) y
-/// el form se reabre solo aunque esté colapsado. Al pie del bloque, la
-/// tercera división es el celular de quién recibe (§024 — requerido).
+/// el form se reabre solo aunque esté colapsado.
 class DeliveryAddressBlock extends StatefulWidget {
   const DeliveryAddressBlock({super.key});
 
@@ -118,23 +120,33 @@ class _DeliveryAddressBlockState extends State<DeliveryAddressBlock> {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           const SizedBox(height: 4),
-          for (final address in state.savedAddresses)
+          // §025 — mientras corre GET /addresses + /store/config la
+          // zona de filas es un placeholder (el CTA también espera).
+          if (state.dataLoading)
+            const AddressesLoading()
+          else ...[
+            // §025 — GET /addresses falló: aviso inline con retry y
+            // "Nueva ubicación" como única opción (pickup no se
+            // bloquea).
+            if (state.addressesFailed) const AddressesErrorNotice(),
+            for (final address in state.savedAddresses)
+              CheckoutOptionRow(
+                icon: _iconFor(address.type),
+                title: address.label,
+                subtitle: address.detail,
+                selected: state.addressId == address.id,
+                onTap: () => cubit.selectAddress(address.id),
+              ),
             CheckoutOptionRow(
-              icon: _iconFor(address.type),
-              title: address.label,
-              subtitle: address.detail,
-              selected: state.addressId == address.id,
-              onTap: () => cubit.selectAddress(address.id),
+              icon: Icons.add_location_alt_rounded,
+              title: l10n.checkoutNewAddress,
+              selected: isNew,
+              // §022d: la fila es toggle de SOLO expandir/colapsar —
+              // tocarla ya seleccionada colapsa el form pero la opción
+              // QUEDA marcada; desmarcar es tocar otra dirección.
+              onTap: cubit.toggleNewAddress,
             ),
-          CheckoutOptionRow(
-            icon: Icons.add_location_alt_rounded,
-            title: l10n.checkoutNewAddress,
-            selected: isNew,
-            // §022d: la fila es toggle de SOLO expandir/colapsar —
-            // tocarla ya seleccionada colapsa el form pero la opción
-            // QUEDA marcada; desmarcar es tocar otra dirección.
-            onTap: cubit.toggleNewAddress,
-          ),
+          ],
           // Sin selección (no debería ocurrir con el prefill — defensa):
           // error a nivel sección bajo la lista.
           if (state.showAddressError && state.addressId == null)
@@ -151,7 +163,7 @@ class _DeliveryAddressBlockState extends State<DeliveryAddressBlock> {
             alignment: Alignment.topCenter,
             clipBehavior: Clip.hardEdge,
             child: formOpen
-                ? _NewAddressForm(
+                ? NewAddressForm(
                     landmarkController: _landmark,
                     neighborhoodController: _neighborhood,
                     labelController: _labelController,
@@ -171,7 +183,7 @@ class _DeliveryAddressBlockState extends State<DeliveryAddressBlock> {
             endIndent: 14,
             color: colors.outlineVariant,
           ),
-          const _DeliveryLocationPin(),
+          const DeliveryLocationPin(),
           // §024 — tercera división del bloque (mismo patrón hairline
           // del pin): "dónde entrego" → "a quién llamo".
           Divider(
@@ -180,341 +192,9 @@ class _DeliveryAddressBlockState extends State<DeliveryAddressBlock> {
             endIndent: 14,
             color: colors.outlineVariant,
           ),
-          const _ContactPhoneField(),
+          const ContactPhoneField(),
         ],
       ),
-    );
-  }
-}
-
-/// Fila del pin de Google Maps del pedido (§022d): botón outlined
-/// "Adjuntar ubicación de Google" → estado adjunto (check primary +
-/// link + ✕ quitar). Order-level: el punto exacto aplica a la
-/// dirección que esté marcada — nueva o guardada (mock: link fijo).
-class _DeliveryLocationPin extends StatelessWidget {
-  const _DeliveryLocationPin();
-
-  @override
-  Widget build(BuildContext context) {
-    final l10n = AppLocalizations.of(context)!;
-    final cubit = context.watch<CheckoutCubit>();
-    final link = cubit.state.deliveryLocationLink;
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(14, 10, 14, 6),
-      child: link == null
-          ? Align(
-              alignment: Alignment.centerLeft,
-              child: OutlinedButton.icon(
-                onPressed: cubit.attachDeliveryLocation,
-                icon: const Icon(Icons.pin_drop_rounded, size: 18),
-                label: Text(l10n.checkoutAttachLocation),
-              ),
-            )
-          : Semantics(
-              label: '${l10n.checkoutLocationAttached}: $link',
-              child: Row(
-                children: [
-                  Icon(
-                    Icons.check_circle_rounded,
-                    size: 18,
-                    color: Theme.of(context).colorScheme.primary,
-                  ),
-                  const SizedBox(width: 8),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          l10n.checkoutLocationAttached,
-                          style: Theme.of(context).textTheme.bodyMedium
-                              ?.copyWith(fontWeight: FontWeight.w600),
-                        ),
-                        Text(
-                          link,
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                          style: Theme.of(context).textTheme.bodySmall
-                              ?.copyWith(
-                                color: Theme.of(context).colorScheme.onSurface
-                                    .withValues(alpha: 0.6),
-                              ),
-                        ),
-                      ],
-                    ),
-                  ),
-                  IconButton(
-                    icon: const Icon(Icons.close_rounded, size: 18),
-                    tooltip: l10n.checkoutRemoveLocation,
-                    onPressed: cubit.removeDeliveryLocation,
-                    visualDensity: VisualDensity.compact,
-                  ),
-                ],
-              ),
-            ),
-    );
-  }
-}
-
-/// Celular de quién recibe el pedido (§024 — solo domicilio).
-/// Espejo del campo Nequi (payment_block): CustomTextField +
-/// keyboardType.phone + digitsOnly + LengthLimiting(10) +
-/// AutofillHints.telephoneNumber. NO usa PhoneInput Formz — ese es el
-/// idioma del registro; el checkout valida plano en el cubit.
-class _ContactPhoneField extends StatefulWidget {
-  const _ContactPhoneField();
-
-  @override
-  State<_ContactPhoneField> createState() => _ContactPhoneFieldState();
-}
-
-class _ContactPhoneFieldState extends State<_ContactPhoneField> {
-  late final TextEditingController _phone;
-  late final FocusNode _phoneFocus = FocusNode();
-
-  @override
-  void initState() {
-    super.initState();
-    // Siembra desde el estado (mismo patrón del landmark/Nequi): el
-    // bloque se desmonta al alternar Local↔Domicilio y el controller
-    // se recrea — sin esto el texto seguía en el cubit pero el campo
-    // reaparecía vacío y podía validar un contacto invisible.
-    _phone = TextEditingController(
-      text: context.read<CheckoutCubit>().state.contactPhone,
-    );
-  }
-
-  @override
-  void dispose() {
-    _phone.dispose();
-    _phoneFocus.dispose();
-    super.dispose();
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final l10n = AppLocalizations.of(context)!;
-    final cubit = context.watch<CheckoutCubit>();
-    final state = cubit.state;
-    return BlocListener<CheckoutCubit, CheckoutState>(
-      // Foco al campo inválido tras un confirm fallido — patrón
-      // login/register (revisor-ui). El punto de referencia va antes
-      // en la pantalla: si él también falló se queda con el foco.
-      listenWhen: (prev, curr) =>
-          !prev.showContactPhoneError && curr.showContactPhoneError,
-      listener: (context, state) {
-        if (state.showAddressError &&
-            state.addressId == kCheckoutNewAddressId &&
-            state.newLandmark.trim().isEmpty) {
-          return;
-        }
-        _phoneFocus.requestFocus();
-      },
-      child: Padding(
-        padding: const EdgeInsets.fromLTRB(14, 10, 14, 6),
-        child: CustomTextField(
-          label: l10n.checkoutContactPhoneLabel,
-          controller: _phone,
-          focusNode: _phoneFocus,
-          hintText: l10n.checkoutContactPhoneHint,
-          keyboardType: TextInputType.phone,
-          textInputAction: TextInputAction.done,
-          autofillHints: const [AutofillHints.telephoneNumber],
-          // Celular colombiano (misma regla del registro/Nequi): solo
-          // dígitos, máx 10 — el formato ^3\d{9}$ lo valida el cubit
-          // al confirmar.
-          inputFormatters: [
-            FilteringTextInputFormatter.digitsOnly,
-            LengthLimitingTextInputFormatter(10),
-          ],
-          errorText: state.showContactPhoneError
-              ? l10n.checkoutContactPhoneRequired
-              : null,
-          onChanged: cubit.contactPhoneChanged,
-        ),
-      ),
-    );
-  }
-}
-
-/// Form inline de "Nueva ubicación" (§022a): PUNTO DE REFERENCIA* es
-/// lo único requerido (la zona no tiene direcciones formales), barrio/
-/// sector opcional + checkbox "Guardar esta ubicación". El pin de
-/// Google vive FUERA del form, al pie del bloque — es del pedido, no
-/// de la dirección nueva (§022d). El error de requerido aparece al
-/// confirmar con el campo vacío (flag del estado, CustomTextField lo
-/// pinta).
-class _NewAddressForm extends StatelessWidget {
-  const _NewAddressForm({
-    required this.landmarkController,
-    required this.neighborhoodController,
-    required this.labelController,
-    required this.landmarkFocus,
-    required this.neighborhoodFocus,
-    required this.labelFocus,
-    required this.saveRowKey,
-  });
-
-  final TextEditingController landmarkController;
-  final TextEditingController neighborhoodController;
-
-  /// Campo del nombre propio cuando el tipo es "Otro" (§022b).
-  final TextEditingController labelController;
-  final FocusNode landmarkFocus;
-  final FocusNode neighborhoodFocus;
-  final FocusNode labelFocus;
-
-  /// Key del checkbox "Guardar esta ubicación" — el bloque le hace
-  /// ensureVisible al abrirse el form (nace bajo el fold).
-  final Key saveRowKey;
-
-  @override
-  Widget build(BuildContext context) {
-    final l10n = AppLocalizations.of(context)!;
-    final cubit = context.watch<CheckoutCubit>();
-    final state = cubit.state;
-    final showErrors = state.showAddressError;
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(14, 4, 14, 4),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          CustomTextField(
-            label: l10n.checkoutLandmarkLabel,
-            controller: landmarkController,
-            focusNode: landmarkFocus,
-            hintText: l10n.checkoutLandmarkHint,
-            textCapitalization: TextCapitalization.sentences,
-            textInputAction: TextInputAction.next,
-            errorText: showErrors && state.newLandmark.trim().isEmpty
-                ? l10n.checkoutLandmarkRequired
-                : null,
-            onChanged: cubit.newLandmarkChanged,
-          ),
-          CustomTextField(
-            label: l10n.checkoutNeighborhoodLabel,
-            controller: neighborhoodController,
-            focusNode: neighborhoodFocus,
-            hintText: l10n.checkoutNeighborhoodHint,
-            textCapitalization: TextCapitalization.words,
-            textInputAction: TextInputAction.done,
-            onChanged: cubit.newNeighborhoodChanged,
-          ),
-          InkWell(
-            key: saveRowKey,
-            onTap: cubit.toggleSaveNewAddress,
-            child: Padding(
-              padding: const EdgeInsets.symmetric(vertical: 4),
-              child: Row(
-                children: [
-                  SizedBox(
-                    height: 40,
-                    width: 40,
-                    child: Checkbox(
-                      value: state.saveNewAddress,
-                      onChanged: (_) => cubit.toggleSaveNewAddress(),
-                    ),
-                  ),
-                  const SizedBox(width: 4),
-                  Expanded(
-                    child: Text(
-                      l10n.checkoutSaveAddress,
-                      style: Theme.of(context).textTheme.bodyMedium,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ),
-          // §022b — el tipo (Casa/Trabajo/Otro) solo se pregunta si la
-          // ubicación se va a guardar: es el nombre que la lista
-          // mostrará después. Aparece con la física de la familia.
-          AnimatedSize(
-            duration: const Duration(milliseconds: 180),
-            curve: Curves.easeOutCubic,
-            alignment: Alignment.topCenter,
-            clipBehavior: Clip.hardEdge,
-            child: state.saveNewAddress
-                ? _AddressTypePicker(
-                    state: state,
-                    labelController: labelController,
-                    labelFocus: labelFocus,
-                  )
-                : const SizedBox.shrink(),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-/// Selector del tipo de ubicación nueva al guardarla (§022b): chips
-/// Casa/Trabajo/Otro — "Otro" revela el campo del nombre propio.
-/// Vive detrás del checkbox "Guardar esta ubicación" porque el tipo
-/// solo existe para nombrar la guardada.
-class _AddressTypePicker extends StatelessWidget {
-  const _AddressTypePicker({
-    required this.state,
-    required this.labelController,
-    required this.labelFocus,
-  });
-
-  final CheckoutState state;
-  final TextEditingController labelController;
-  final FocusNode labelFocus;
-
-  @override
-  Widget build(BuildContext context) {
-    final l10n = AppLocalizations.of(context)!;
-    final text = Theme.of(context).textTheme;
-    final cubit = context.read<CheckoutCubit>();
-    final selected = state.newAddressType;
-    SelectChip chip(SavedAddressType type, String label) => SelectChip(
-      label: label,
-      selected: selected == type,
-      onTap: () => cubit.setNewAddressType(type),
-    );
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Padding(
-          padding: const EdgeInsets.only(top: 6, bottom: 8),
-          child: Text(
-            l10n.checkoutAddressTypeLabel,
-            style: text.bodyMedium?.copyWith(fontWeight: FontWeight.w600),
-          ),
-        ),
-        Wrap(
-          spacing: 8,
-          runSpacing: 8,
-          children: [
-            chip(SavedAddressType.home, l10n.checkoutAddressTypeHome),
-            chip(SavedAddressType.work, l10n.checkoutAddressTypeWork),
-            chip(SavedAddressType.other, l10n.checkoutAddressTypeOther),
-          ],
-        ),
-        // "Otro" necesita el nombre propio — la lista guardada lo
-        // mostrará tal cual ("casa de mi mamá").
-        AnimatedSize(
-          duration: const Duration(milliseconds: 180),
-          curve: Curves.easeOutCubic,
-          alignment: Alignment.topCenter,
-          clipBehavior: Clip.hardEdge,
-          child: selected == SavedAddressType.other
-              ? Padding(
-                  padding: const EdgeInsets.only(top: 8),
-                  child: CustomTextField(
-                    label: l10n.checkoutAddressNameLabel,
-                    controller: labelController,
-                    focusNode: labelFocus,
-                    hintText: l10n.checkoutAddressNameHint,
-                    textCapitalization: TextCapitalization.words,
-                    textInputAction: TextInputAction.done,
-                    onChanged: cubit.newAddressLabelChanged,
-                  ),
-                )
-              : const SizedBox.shrink(),
-        ),
-      ],
     );
   }
 }

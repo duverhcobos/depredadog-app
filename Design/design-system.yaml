@@ -4,7 +4,7 @@
 
 meta:
   product: Depredadog
-  version: 1.30.1
+  version: 1.30.2
   updated: 2026-11-08
 
 palette:
@@ -21,8 +21,8 @@ palette:
   scaffold_light: "#FFFFFF"
   on_surface_light: "#4A2511"
   error_light: "#B3261E"
-  primary_dark: "#FDD019" # mostaza del logo — decisión del usuario tras comparar vs rojo pleno y rojo pálido
-  secondary_dark: "#FCD34D"
+  primary_dark: "#F4BE38" # mostaza ámbar — decisión del usuario (antes #FDD019)
+  secondary_dark: "#F6CE6B"
   tertiary_dark: "#8FBF6A"
   surface_dark: "#241511"
   scaffold_dark: "#000000" # negro puro — decisión del usuario
@@ -139,6 +139,12 @@ screens:
     status: "PLACEHOLDER (§016) — module_placeholder 'Perfil' con icono person_rounded"
 
 changelog:
+  - version: "1.30.2"
+    date: 2026-11-09
+    page: "tema (retono del amarillo de marca — decisión del usuario)"
+    status: "completed"
+    changes:
+      - "primary_dark #FDD019 → #F4BE38 (mostaza más ámbar) y secondary_dark #FCD34D → #F6CE6B (suavizada derivada del nuevo tono — la familia sigue alineada, decisión del usuario). Alcance SOLO tokens de UI: el arte de marca (imagotipo/isotipo/splash/ícono launcher, #FDD019 en SVG y PNG) lo ajusta el usuario por su cuenta."
   - version: "1.30.1"
     date: 2026-11-08
     page: "checkout + orders (§024 — celular de quién recibe: tercera división del bloque domicilio + línea 'Recibe:' en el detalle)"

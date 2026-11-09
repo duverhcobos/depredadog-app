@@ -24,6 +24,12 @@ import '../../features/auth/presentation/cubit/register_cubit.dart';
 import '../../features/auth/presentation/cubit/splash_cubit.dart';
 import '../../features/auth/presentation/cubit/verify_email_cubit.dart';
 import '../../features/cart/presentation/cubit/cart_cubit.dart';
+import '../../features/checkout/data/datasources/implementations/checkout_remote_datasource_impl.dart';
+import '../../features/checkout/data/datasources/interfaces/i_checkout_remote_datasource.dart';
+import '../../features/checkout/data/repositories/checkout_repository_impl.dart';
+import '../../features/checkout/domain/repositories/i_checkout_repository.dart';
+import '../../features/checkout/domain/use_cases/load_checkout_data_use_case.dart';
+import '../../features/checkout/domain/use_cases/save_address_use_case.dart';
 import '../../features/checkout/presentation/cubit/checkout_cubit.dart';
 import '../../features/home/data/datasources/implementations/catalog_remote_datasource_impl.dart';
 import '../../features/home/data/datasources/interfaces/i_catalog_remote_datasource.dart';
@@ -170,14 +176,36 @@ void setupDI() {
   // En memoria: no persiste entre arranques (decisión MVP).
   locator.registerLazySingleton<CartCubit>(() => CartCubit());
 
-  // --- Checkout (propuesta 022): factory por apertura — es estado de
-  // pantalla, no se comparte. LEE el CartCubit (ítems/subtotal — nunca
-  // lo muta) y AuthSession (prefill del celular Nequi con el phone de
-  // la cuenta, editable).
+  // --- Checkout (propuesta 025): datasource + repo + use-cases de los
+  // endpoints reales (GET /addresses, GET /store/config, POST
+  // /addresses). El cubit queda factory por apertura — es estado de
+  // pantalla, no se comparte; loadCheckoutData() lo gatilla el router
+  // en el create del BlocProvider. LEE el CartCubit (ítems/subtotal —
+  // nunca lo muta) y AuthSession (prefill del celular Nequi con el
+  // phone de la cuenta, editable).
+  locator.registerLazySingleton<ICheckoutRemoteDataSource>(
+    () => CheckoutRemoteDataSourceImpl(
+      networkService: locator<INetworkService>(),
+    ),
+  );
+  locator.registerLazySingleton<ICheckoutRepository>(
+    () => CheckoutRepositoryImpl(
+      remoteDataSource: locator<ICheckoutRemoteDataSource>(),
+      networkInfo: locator<INetworkInfo>(),
+    ),
+  );
+  locator.registerLazySingleton<LoadCheckoutDataUseCase>(
+    () => LoadCheckoutDataUseCase(locator<ICheckoutRepository>()),
+  );
+  locator.registerLazySingleton<SaveAddressUseCase>(
+    () => SaveAddressUseCase(locator<ICheckoutRepository>()),
+  );
   locator.registerFactory<CheckoutCubit>(
     () => CheckoutCubit(
       cartCubit: locator<CartCubit>(),
       authSession: locator<AuthSession>(),
+      loadCheckoutDataUseCase: locator<LoadCheckoutDataUseCase>(),
+      saveAddressUseCase: locator<SaveAddressUseCase>(),
     ),
   );
 

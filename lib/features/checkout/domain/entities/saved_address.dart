@@ -5,8 +5,9 @@ import 'package:equatable/equatable.dart';
 /// guarda textos (§022, mock).
 enum SavedAddressType { home, work, other }
 
-/// Ubicación guardada del cliente (§022, solo presentación — mock en
-/// CheckoutCubit; la fuente real será `GET /addresses`, backend 014).
+/// Ubicación guardada del cliente — viene de `GET /addresses`
+/// (backend 014, §025 la conectó) y se crea con `POST /addresses`
+/// desde "Guardar esta ubicación" del checkout.
 ///
 /// La zona del negocio no tiene nomenclatura de calles — la entrega se
 /// guía por PUNTOS DE REFERENCIA ("casa blanca frente a la cancha"),

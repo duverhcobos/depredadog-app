@@ -680,6 +680,22 @@ class AppLocalizationsEs extends AppLocalizations {
   String get checkoutViewOrdersCta => 'Ver mis pedidos';
 
   @override
+  String get checkoutAddressesError => 'No pudimos cargar tus ubicaciones';
+
+  @override
+  String get checkoutRetry => 'Reintentar';
+
+  @override
+  String get checkoutStoreError => 'No pudimos cargar los datos del local';
+
+  @override
+  String get checkoutStoreClosed => 'El local está cerrado ahora';
+
+  @override
+  String get checkoutAddressSaveFailed =>
+      'Pedido confirmado — no pudimos guardar la ubicación';
+
+  @override
   String get ordersTitle => 'Pedidos';
 
   @override

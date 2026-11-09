@@ -21,9 +21,9 @@ class AppColors {
   static const Color onErrorLight = Color(0xFFFFFFFF);
 
   // ---- Dark (derivadas de la misma familia) ----
-  static const Color primaryDark = Color(0xFFFDD019); // mostaza del logo
+  static const Color primaryDark = Color(0xFFF4BE38); // mostaza ámbar
   static const Color onPrimaryDark = Color(0xFF1D1D1B); // negro rico
-  static const Color secondaryDark = Color(0xFFFCD34D); // mostaza suavizada
+  static const Color secondaryDark = Color(0xFFF6CE6B); // mostaza suavizada
   static const Color onSecondaryDark = Color(0xFF3D2B00);
   static const Color tertiaryDark = Color(0xFF8FBF6A);
   static const Color onTertiaryDark = Color(0xFF1E3A0F);

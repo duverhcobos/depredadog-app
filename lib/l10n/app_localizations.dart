@@ -1336,6 +1336,36 @@ abstract class AppLocalizations {
   /// **'Ver mis pedidos'**
   String get checkoutViewOrdersCta;
 
+  /// Aviso inline del bloque de domicilio cuando GET /addresses falla — cae a 'Nueva ubicación' como única opción con retry (§025)
+  ///
+  /// In es, this message translates to:
+  /// **'No pudimos cargar tus ubicaciones'**
+  String get checkoutAddressesError;
+
+  /// Botón de reintento de los avisos inline del checkout (ubicaciones / datos del local)
+  ///
+  /// In es, this message translates to:
+  /// **'Reintentar'**
+  String get checkoutRetry;
+
+  /// Aviso inline cuando GET /store/config falla — las líneas del local quedan en '—' con retry (§025)
+  ///
+  /// In es, this message translates to:
+  /// **'No pudimos cargar los datos del local'**
+  String get checkoutStoreError;
+
+  /// Banner inline sobre el CTA cuando isOpen=false — confirmar queda deshabilitado (§025; el backend rechaza con 409)
+  ///
+  /// In es, this message translates to:
+  /// **'El local está cerrado ahora'**
+  String get checkoutStoreClosed;
+
+  /// Toast junto al diálogo de éxito cuando POST /addresses falló — el guardado es auxiliar y el pedido siguió igual (§025)
+  ///
+  /// In es, this message translates to:
+  /// **'Pedido confirmado — no pudimos guardar la ubicación'**
+  String get checkoutAddressSaveFailed;
+
   /// Título naciente (scrolling_title) del tab Pedidos (§023)
   ///
   /// In es, this message translates to:

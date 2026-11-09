@@ -3,6 +3,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../../core/routes/auth_guard.dart';
+import '../../../../core/widgets/app_toast.dart';
 import '../../../../l10n/app_localizations.dart';
 import '../../../cart/presentation/cubit/cart_cubit.dart';
 import '../../../home/presentation/utils/format_cop.dart';
@@ -14,6 +15,7 @@ import '../widgets/order_summary_block.dart';
 import '../widgets/order_type_body.dart';
 import '../widgets/order_type_toggle.dart';
 import '../widgets/payment_block.dart';
+import '../widgets/store_status_banner.dart';
 
 /// Checkout (§022, solo presentación): familia del carrito/detalle —
 /// franja firma + título naciente dentro del scroll + cards straddle
@@ -36,6 +38,11 @@ class CheckoutScreen extends StatelessWidget {
   /// el cliente solo necesita saber que su pedido quedó).
   void _showConfirmedDialog(BuildContext context, CheckoutState state) {
     final l10n = AppLocalizations.of(context)!;
+    // §025 — el guardado de la ubicación es auxiliar: si POST
+    // /addresses falló el pedido confirmó igual y solo se avisa.
+    if (state.addressSaveFailed) {
+      AppToast.info(context, l10n.checkoutAddressSaveFailed);
+    }
     showDialog<void>(
       context: context,
       // El único camino es el CTA — no se cierra por fuera.
@@ -99,15 +106,24 @@ class CheckoutScreen extends StatelessWidget {
       listener: _showConfirmedDialog,
       child: BlocBuilder<CheckoutCubit, CheckoutState>(
         builder: (context, state) {
-          // El total mezcla carrito + tipo de pedido — se lee de ambos
-          // (el carrito no cambia mientras el checkout está abierto,
-          // pero el watch lo mantiene correcto por construcción).
-          final subtotal = context.watch<CartCubit>().state.subtotal;
-          final total =
-              subtotal +
-              (state.orderType == CheckoutOrderType.delivery
-                  ? state.store.deliveryFee
-                  : 0);
+          // Suscripción al carrito — el total lo calcula el cubit de
+          // checkout, pero este BlocBuilder no escucha al CartCubit:
+          // sin el watch el footer quedaría stale si el carrito
+          // cambiara (§022 — se conserva por construcción).
+          final _ = context.watch<CartCubit>();
+          final isDelivery = state.orderType == CheckoutOrderType.delivery;
+          // §025 — el fee viene de /store/config: sin él el total en
+          // domicilio no se conoce → "—" (igual que el resumen).
+          final feeUnresolved =
+              isDelivery && (state.dataLoading || state.storeFailed);
+          // Total único del cubit — no duplicar la regla acá (si el
+          // mínimo de domicilio llega a afectarla, ambas vistas
+          // coinciden por construcción).
+          final total = context.read<CheckoutCubit>().total;
+          // El CTA espera la carga y se bloquea con el local cerrado
+          // (§025 — isOpen=false también cubre el placeholder del
+          // store fallido: cerrado por defecto = seguro).
+          final canConfirm = !state.dataLoading && state.store.isOpen;
           return Scaffold(
             // Convención de loading (elevated_button_primary): TODOS
             // los controles se bloquean durante la confirmación sin
@@ -200,49 +216,76 @@ class CheckoutScreen extends StatelessWidget {
                           top: false,
                           child: Padding(
                             padding: const EdgeInsets.fromLTRB(16, 12, 16, 12),
-                            child: Row(
+                            child: Column(
+                              mainAxisSize: MainAxisSize.min,
                               children: [
-                                Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                // §025 — aviso fijo: cerrado
+                                // (isOpen=false) o falla del store
+                                // con retry.
+                                if (state.storeFailed)
+                                  StoreStatusBanner(
+                                    message: l10n.checkoutStoreError,
+                                    actionLabel: l10n.checkoutRetry,
+                                    onAction: context
+                                        .read<CheckoutCubit>()
+                                        .loadCheckoutData,
+                                  )
+                                else if (!state.dataLoading &&
+                                    !state.store.isOpen)
+                                  StoreStatusBanner(
+                                    message: l10n.checkoutStoreClosed,
+                                  ),
+                                Row(
                                   children: [
-                                    Text(
-                                      l10n.detailTotalLabel,
-                                      style: text.bodySmall?.copyWith(
-                                        color: colors.onSurface.withValues(
-                                          alpha: 0.7,
+                                    Column(
+                                      crossAxisAlignment:
+                                          CrossAxisAlignment.start,
+                                      children: [
+                                        Text(
+                                          l10n.detailTotalLabel,
+                                          style: text.bodySmall?.copyWith(
+                                            color: colors.onSurface.withValues(
+                                              alpha: 0.7,
+                                            ),
+                                          ),
                                         ),
-                                      ),
+                                        Text(
+                                          feeUnresolved
+                                              ? '—'
+                                              : formatCop(total),
+                                          style: text.titleMedium?.copyWith(
+                                            color: colors.primary,
+                                            fontWeight: FontWeight.w800,
+                                          ),
+                                        ),
+                                      ],
                                     ),
-                                    Text(
-                                      formatCop(total),
-                                      style: text.titleMedium?.copyWith(
-                                        color: colors.primary,
-                                        fontWeight: FontWeight.w800,
+                                    const SizedBox(width: 16),
+                                    Expanded(
+                                      child: FilledButton(
+                                        // Spinner DENTRO del botón
+                                        // (elevated_button_primary): el
+                                        // CTA sigue mostaza y el cubit
+                                        // ignora re-entradas.
+                                        onPressed: canConfirm
+                                            ? context
+                                                  .read<CheckoutCubit>()
+                                                  .confirm
+                                            : null,
+                                        child: state.confirmInProgress
+                                            ? SizedBox(
+                                                height: 22,
+                                                width: 22,
+                                                child:
+                                                    CircularProgressIndicator(
+                                                      strokeWidth: 2.5,
+                                                      color: colors.onPrimary,
+                                                    ),
+                                              )
+                                            : Text(l10n.checkoutConfirmCta),
                                       ),
                                     ),
                                   ],
-                                ),
-                                const SizedBox(width: 16),
-                                Expanded(
-                                  child: FilledButton(
-                                    // Spinner DENTRO del botón
-                                    // (elevated_button_primary): el
-                                    // CTA sigue mostaza y el cubit
-                                    // ignora re-entradas.
-                                    onPressed: context
-                                        .read<CheckoutCubit>()
-                                        .confirm,
-                                    child: state.confirmInProgress
-                                        ? SizedBox(
-                                            height: 22,
-                                            width: 22,
-                                            child: CircularProgressIndicator(
-                                              strokeWidth: 2.5,
-                                              color: colors.onPrimary,
-                                            ),
-                                          )
-                                        : Text(l10n.checkoutConfirmCta),
-                                  ),
                                 ),
                               ],
                             ),

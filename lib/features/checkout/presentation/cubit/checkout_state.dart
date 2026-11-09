@@ -20,9 +20,9 @@ const String kCheckoutNewAddressId = 'new';
 /// real tomará las coordenadas del dispositivo / link de Maps).
 const String kCheckoutMockLocationLink = 'maps.app.goo.gl/xK9fP2AbCd3';
 
-/// Estado de la pantalla de checkout (§022, solo presentación). Es
-/// estado de pantalla — el cubit es factory por apertura, no se
-/// comparte fuera de la ruta.
+/// Estado de la pantalla de checkout (§022 + §025 — datos reales de
+/// GET /addresses + GET /store/config). Es estado de pantalla — el
+/// cubit es factory por apertura, no se comparte fuera de la ruta.
 class CheckoutState extends Equatable {
   const CheckoutState({
     required this.savedAddresses,
@@ -45,20 +45,27 @@ class CheckoutState extends Equatable {
     this.showAddressError = false,
     this.showNequiPhoneError = false,
     this.showContactPhoneError = false,
+    this.dataLoading = true,
+    this.addressesFailed = false,
+    this.storeFailed = false,
+    this.addressSaveFailed = false,
+    this.justSavedAddress,
   });
 
-  /// Direcciones guardadas (mock §022 — en integración vendrán del
-  /// endpoint de addresses).
+  /// Direcciones guardadas — GET /addresses (el backend ordena
+  /// default-primero, §014 — `first` es el prefill del domicilio).
   final List<SavedAddress> savedAddresses;
 
-  /// Datos del negocio (mock §022 — /store/config en integración).
+  /// Datos del negocio — GET /store/config (backend 013). Mientras
+  /// carga es un placeholder vacío con isOpen=true.
   final CheckoutStore store;
 
   final CheckoutOrderType orderType;
 
   /// Id de la dirección elegida (una de [savedAddresses]) o
-  /// [kCheckoutNewAddressId] para el form inline. Nunca null en la
-  /// práctica — arranca preseleccionada la primera guardada.
+  /// [kCheckoutNewAddressId] para el form inline. Null mientras carga —
+  /// el prefill se resuelve al llegar GET /addresses (primera guardada,
+  /// o "new" si no hay / falló).
   final String? addressId;
 
   /// Campos del form "Nueva ubicación" (§022a — la zona no tiene
@@ -79,7 +86,9 @@ class CheckoutState extends Equatable {
   /// null = el cliente no adjuntó ubicación.
   final String? deliveryLocationLink;
 
-  /// Checkbox "Guardar esta ubicación" (mock — no persiste).
+  /// Checkbox "Guardar esta ubicación" — al confirmar hace POST
+  /// /addresses real antes del pedido (§025 — el guardado es
+  /// auxiliar: si falla el pedido sigue y solo se avisa con toast).
   final bool saveNewAddress;
 
   /// Tipo elegido para la ubicación nueva al guardarla — casa/
@@ -124,6 +133,28 @@ class CheckoutState extends Equatable {
   /// contacto es requerido y debe ser celular colombiano.
   final bool showContactPhoneError;
 
+  /// Carga inicial de direcciones + store en vuelo — los bloques
+  /// muestran placeholder de carga y el CTA espera (§025).
+  final bool dataLoading;
+
+  /// GET /addresses falló → el bloque cae a "Nueva ubicación" como
+  /// única opción + aviso con retry (el pickup nunca se bloquea).
+  final bool addressesFailed;
+
+  /// GET /store/config falló → las líneas del local quedan en "—",
+  /// aviso con retry y el store placeholder queda cerrado (seguro).
+  final bool storeFailed;
+
+  /// POST /addresses falló al confirmar con "guardar" — el pedido
+  /// continuó igual (el guardado es auxiliar, §025); la UI lo avisa
+  /// con toast junto al diálogo de éxito.
+  final bool addressSaveFailed;
+
+  /// La dirección que se acaba de guardar dentro del confirm — ciclo
+  /// 2 la usará como destino de la orden (`justSavedAddress?.id ??
+  /// newAddress`).
+  final SavedAddress? justSavedAddress;
+
   /// La entrega está resuelta: modo pickup, dirección guardada
   /// elegida, o form nuevo con los campos requeridos completos.
   bool get hasValidDeliveryTarget {
@@ -138,6 +169,8 @@ class CheckoutState extends Equatable {
   }
 
   CheckoutState copyWith({
+    List<SavedAddress>? savedAddresses,
+    CheckoutStore? store,
     CheckoutOrderType? orderType,
     String? addressId,
     String? newLandmark,
@@ -156,9 +189,14 @@ class CheckoutState extends Equatable {
     bool? showAddressError,
     bool? showNequiPhoneError,
     bool? showContactPhoneError,
+    bool? dataLoading,
+    bool? addressesFailed,
+    bool? storeFailed,
+    bool? addressSaveFailed,
+    SavedAddress? Function()? justSavedAddress,
   }) => CheckoutState(
-    savedAddresses: savedAddresses,
-    store: store,
+    savedAddresses: savedAddresses ?? this.savedAddresses,
+    store: store ?? this.store,
     orderType: orderType ?? this.orderType,
     addressId: addressId ?? this.addressId,
     newLandmark: newLandmark ?? this.newLandmark,
@@ -179,6 +217,13 @@ class CheckoutState extends Equatable {
     showAddressError: showAddressError ?? this.showAddressError,
     showNequiPhoneError: showNequiPhoneError ?? this.showNequiPhoneError,
     showContactPhoneError: showContactPhoneError ?? this.showContactPhoneError,
+    dataLoading: dataLoading ?? this.dataLoading,
+    addressesFailed: addressesFailed ?? this.addressesFailed,
+    storeFailed: storeFailed ?? this.storeFailed,
+    addressSaveFailed: addressSaveFailed ?? this.addressSaveFailed,
+    justSavedAddress: justSavedAddress != null
+        ? justSavedAddress()
+        : this.justSavedAddress,
   );
 
   @override
@@ -203,5 +248,10 @@ class CheckoutState extends Equatable {
     showAddressError,
     showNequiPhoneError,
     showContactPhoneError,
+    dataLoading,
+    addressesFailed,
+    storeFailed,
+    addressSaveFailed,
+    justSavedAddress,
   ];
 }

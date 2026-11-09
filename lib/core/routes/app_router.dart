@@ -137,7 +137,9 @@ class AppRouter {
                             CustomTransitions.slideUp(
                               state,
                               BlocProvider(
-                                create: (_) => locator<CheckoutCubit>(),
+                                create: (_) =>
+                                    locator<CheckoutCubit>()
+                                      ..loadCheckoutData(),
                                 child: const CheckoutScreen(),
                               ),
                             ),
