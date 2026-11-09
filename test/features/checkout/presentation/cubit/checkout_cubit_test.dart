@@ -6,10 +6,14 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:depredadog_app/core/auth/auth_session.dart';
 import 'package:depredadog_app/features/auth/domain/entities/user.dart';
+import 'package:depredadog_app/features/cart/domain/entities/cart_modifier.dart';
 import 'package:depredadog_app/features/cart/presentation/cubit/cart_cubit.dart';
 import 'package:depredadog_app/features/checkout/domain/entities/checkout_store.dart';
+import 'package:depredadog_app/features/checkout/domain/entities/placed_order.dart';
 import 'package:depredadog_app/features/checkout/domain/entities/saved_address.dart';
 import 'package:depredadog_app/features/checkout/domain/failures/checkout_failure.dart';
+import 'package:depredadog_app/features/checkout/domain/use_cases/create_order_params.dart';
+import 'package:depredadog_app/features/checkout/domain/use_cases/create_order_use_case.dart';
 import 'package:depredadog_app/features/checkout/domain/use_cases/load_checkout_data_use_case.dart';
 import 'package:depredadog_app/features/checkout/domain/use_cases/save_address_use_case.dart';
 import 'package:depredadog_app/features/checkout/presentation/cubit/checkout_cubit.dart';
@@ -71,27 +75,47 @@ const _savedResponse = SavedAddress(
   type: SavedAddressType.home,
 );
 
+const _placed = PlacedOrder(
+  id: 'o-1',
+  orderNumber: 7,
+  status: 'pending',
+  total: 14000,
+);
+
 class MockLoadCheckoutData extends Mock implements LoadCheckoutDataUseCase {}
 
 class MockSaveAddress extends Mock implements SaveAddressUseCase {}
+
+class MockCreateOrder extends Mock implements CreateOrderUseCase {}
 
 void main() {
   late CartCubit cartCubit;
   late AuthSession session;
   late MockLoadCheckoutData loadData;
   late MockSaveAddress saveAddress;
+  late MockCreateOrder createOrder;
   late CheckoutDataResult loadResult;
 
-  CheckoutCubit buildCubit({Duration delay = Duration.zero}) => CheckoutCubit(
-    cartCubit: cartCubit,
-    authSession: session,
-    loadCheckoutDataUseCase: loadData,
-    saveAddressUseCase: saveAddress,
-    confirmDelay: delay,
-  );
+  CheckoutCubit buildCubit({String clientRequestId = 'req-test'}) =>
+      CheckoutCubit(
+        cartCubit: cartCubit,
+        authSession: session,
+        loadCheckoutDataUseCase: loadData,
+        saveAddressUseCase: saveAddress,
+        createOrderUseCase: createOrder,
+        clientRequestId: clientRequestId,
+      );
 
   setUpAll(() {
     registerFallbackValue(SavedAddressType.home);
+    registerFallbackValue(
+      const CreateOrderParams(
+        serviceType: 'pickup',
+        paymentMethod: 'cash',
+        items: [],
+        clientRequestId: '',
+      ),
+    );
   });
 
   setUp(() {
@@ -106,6 +130,7 @@ void main() {
     session = AuthSession()..markAuthenticated(_userWithPhone);
     loadData = MockLoadCheckoutData();
     saveAddress = MockSaveAddress();
+    createOrder = MockCreateOrder();
     loadResult = const CheckoutDataResult(
       addresses: Right(_addresses),
       store: Right(_storeOpen),
@@ -119,6 +144,8 @@ void main() {
         type: any(named: 'type'),
       ),
     ).thenAnswer((_) async => const Right(_savedResponse));
+    when(() => createOrder.call(any()))
+        .thenAnswer((_) async => const Right(_placed));
   });
 
   tearDown(() => cartCubit.close());
@@ -656,9 +683,9 @@ void main() {
     });
   });
 
-  group('confirmación (delay mock)', () {
+  group('confirmación real (§026 — POST /orders)', () {
     blocTest<CheckoutCubit, CheckoutState>(
-      'válido → confirmInProgress → orderConfirmed',
+      'válido → confirmInProgress → orderConfirmed + POST una vez',
       build: buildCubit,
       act: (cubit) async {
         await cubit.loadCheckoutData();
@@ -667,23 +694,270 @@ void main() {
       verify: (cubit) {
         expect(cubit.state.confirmInProgress, isFalse);
         expect(cubit.state.orderConfirmed, isTrue);
+        expect(cubit.state.confirmError, isNull);
+        verify(() => createOrder.call(any())).called(1);
       },
     );
 
-    test('doble tap durante el delay no dispara dos confirmaciones', () async {
-      final cubit = buildCubit(delay: const Duration(milliseconds: 800));
+    test('pickup + Nequi → transfer+payerPhone, sin contactPhone ni '
+        'destino de domicilio', () async {
+      final cubit = buildCubit();
       addTearDown(cubit.close);
       await cubit.loadCheckoutData();
-      final states = <CheckoutState>[];
-      final sub = cubit.stream.listen(states.add);
-      addTearDown(sub.cancel);
+
+      await cubit.confirm();
+
+      final params =
+          verify(() => createOrder.call(captureAny())).captured.single
+              as CreateOrderParams;
+      expect(params.serviceType, 'pickup');
+      expect(params.paymentMethod, 'transfer');
+      expect(params.payerPhone, '3001234567');
+      expect(params.contactPhone, isNull);
+      expect(params.addressId, isNull);
+      expect(params.newLandmark, isNull);
+      expect(params.newNeighborhood, isNull);
+      expect(params.deliveryLocationLink, isNull);
+      expect(params.notes, isNull);
+      expect(params.clientRequestId, 'req-test');
+      expect(params.items, hasLength(1));
+      expect(params.items.single.productId, 'p-cachorro');
+      expect(params.items.single.quantity, 1);
+      expect(params.items.single.modifiers, isEmpty);
+    });
+
+    test('delivery + al recibir → cash+contactPhone sin payerPhone; '
+        'addressId = guardada elegida', () async {
+      final cubit = buildCubit();
+      addTearDown(cubit.close);
+      await cubit.loadCheckoutData();
+      cubit.setOrderType(CheckoutOrderType.delivery);
+      cubit.selectAddress('addr-trabajo');
+      cubit.setPaymentMethod(CheckoutPaymentMethod.onDelivery);
+
+      await cubit.confirm();
+
+      final params =
+          verify(() => createOrder.call(captureAny())).captured.single
+              as CreateOrderParams;
+      expect(params.serviceType, 'delivery');
+      expect(params.paymentMethod, 'cash');
+      expect(params.payerPhone, isNull);
+      expect(params.contactPhone, '3001234567');
+      expect(params.addressId, 'addr-trabajo');
+      expect(params.newLandmark, isNull);
+    });
+
+    test('delivery + Nequi → transfer + ambos phones; el pin adjunto '
+        'viaja aunque sea el link mock (decisión #1)', () async {
+      final cubit = buildCubit();
+      addTearDown(cubit.close);
+      await cubit.loadCheckoutData();
+      cubit.setOrderType(CheckoutOrderType.delivery);
+      cubit.attachDeliveryLocation();
+      cubit.noteChanged('Sin picante');
+
+      await cubit.confirm();
+
+      final params =
+          verify(() => createOrder.call(captureAny())).captured.single
+              as CreateOrderParams;
+      expect(params.serviceType, 'delivery');
+      expect(params.paymentMethod, 'transfer');
+      expect(params.payerPhone, '3001234567');
+      expect(params.contactPhone, '3001234567');
+      expect(params.addressId, 'addr-casa');
+      expect(params.deliveryLocationLink, kCheckoutMockLocationLink);
+      expect(params.notes, 'Sin picante');
+    });
+
+    test('"new" sin guardar → newAddress crudo (trim), addressId '
+        'null', () async {
+      final cubit = buildCubit();
+      addTearDown(cubit.close);
+      await cubit.loadCheckoutData();
+      cubit.setOrderType(CheckoutOrderType.delivery);
+      cubit.toggleNewAddress();
+      cubit.newLandmarkChanged('  Casa de teja  ');
+      cubit.newNeighborhoodChanged('La Esperanza');
+
+      await cubit.confirm();
+
+      final params =
+          verify(() => createOrder.call(captureAny())).captured.single
+              as CreateOrderParams;
+      expect(params.addressId, isNull);
+      expect(params.newLandmark, 'Casa de teja');
+      expect(params.newNeighborhood, 'La Esperanza');
+    });
+
+    test('justSavedAddress.id viaja como addressId (guardada en el '
+        'mismo confirm) — newAddress NO viaja', () async {
+      final cubit = buildCubit();
+      addTearDown(cubit.close);
+      await cubit.loadCheckoutData();
+      cubit.setOrderType(CheckoutOrderType.delivery);
+      cubit.toggleNewAddress();
+      cubit.newLandmarkChanged('Casa de teja');
+      cubit.toggleSaveNewAddress();
+
+      await cubit.confirm();
+
+      final params =
+          verify(() => createOrder.call(captureAny())).captured.single
+              as CreateOrderParams;
+      expect(params.addressId, 'addr-nueva');
+      expect(params.newLandmark, isNull);
+      expect(params.newNeighborhood, isNull);
+    });
+
+    test('ítem con modificadores → optionId/action/replacesOptionId '
+        'del carrito al comando', () async {
+      cartCubit.addItem(
+        productId: 'p-perro',
+        productSlug: 'perro',
+        productName: 'El Perro',
+        unitBase: 18000,
+        modifiers: const [
+          CartModifier(
+            optionId: 'opt-mozzarella',
+            optionName: 'Mozzarella',
+            action: CartModifierAction.removed,
+            priceDelta: 0,
+          ),
+          CartModifier(
+            optionId: 'opt-tostacos',
+            optionName: 'Tostacos',
+            action: CartModifierAction.added,
+            priceDelta: 0,
+            replacesOptionId: 'opt-mozzarella',
+          ),
+        ],
+      );
+      final cubit = buildCubit();
+      addTearDown(cubit.close);
+      await cubit.loadCheckoutData();
+
+      await cubit.confirm();
+
+      final params =
+          verify(() => createOrder.call(captureAny())).captured.single
+              as CreateOrderParams;
+      expect(params.items, hasLength(2));
+      final perro = params.items.firstWhere((i) => i.productId == 'p-perro');
+      expect(perro.modifiers, hasLength(2));
+      expect(perro.modifiers[0].optionId, 'opt-mozzarella');
+      expect(perro.modifiers[0].action, 'removed');
+      expect(perro.modifiers[0].replacesOptionId, isNull);
+      expect(perro.modifiers[1].optionId, 'opt-tostacos');
+      expect(perro.modifiers[1].action, 'added');
+      expect(perro.modifiers[1].replacesOptionId, 'opt-mozzarella');
+    });
+
+    test('4xx → confirmError con el mensaje del servidor, CTA libre '
+        'para el retry', () async {
+      when(() => createOrder.call(any())).thenAnswer(
+        (_) async => const Left(
+          CheckoutOrderRejectedFailure('El perro de la casa se agotó'),
+        ),
+      );
+      final cubit = buildCubit();
+      addTearDown(cubit.close);
+      await cubit.loadCheckoutData();
+
+      await cubit.confirm();
+
+      expect(cubit.state.orderConfirmed, isFalse);
+      expect(cubit.state.confirmInProgress, isFalse);
+      expect(cubit.state.confirmError, 'El perro de la casa se agotó');
+    });
+
+    test('offline → confirmError = l10n de sin conexión', () async {
+      when(() => createOrder.call(any()))
+          .thenAnswer((_) async => const Left(CheckoutOfflineFailure()));
+      final cubit = buildCubit();
+      addTearDown(cubit.close);
+      await cubit.loadCheckoutData();
+
+      await cubit.confirm();
+
+      expect(
+        cubit.state.confirmError,
+        'Sin internet — revisa tu conexión e inténtalo de nuevo',
+      );
+    });
+
+    test('5xx/inesperado → confirmError = l10n genérico', () async {
+      when(() => createOrder.call(any()))
+          .thenAnswer((_) async => const Left(CheckoutServerFailure('boom')));
+      final cubit = buildCubit();
+      addTearDown(cubit.close);
+      await cubit.loadCheckoutData();
+
+      await cubit.confirm();
+
+      expect(
+        cubit.state.confirmError,
+        'No pudimos confirmar tu pedido — inténtalo de nuevo',
+      );
+    });
+
+    test('retry tras fallo: mismo clientRequestId y saveAddress NO se '
+        're-llama cuando justSavedAddress ya existe', () async {
+      var calls = 0;
+      when(() => createOrder.call(any())).thenAnswer((_) async {
+        calls++;
+        return calls == 1
+            ? const Left(CheckoutServerFailure('boom'))
+            : const Right(_placed);
+      });
+      final cubit = buildCubit();
+      addTearDown(cubit.close);
+      await cubit.loadCheckoutData();
+      cubit.setOrderType(CheckoutOrderType.delivery);
+      cubit.toggleNewAddress();
+      cubit.newLandmarkChanged('Casa de teja');
+      cubit.toggleSaveNewAddress();
+
+      await cubit.confirm(); // saveAddress ok, POST /orders falla
+      expect(cubit.state.confirmError, isNotNull);
+      expect(cubit.state.justSavedAddress?.id, 'addr-nueva');
+
+      await cubit.confirm(); // retry — la dirección ya está persistida
+
+      verify(
+        () => saveAddress.call(
+          label: any(named: 'label'),
+          landmark: any(named: 'landmark'),
+          neighborhood: any(named: 'neighborhood'),
+          type: any(named: 'type'),
+        ),
+      ).called(1);
+      final captured = verify(() => createOrder.call(captureAny())).captured;
+      expect(captured, hasLength(2));
+      // Idempotencia (§015): ambos intentos llevan el MISMO
+      // clientRequestId y la recién guardada va como addressId.
+      for (final p in captured.cast<CreateOrderParams>()) {
+        expect(p.clientRequestId, 'req-test');
+        expect(p.addressId, 'addr-nueva');
+      }
+      expect(cubit.state.orderConfirmed, isTrue);
+      expect(cubit.state.confirmError, isNull);
+    });
+
+    test('doble tap durante el POST no dispara dos llamadas', () async {
+      final gate = Completer<Either<CheckoutFailure, PlacedOrder>>();
+      when(() => createOrder.call(any())).thenAnswer((_) => gate.future);
+      final cubit = buildCubit();
+      addTearDown(cubit.close);
+      await cubit.loadCheckoutData();
 
       unawaited(cubit.confirm());
-      unawaited(cubit.confirm());
-      await Future<void>.delayed(const Duration(seconds: 1));
+      unawaited(cubit.confirm()); // confirmInProgress → no-op
+      gate.complete(const Right(_placed));
+      await Future<void>.delayed(Duration.zero);
 
-      // Una sola secuencia inProgress → confirmed — sin duplicados.
-      expect(states.where((s) => s.orderConfirmed), hasLength(1));
+      verify(() => createOrder.call(any())).called(1);
       expect(cubit.state.orderConfirmed, isTrue);
     });
   });

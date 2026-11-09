@@ -696,6 +696,14 @@ class AppLocalizationsEs extends AppLocalizations {
       'Pedido confirmado — no pudimos guardar la ubicación';
 
   @override
+  String get checkoutOrderFailed =>
+      'No pudimos confirmar tu pedido — inténtalo de nuevo';
+
+  @override
+  String get checkoutOrderOffline =>
+      'Sin internet — revisa tu conexión e inténtalo de nuevo';
+
+  @override
   String get ordersTitle => 'Pedidos';
 
   @override

@@ -26,10 +26,10 @@ import '../widgets/store_status_banner.dart';
 /// — puntos de referencia + pin de Google, domicilio GRATIS §022a),
 /// observación, pago (logo Nequi + celular prellenado editable / al
 /// recibir) y resumen con totales. Confirmar valida INLINE (ubicación
-/// en domicilio, celular Nequi válido — SIN mínimo), hace el delay
-/// mock de 800ms y abre el diálogo de éxito: "Ver mis pedidos" vacía
-/// el carrito y va a /orders (flujo completo simulado — la integración
-/// real llega por endpoint).
+/// en domicilio, celular Nequi válido — SIN mínimo), hace POST
+/// /orders real (§026) y abre el diálogo de éxito: "Ver mis pedidos"
+/// vacía el carrito y va a /orders. Un rechazo del servidor queda en
+/// la fila inline sobre el CTA hasta el reintento.
 class CheckoutScreen extends StatelessWidget {
   const CheckoutScreen({super.key});
 
@@ -75,8 +75,8 @@ class CheckoutScreen extends StatelessWidget {
                 final router = GoRouter.of(context);
                 final cart = context.read<CartCubit>();
                 Navigator.of(dialogContext).pop();
-                // Flujo simulado de punta a punta (§022): el vaciado
-                // real lo hará la integración de POST /orders (§015).
+                // El pedido ya existe en el backend (§026): el
+                // carrito se vacía aquí, al salir del diálogo.
                 cart.clear();
                 // Reencauza la branch de Inicio a su raíz (suelta
                 // carrito+checkout del stack) y UN FRAME DESPUÉS salta
@@ -235,6 +235,32 @@ class CheckoutScreen extends StatelessWidget {
                                   StoreStatusBanner(
                                     message: l10n.checkoutStoreClosed,
                                   ),
+                                // §026 — error persistente del POST
+                                // /orders (misma familia de avisos
+                                // inline del §025): el motivo real del
+                                // servidor o el l10n genérico; se
+                                // limpia al reintentar.
+                                if (state.confirmError != null) ...[
+                                  Row(
+                                    children: [
+                                      Icon(
+                                        Icons.error_outline_rounded,
+                                        size: 18,
+                                        color: colors.error,
+                                      ),
+                                      const SizedBox(width: 8),
+                                      Expanded(
+                                        child: Text(
+                                          state.confirmError!,
+                                          style: text.bodySmall?.copyWith(
+                                            color: colors.error,
+                                          ),
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                  const SizedBox(height: 8),
+                                ],
                                 Row(
                                   children: [
                                     Column(

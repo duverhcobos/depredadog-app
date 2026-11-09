@@ -5,11 +5,14 @@ import 'package:depredadog_app/core/network/exceptions/network_exception.dart';
 import 'package:depredadog_app/core/network/interfaces/i_network_info.dart';
 import 'package:depredadog_app/features/checkout/data/datasources/interfaces/i_checkout_remote_datasource.dart';
 import 'package:depredadog_app/features/checkout/data/models/checkout_store_model.dart';
+import 'package:depredadog_app/features/checkout/data/models/placed_order_model.dart';
 import 'package:depredadog_app/features/checkout/data/models/saved_address_model.dart';
 import 'package:depredadog_app/features/checkout/data/repositories/checkout_repository_impl.dart';
 import 'package:depredadog_app/features/checkout/domain/entities/checkout_store.dart';
+import 'package:depredadog_app/features/checkout/domain/entities/placed_order.dart';
 import 'package:depredadog_app/features/checkout/domain/entities/saved_address.dart';
 import 'package:depredadog_app/features/checkout/domain/failures/checkout_failure.dart';
+import 'package:depredadog_app/features/checkout/domain/use_cases/create_order_params.dart';
 
 class MockRemoteDataSource extends Mock implements ICheckoutRemoteDataSource {}
 
@@ -65,24 +68,26 @@ void main() {
       verify(() => remote.fetchAddresses()).called(1);
     });
 
-    test('sin conectividad → Left(Offline) y el datasource NUNCA se llama', () async {
-      when(() => networkInfo.isConnected).thenAnswer((_) async => false);
+    test(
+      'sin conectividad → Left(Offline) y el datasource NUNCA se llama',
+      () async {
+        when(() => networkInfo.isConnected).thenAnswer((_) async => false);
 
-      final result = await repository.getSavedAddresses();
+        final result = await repository.getSavedAddresses();
 
-      expect(
-        result,
-        const Left<CheckoutFailure, List<SavedAddress>>(
-          CheckoutOfflineFailure(),
-        ),
-      );
-      verifyNever(() => remote.fetchAddresses());
-    });
+        expect(
+          result,
+          const Left<CheckoutFailure, List<SavedAddress>>(
+            CheckoutOfflineFailure(),
+          ),
+        );
+        verifyNever(() => remote.fetchAddresses());
+      },
+    );
 
     test('NoConnectionException → CheckoutOfflineFailure', () async {
-      when(
-        () => remote.fetchAddresses(),
-      ).thenThrow(const NoConnectionException());
+      when(() => remote.fetchAddresses())
+          .thenThrow(const NoConnectionException());
 
       final result = await repository.getSavedAddresses();
 
@@ -95,9 +100,8 @@ void main() {
     });
 
     test('ServerException (500) → CheckoutServerFailure', () async {
-      when(
-        () => remote.fetchAddresses(),
-      ).thenThrow(const ServerException('Internal error', statusCode: 500));
+      when(() => remote.fetchAddresses())
+          .thenThrow(const ServerException('Internal error', statusCode: 500));
 
       final result = await repository.getSavedAddresses();
 
@@ -132,9 +136,8 @@ void main() {
     });
 
     test('ServerException → CheckoutServerFailure', () async {
-      when(
-        () => remote.fetchStoreConfig(),
-      ).thenThrow(const ServerException('boom', statusCode: 502));
+      when(() => remote.fetchStoreConfig())
+          .thenThrow(const ServerException('boom', statusCode: 502));
 
       final result = await repository.getStoreConfig();
 
@@ -161,33 +164,32 @@ void main() {
   });
 
   group('saveAddress', () {
-    test('éxito → arma el body con type.name y devuelve Right(saved)', () async {
-      when(
-        () => remote.createAddress(any()),
-      ).thenAnswer((_) async => saved);
+    test(
+      'éxito → arma el body con type.name y devuelve Right(saved)',
+      () async {
+        when(() => remote.createAddress(any())).thenAnswer((_) async => saved);
 
-      final result = await repository.saveAddress(
-        label: 'Casa',
-        landmark: 'Casa de teja',
-        neighborhood: 'La Esperanza',
-        type: SavedAddressType.home,
-      );
+        final result = await repository.saveAddress(
+          label: 'Casa',
+          landmark: 'Casa de teja',
+          neighborhood: 'La Esperanza',
+          type: SavedAddressType.home,
+        );
 
-      expect(result, const Right<CheckoutFailure, SavedAddress>(saved));
-      verify(
-        () => remote.createAddress({
-          'label': 'Casa',
-          'landmark': 'Casa de teja',
-          'neighborhood': 'La Esperanza',
-          'type': 'home',
-        }),
-      ).called(1);
-    });
+        expect(result, const Right<CheckoutFailure, SavedAddress>(saved));
+        verify(
+          () => remote.createAddress({
+            'label': 'Casa',
+            'landmark': 'Casa de teja',
+            'neighborhood': 'La Esperanza',
+            'type': 'home',
+          }),
+        ).called(1);
+      },
+    );
 
     test('neighborhood null → la key no viaja en el body', () async {
-      when(
-        () => remote.createAddress(any()),
-      ).thenAnswer((_) async => saved);
+      when(() => remote.createAddress(any())).thenAnswer((_) async => saved);
 
       await repository.saveAddress(
         label: 'Trabajo',
@@ -221,9 +223,8 @@ void main() {
     });
 
     test('ServerException (400) → CheckoutServerFailure', () async {
-      when(
-        () => remote.createAddress(any()),
-      ).thenThrow(const ServerException('label required', statusCode: 400));
+      when(() => remote.createAddress(any()))
+          .thenThrow(const ServerException('label required', statusCode: 400));
 
       final result = await repository.saveAddress(
         label: 'Casa',
@@ -236,6 +237,162 @@ void main() {
         const Left<CheckoutFailure, SavedAddress>(
           CheckoutServerFailure('label required'),
         ),
+      );
+    });
+  });
+
+  group('createOrder', () {
+    const placed = PlacedOrderModel(
+      id: 'o-1',
+      orderNumber: 7,
+      status: 'pending',
+      total: 28000,
+    );
+    const params = CreateOrderParams(
+      serviceType: 'delivery',
+      paymentMethod: 'cash',
+      clientRequestId: 'req-1',
+      addressId: 'a-1',
+      contactPhone: '3001234567',
+      deliveryLocationLink: 'maps.app.goo.gl/xK9fP2AbCd3',
+      notes: 'Sin picante',
+      items: [
+        OrderItemInput(
+          productId: 'p-1',
+          quantity: 2,
+          modifiers: [
+            OrderModifierInput(optionId: 'm-1', action: 'removed'),
+            OrderModifierInput(
+              optionId: 'm-9',
+              action: 'added',
+              replacesOptionId: 'm-1',
+            ),
+          ],
+        ),
+      ],
+    );
+
+    test('éxito → Right(placed) y el wire map respeta el contrato '
+        '(§015)', () async {
+      when(() => remote.createOrder(any())).thenAnswer((_) async => placed);
+
+      final result = await repository.createOrder(params);
+
+      expect(result, const Right<CheckoutFailure, PlacedOrder>(placed));
+      // replacesOptionId solo viaja en la fila added que lo trae.
+      verify(
+        () => remote.createOrder({
+          'serviceType': 'delivery',
+          'items': [
+            {
+              'productId': 'p-1',
+              'quantity': 2,
+              'modifiers': [
+                {'optionId': 'm-1', 'action': 'removed'},
+                {
+                  'optionId': 'm-9',
+                  'action': 'added',
+                  'replacesOptionId': 'm-1',
+                },
+              ],
+            },
+          ],
+          'paymentMethod': 'cash',
+          'clientRequestId': 'req-1',
+          'addressId': 'a-1',
+          'contactPhone': '3001234567',
+          'deliveryLocationLink': 'maps.app.goo.gl/xK9fP2AbCd3',
+          'notes': 'Sin picante',
+        }),
+      ).called(1);
+    });
+
+    test('XOR: newLandmark → newAddress{landmark,neighborhood?} y '
+        'addressId NO viaja', () async {
+      when(() => remote.createOrder(any())).thenAnswer((_) async => placed);
+
+      await repository.createOrder(
+        const CreateOrderParams(
+          serviceType: 'delivery',
+          paymentMethod: 'transfer',
+          clientRequestId: 'req-2',
+          newLandmark: 'Casa de teja',
+          newNeighborhood: 'La Esperanza',
+          payerPhone: '3109876543',
+          items: [OrderItemInput(productId: 'p-2', quantity: 1)],
+        ),
+      );
+
+      verify(
+        () => remote.createOrder({
+          'serviceType': 'delivery',
+          'items': [
+            {'productId': 'p-2', 'quantity': 1, 'modifiers': <dynamic>[]},
+          ],
+          'paymentMethod': 'transfer',
+          'clientRequestId': 'req-2',
+          'newAddress': {
+            'landmark': 'Casa de teja',
+            'neighborhood': 'La Esperanza',
+          },
+          'payerPhone': '3109876543',
+        }),
+      ).called(1);
+    });
+
+    test('sin conectividad → Left(Offline) sin llamar al datasource', () async {
+      when(() => networkInfo.isConnected).thenAnswer((_) async => false);
+
+      final result = await repository.createOrder(params);
+
+      expect(
+        result,
+        const Left<CheckoutFailure, PlacedOrder>(CheckoutOfflineFailure()),
+      );
+      verifyNever(() => remote.createOrder(any()));
+    });
+
+    test('NoConnectionException → CheckoutOfflineFailure', () async {
+      when(() => remote.createOrder(any()))
+          .thenThrow(const NoConnectionException());
+
+      final result = await repository.createOrder(params);
+
+      expect(
+        result,
+        const Left<CheckoutFailure, PlacedOrder>(CheckoutOfflineFailure()),
+      );
+    });
+
+    test('409 con mensaje del servidor → CheckoutOrderRejectedFailure '
+        '(el motivo llega a la fila inline)', () async {
+      when(() => remote.createOrder(any())).thenThrow(
+        const ServerException(
+          'El producto ya no está disponible',
+          statusCode: 409,
+        ),
+      );
+
+      final result = await repository.createOrder(params);
+
+      expect(
+        result,
+        const Left<CheckoutFailure, PlacedOrder>(
+          CheckoutOrderRejectedFailure('El producto ya no está disponible'),
+        ),
+      );
+    });
+
+    test('500 → CheckoutServerFailure (infraestructura, no motivo de '
+        'negocio)', () async {
+      when(() => remote.createOrder(any()))
+          .thenThrow(const ServerException('boom', statusCode: 500));
+
+      final result = await repository.createOrder(params);
+
+      expect(
+        result,
+        const Left<CheckoutFailure, PlacedOrder>(CheckoutServerFailure('boom')),
       );
     });
   });

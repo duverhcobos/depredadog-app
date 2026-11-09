@@ -569,6 +569,14 @@
   "@checkoutAddressSaveFailed": {
     "description": "Toast junto al diálogo de éxito cuando POST /addresses falló — el guardado es auxiliar y el pedido siguió igual (§025)"
   },
+  "checkoutOrderFailed": "No pudimos confirmar tu pedido — inténtalo de nuevo",
+  "@checkoutOrderFailed": {
+    "description": "Error genérico inline del POST /orders (5xx/inesperado)"
+  },
+  "checkoutOrderOffline": "Sin internet — revisa tu conexión e inténtalo de nuevo",
+  "@checkoutOrderOffline": {
+    "description": "Error inline del POST /orders sin conectividad"
+  },
   "ordersTitle": "Pedidos",
   "@ordersTitle": {
     "description": "Título naciente (scrolling_title) del tab Pedidos (§023)"

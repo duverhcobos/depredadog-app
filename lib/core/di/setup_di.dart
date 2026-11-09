@@ -28,6 +28,7 @@ import '../../features/checkout/data/datasources/implementations/checkout_remote
 import '../../features/checkout/data/datasources/interfaces/i_checkout_remote_datasource.dart';
 import '../../features/checkout/data/repositories/checkout_repository_impl.dart';
 import '../../features/checkout/domain/repositories/i_checkout_repository.dart';
+import '../../features/checkout/domain/use_cases/create_order_use_case.dart';
 import '../../features/checkout/domain/use_cases/load_checkout_data_use_case.dart';
 import '../../features/checkout/domain/use_cases/save_address_use_case.dart';
 import '../../features/checkout/presentation/cubit/checkout_cubit.dart';
@@ -176,9 +177,9 @@ void setupDI() {
   // En memoria: no persiste entre arranques (decisión MVP).
   locator.registerLazySingleton<CartCubit>(() => CartCubit());
 
-  // --- Checkout (propuesta 025): datasource + repo + use-cases de los
-  // endpoints reales (GET /addresses, GET /store/config, POST
-  // /addresses). El cubit queda factory por apertura — es estado de
+  // --- Checkout (propuestas 025+026): datasource + repo + use-cases
+  // de los endpoints reales (GET /addresses, GET /store/config, POST
+  // /addresses, POST /orders). El cubit queda factory por apertura — es estado de
   // pantalla, no se comparte; loadCheckoutData() lo gatilla el router
   // en el create del BlocProvider. LEE el CartCubit (ítems/subtotal —
   // nunca lo muta) y AuthSession (prefill del celular Nequi con el
@@ -200,12 +201,16 @@ void setupDI() {
   locator.registerLazySingleton<SaveAddressUseCase>(
     () => SaveAddressUseCase(locator<ICheckoutRepository>()),
   );
+  locator.registerLazySingleton<CreateOrderUseCase>(
+    () => CreateOrderUseCase(locator<ICheckoutRepository>()),
+  );
   locator.registerFactory<CheckoutCubit>(
     () => CheckoutCubit(
       cartCubit: locator<CartCubit>(),
       authSession: locator<AuthSession>(),
       loadCheckoutDataUseCase: locator<LoadCheckoutDataUseCase>(),
       saveAddressUseCase: locator<SaveAddressUseCase>(),
+      createOrderUseCase: locator<CreateOrderUseCase>(),
     ),
   );
 

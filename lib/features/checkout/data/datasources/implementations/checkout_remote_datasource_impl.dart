@@ -1,5 +1,6 @@
 import '../../../../../core/network/interfaces/i_network_service.dart';
 import '../../models/checkout_store_model.dart';
+import '../../models/placed_order_model.dart';
 import '../../models/saved_address_model.dart';
 import '../interfaces/i_checkout_remote_datasource.dart';
 
@@ -28,5 +29,11 @@ class CheckoutRemoteDataSourceImpl implements ICheckoutRemoteDataSource {
   Future<SavedAddressModel> createAddress(Map<String, dynamic> body) async {
     final response = await _networkService.post('/addresses', body: body);
     return SavedAddressModel.fromJson(response as Map<String, dynamic>);
+  }
+
+  @override
+  Future<PlacedOrderModel> createOrder(Map<String, dynamic> body) async {
+    final response = await _networkService.post('/orders', body: body);
+    return PlacedOrderModel.fromJson(response as Map<String, dynamic>);
   }
 }

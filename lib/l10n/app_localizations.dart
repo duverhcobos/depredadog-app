@@ -1366,6 +1366,18 @@ abstract class AppLocalizations {
   /// **'Pedido confirmado — no pudimos guardar la ubicación'**
   String get checkoutAddressSaveFailed;
 
+  /// Error genérico inline del POST /orders (5xx/inesperado)
+  ///
+  /// In es, this message translates to:
+  /// **'No pudimos confirmar tu pedido — inténtalo de nuevo'**
+  String get checkoutOrderFailed;
+
+  /// Error inline del POST /orders sin conectividad
+  ///
+  /// In es, this message translates to:
+  /// **'Sin internet — revisa tu conexión e inténtalo de nuevo'**
+  String get checkoutOrderOffline;
+
   /// Título naciente (scrolling_title) del tab Pedidos (§023)
   ///
   /// In es, this message translates to:

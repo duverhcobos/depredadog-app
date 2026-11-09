@@ -50,6 +50,7 @@ class CheckoutState extends Equatable {
     this.storeFailed = false,
     this.addressSaveFailed = false,
     this.justSavedAddress,
+    this.confirmError,
   });
 
   /// Direcciones guardadas — GET /addresses (el backend ordena
@@ -117,7 +118,7 @@ class CheckoutState extends Equatable {
   /// Nota opcional para el local (a nivel pedido, §013).
   final String note;
 
-  /// Delay mock de confirmación — spinner en el CTA + IgnorePointer.
+  /// POST /orders en vuelo — spinner en el CTA + IgnorePointer.
   final bool confirmInProgress;
 
   /// Disparo one-shot del diálogo de éxito (BlocListener).
@@ -154,6 +155,12 @@ class CheckoutState extends Equatable {
   /// 2 la usará como destino de la orden (`justSavedAddress?.id ??
   /// newAddress`).
   final SavedAddress? justSavedAddress;
+
+  /// POST /orders rechazado/fallido — texto resuelto por el cubit
+  /// (mensaje del servidor en 4xx, l10n en offline/5xx) que la fila
+  /// inline sobre el CTA muestra persistente hasta el retry. Null =
+  /// sin error.
+  final String? confirmError;
 
   /// La entrega está resuelta: modo pickup, dirección guardada
   /// elegida, o form nuevo con los campos requeridos completos.
@@ -194,6 +201,7 @@ class CheckoutState extends Equatable {
     bool? storeFailed,
     bool? addressSaveFailed,
     SavedAddress? Function()? justSavedAddress,
+    String? Function()? confirmError,
   }) => CheckoutState(
     savedAddresses: savedAddresses ?? this.savedAddresses,
     store: store ?? this.store,
@@ -224,6 +232,7 @@ class CheckoutState extends Equatable {
     justSavedAddress: justSavedAddress != null
         ? justSavedAddress()
         : this.justSavedAddress,
+    confirmError: confirmError != null ? confirmError() : this.confirmError,
   );
 
   @override
@@ -253,5 +262,6 @@ class CheckoutState extends Equatable {
     storeFailed,
     addressSaveFailed,
     justSavedAddress,
+    confirmError,
   ];
 }

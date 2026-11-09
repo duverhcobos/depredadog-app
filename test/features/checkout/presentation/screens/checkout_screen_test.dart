@@ -11,8 +11,11 @@ import 'package:depredadog_app/core/theme/app_theme.dart';
 import 'package:depredadog_app/features/auth/domain/entities/user.dart';
 import 'package:depredadog_app/features/cart/presentation/cubit/cart_cubit.dart';
 import 'package:depredadog_app/features/checkout/domain/entities/checkout_store.dart';
+import 'package:depredadog_app/features/checkout/domain/entities/placed_order.dart';
 import 'package:depredadog_app/features/checkout/domain/entities/saved_address.dart';
 import 'package:depredadog_app/features/checkout/domain/failures/checkout_failure.dart';
+import 'package:depredadog_app/features/checkout/domain/use_cases/create_order_params.dart';
+import 'package:depredadog_app/features/checkout/domain/use_cases/create_order_use_case.dart';
 import 'package:depredadog_app/features/checkout/domain/use_cases/load_checkout_data_use_case.dart';
 import 'package:depredadog_app/features/checkout/domain/use_cases/save_address_use_case.dart';
 import 'package:depredadog_app/features/checkout/presentation/cubit/checkout_cubit.dart';
@@ -61,9 +64,18 @@ const _storeClosed = CheckoutStore(
   isOpen: false,
 );
 
+const _placedOrder = PlacedOrder(
+  id: 'o-1',
+  orderNumber: 7,
+  status: 'pending',
+  total: 14000,
+);
+
 class MockLoadCheckoutData extends Mock implements LoadCheckoutDataUseCase {}
 
 class MockSaveAddress extends Mock implements SaveAddressUseCase {}
+
+class MockCreateOrder extends Mock implements CreateOrderUseCase {}
 
 void main() {
   late CartCubit cartCubit;
@@ -72,10 +84,19 @@ void main() {
   late GoRouter router;
   late MockLoadCheckoutData loadData;
   late MockSaveAddress saveAddress;
+  late MockCreateOrder createOrder;
   late CheckoutDataResult loadResult;
 
   setUpAll(() {
     registerFallbackValue(SavedAddressType.home);
+    registerFallbackValue(
+      const CreateOrderParams(
+        serviceType: 'pickup',
+        paymentMethod: 'cash',
+        items: [],
+        clientRequestId: '',
+      ),
+    );
   });
 
   setUp(() async {
@@ -90,6 +111,7 @@ void main() {
     session = AuthSession()..markAuthenticated(_userWithPhone);
     loadData = MockLoadCheckoutData();
     saveAddress = MockSaveAddress();
+    createOrder = MockCreateOrder();
     loadResult = const CheckoutDataResult(
       addresses: Right(_addresses),
       store: Right(_storeOpen),
@@ -112,13 +134,15 @@ void main() {
         ),
       ),
     );
-    // confirmDelay cero: la pantalla llega al diálogo en el mismo pump.
+    when(() => createOrder.call(any()))
+        .thenAnswer((_) async => const Right(_placedOrder));
     checkoutCubit = CheckoutCubit(
       cartCubit: cartCubit,
       authSession: session,
       loadCheckoutDataUseCase: loadData,
       saveAddressUseCase: saveAddress,
-      confirmDelay: Duration.zero,
+      createOrderUseCase: createOrder,
+      clientRequestId: 'req-test',
     );
     // §025 — la carga real corre en el create del BlocProvider del
     // router; el harness la gatilla igual que la app (datos cargados
@@ -503,7 +527,7 @@ void main() {
     await tester.tap(find.widgetWithText(FilledButton, 'Confirmar pedido'));
     await tester.pumpAndSettle();
 
-    // Diálogo de éxito mock (§022 — flujo completo simulado).
+    // Diálogo de éxito tras el POST /orders real (§026).
     expect(find.text('¡Pedido confirmado!'), findsOneWidget);
     // §022b: el subtítulo del diálogo NO lleva número de orden — el
     // consecutivo revela el volumen de ventas (decisión del usuario).
@@ -646,5 +670,46 @@ void main() {
     // entrega a domicilio.
     expect(find.text('Punto de referencia *'), findsOneWidget);
     expect(checkoutCubit.state.addressId, kCheckoutNewAddressId);
+  });
+
+  testWidgets('POST /orders rechazado → fila inline con el motivo del '
+      'servidor + CTA re-habilitado; el retry confirma y el diálogo '
+      'llega intacto (§026)', (tester) async {
+    var calls = 0;
+    when(() => createOrder.call(any())).thenAnswer((_) async {
+      calls++;
+      return calls == 1
+          ? const Left(
+              CheckoutOrderRejectedFailure('El perro de la casa se agotó'),
+            )
+          : const Right(_placedOrder);
+    });
+    await pumpCheckout(tester);
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.widgetWithText(FilledButton, 'Confirmar pedido'));
+    await tester.pumpAndSettle();
+
+    // Fila inline persistente con el motivo del servidor sobre el
+    // CTA — el diálogo de éxito NO aparece.
+    expect(find.text('El perro de la casa se agotó'), findsOneWidget);
+    expect(find.byIcon(Icons.error_outline_rounded), findsOneWidget);
+    expect(find.text('¡Pedido confirmado!'), findsNothing);
+    // El CTA queda habilitado para reintentar (mismo clientRequestId —
+    // idempotencia del §015).
+    expect(
+      tester
+          .widget<FilledButton>(
+            find.widgetWithText(FilledButton, 'Confirmar pedido'),
+          )
+          .onPressed,
+      isNotNull,
+    );
+
+    await tester.tap(find.widgetWithText(FilledButton, 'Confirmar pedido'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('El perro de la casa se agotó'), findsNothing);
+    expect(find.text('¡Pedido confirmado!'), findsOneWidget);
   });
 }

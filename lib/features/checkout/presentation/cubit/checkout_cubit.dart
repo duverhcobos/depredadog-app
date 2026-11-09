@@ -1,32 +1,42 @@
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:uuid/uuid.dart';
 
 import '../../../../core/auth/auth_session.dart';
 import '../../../../l10n/app_localizations_es.dart';
 import '../../../cart/presentation/cubit/cart_cubit.dart';
 import '../../domain/entities/checkout_store.dart';
 import '../../domain/entities/saved_address.dart';
+import '../../domain/failures/checkout_failure.dart';
+import '../../domain/use_cases/create_order_params.dart';
+import '../../domain/use_cases/create_order_use_case.dart';
 import '../../domain/use_cases/load_checkout_data_use_case.dart';
 import '../../domain/use_cases/save_address_use_case.dart';
 import 'checkout_state.dart';
 
 /// SOLID (SRP): único dueño del estado de la pantalla de checkout
-/// (§022 + §025) — tipo de pedido, dirección, pago, nota, la carga
-/// inicial de direcciones+store y el delay mock de confirmación. Es
-/// FACTORY por apertura (estado de pantalla, no compartido): cada push
-/// a /checkout crea una instancia fresca.
+/// (§022 + §025 + §026) — tipo de pedido, dirección, pago, nota, la
+/// carga inicial de direcciones+store y el POST /orders del confirm.
+/// Es FACTORY por apertura (estado de pantalla, no compartido): cada
+/// push a /checkout crea una instancia fresca.
 ///
 /// LEE el CartCubit para ítems/subtotal/total — NUNCA lo modifica: la
-/// confirmación real vaciará el carrito en §015; aquí la pantalla lo
-/// limpia tras el diálogo de éxito (flujo simulado).
+/// pantalla lo limpia tras el diálogo de éxito.
 class CheckoutCubit extends Cubit<CheckoutState> {
   CheckoutCubit({
     required this.cartCubit,
     required AuthSession authSession,
     required LoadCheckoutDataUseCase loadCheckoutDataUseCase,
     required SaveAddressUseCase saveAddressUseCase,
-    this.confirmDelay = const Duration(milliseconds: 800),
+    required CreateOrderUseCase createOrderUseCase,
+    String? clientRequestId,
   }) : _loadCheckoutData = loadCheckoutDataUseCase,
        _saveAddress = saveAddressUseCase,
+       _createOrder = createOrderUseCase,
+       // Idempotencia (§015): un uuid por instancia — los reintentos
+       // del MISMO checkout reusan el id (doble-tap/red caída → el
+       // backend devuelve la orden ya creada). Una apertura nueva del
+       // checkout es una intención nueva → id nuevo.
+       clientRequestId = clientRequestId ?? const Uuid().v4(),
        super(
          CheckoutState(
            // El prefill addressId se resuelve en loadCheckoutData()
@@ -48,11 +58,12 @@ class CheckoutCubit extends Cubit<CheckoutState> {
   /// muta; la pantalla lo limpia tras el diálogo de éxito).
   final CartCubit cartCubit;
 
-  /// Duración del delay mock de confirmación — inyectable para tests.
-  final Duration confirmDelay;
+  /// Idempotency-key del POST /orders — fijo por instancia (§015).
+  final String clientRequestId;
 
   final LoadCheckoutDataUseCase _loadCheckoutData;
   final SaveAddressUseCase _saveAddress;
+  final CreateOrderUseCase _createOrder;
 
   /// Celular colombiano: 10 dígitos iniciando en 3 — MISMA regla que
   /// `PhoneInput` del registro (propuesta 009, ^3\d{9}$).
@@ -202,11 +213,25 @@ class CheckoutCubit extends Cubit<CheckoutState> {
   void newAddressLabelChanged(String value) =>
       emit(state.copyWith(newAddressLabel: value));
 
-  void newLandmarkChanged(String value) =>
-      emit(state.copyWith(newLandmark: value, showAddressError: false));
+  void newLandmarkChanged(String value) => emit(
+    // Editar el form tras un guardado exitoso invalida la fila
+    // justSavedAddress — los datos tipeados ya no son esa dirección;
+    // el próximo confirm manda newAddress crudo (o re-guarda si el
+    // checkbox sigue marcado).
+    state.copyWith(
+      newLandmark: value,
+      showAddressError: false,
+      justSavedAddress: () => null,
+    ),
+  );
 
-  void newNeighborhoodChanged(String value) =>
-      emit(state.copyWith(newNeighborhood: value, showAddressError: false));
+  void newNeighborhoodChanged(String value) => emit(
+    state.copyWith(
+      newNeighborhood: value,
+      showAddressError: false,
+      justSavedAddress: () => null,
+    ),
+  );
 
   /// Adjunta/quita el pin de Google Maps del PEDIDO (§022d — sirve
   /// para dirección nueva o guardada: el repartidor usa el punto
@@ -244,11 +269,14 @@ class CheckoutCubit extends Cubit<CheckoutState> {
   void noteChanged(String value) => emit(state.copyWith(note: value));
 
   /// "Guardar esta ubicación" corre solo si hay algo válido que
-  /// guardar: domicilio + form nuevo + checkbox + landmark (§025).
+  /// guardar: domicilio + form nuevo + checkbox + landmark (§025). Si
+  /// el guardado ya corrió y solo falló el POST /orders, el retry NO
+  /// re-guarda — `justSavedAddress.id` viaja como addressId.
   bool get _shouldSaveNewAddress =>
       state.orderType == CheckoutOrderType.delivery &&
       state.addressId == kCheckoutNewAddressId &&
       state.saveNewAddress &&
+      state.justSavedAddress == null &&
       state.hasValidDeliveryTarget;
 
   /// Label que POST /addresses exige siempre (§014): casa/trabajo toman
@@ -275,8 +303,9 @@ class CheckoutCubit extends Cubit<CheckoutState> {
   /// celular colombiano válido.
   /// Inválido → errores INLINE (flags, la UI los pinta bajo el campo/
   /// sección); válido → guarda la ubicación si se pidió (§025 —
-  /// auxiliar: si falla el pedido sigue y solo se avisa con toast),
-  /// delay mock → `orderConfirmed` dispara el diálogo de éxito.
+  /// auxiliar: si falla el pedido sigue y solo se avisa con toast) y
+  /// POST /orders real (§026): éxito → `orderConfirmed` dispara el
+  /// diálogo; fallo → `confirmError` inline persistente hasta el retry.
   Future<void> confirm() async {
     if (state.confirmInProgress || state.orderConfirmed) return;
     // Guardia de cerrado (la UI ya deshabilita el CTA — defensa): el
@@ -299,6 +328,9 @@ class CheckoutCubit extends Cubit<CheckoutState> {
           showAddressError: !addressOk,
           showNequiPhoneError: !phoneOk,
           showContactPhoneError: !contactOk,
+          // El motivo viejo del POST no puede convivir con errores
+          // inline nuevos — un reintento siempre lo limpia.
+          confirmError: () => null,
           // §022d — si el error es del form colapsado, hay que
           // reabrirlo para que el usuario vea el error inline.
           newAddressExpanded:
@@ -309,7 +341,7 @@ class CheckoutCubit extends Cubit<CheckoutState> {
       );
       return;
     }
-    emit(state.copyWith(confirmInProgress: true));
+    emit(state.copyWith(confirmInProgress: true, confirmError: () => null));
     // §025 — POST /addresses ANTES de confirmar (flujo de dos llamadas
     // del 015): el guardado es auxiliar, NUNCA aborta la compra — si
     // falla, el pedido sigue y la UI solo avisa con toast.
@@ -335,8 +367,77 @@ class CheckoutCubit extends Cubit<CheckoutState> {
         ),
       );
     }
-    await Future<void>.delayed(confirmDelay);
+    final result = await _createOrder(_buildOrderParams());
     if (isClosed) return;
-    emit(state.copyWith(confirmInProgress: false, orderConfirmed: true));
+    result.fold(
+      // El usuario pudo salir durante el POST — emitir sobre un cubit
+      // cerrado lanza StateError async.
+      (failure) => emit(
+        state.copyWith(
+          confirmInProgress: false,
+          confirmError: () => _confirmErrorText(failure),
+        ),
+      ),
+      (_) =>
+          emit(state.copyWith(confirmInProgress: false, orderConfirmed: true)),
+    );
+  }
+
+  /// Traduce el estado + el carrito al comando del §015. Destino de
+  /// la entrega: una guardada elegida manda; si la selección sigue en
+  /// `'new'`, `justSavedAddress` (la recién persistida por "Guardar
+  /// esta ubicación") resuelve el id; sin ella `'new'` viaja como
+  /// newAddress crudo — el pedido llega igual con los datos tipeados.
+  CreateOrderParams _buildOrderParams() {
+    final isDelivery = state.orderType == CheckoutOrderType.delivery;
+    final isTransfer = state.paymentMethod == CheckoutPaymentMethod.nequi;
+    // justSavedAddress solo aplica mientras la selección siga en
+    // 'new': si tras un fallo el usuario marcó OTRA guardada, su
+    // selección visible manda (regresión del revisor §026 — la orden
+    // no puede viajar a una dirección que la UI no muestra marcada).
+    final savedId = state.addressId == kCheckoutNewAddressId
+        ? state.justSavedAddress?.id
+        : state.addressId;
+    final rawNewAddress = isDelivery && savedId == null;
+    return CreateOrderParams(
+      serviceType: isDelivery ? 'delivery' : 'pickup',
+      paymentMethod: isTransfer ? 'transfer' : 'cash',
+      clientRequestId: clientRequestId,
+      addressId: isDelivery ? savedId : null,
+      newLandmark: rawNewAddress ? state.newLandmark.trim() : null,
+      newNeighborhood: rawNewAddress && state.newNeighborhood.trim().isNotEmpty
+          ? state.newNeighborhood.trim()
+          : null,
+      contactPhone: isDelivery ? state.contactPhone.trim() : null,
+      deliveryLocationLink: isDelivery ? state.deliveryLocationLink : null,
+      payerPhone: isTransfer ? state.nequiPhone.trim() : null,
+      notes: state.note.trim().isEmpty ? null : state.note.trim(),
+      items: [
+        for (final item in cartCubit.state.items)
+          OrderItemInput(
+            productId: item.productId,
+            quantity: item.quantity,
+            modifiers: [
+              for (final m in item.modifiers)
+                OrderModifierInput(
+                  optionId: m.optionId,
+                  action: m.action.name,
+                  replacesOptionId: m.replacesOptionId,
+                ),
+            ],
+          ),
+      ],
+    );
+  }
+
+  /// Texto de la fila de error: el motivo del servidor en 4xx
+  /// (español producto), l10n propio en offline/inesperado.
+  String _confirmErrorText(CheckoutFailure failure) {
+    final l10n = AppLocalizationsEs();
+    return switch (failure) {
+      CheckoutOrderRejectedFailure(:final message) => message,
+      CheckoutOfflineFailure() => l10n.checkoutOrderOffline,
+      _ => l10n.checkoutOrderFailed,
+    };
   }
 }
