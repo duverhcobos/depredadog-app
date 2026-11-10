@@ -597,8 +597,8 @@ void main() {
     },
   );
 
-  testWidgets('local cerrado (isOpen=false) → banner + CTA '
-      'deshabilitado (§025)', (tester) async {
+  testWidgets('local cerrado (isOpen=false) → el mensaje ocupa el '
+      'slot del CTA — sin FilledButton (§029)', (tester) async {
     loadResult = const CheckoutDataResult(
       addresses: Right(_addresses),
       store: Right(_storeClosed),
@@ -607,11 +607,18 @@ void main() {
     await pumpCheckout(tester);
     await tester.pumpAndSettle();
 
-    expect(find.text('El local está cerrado ahora'), findsOneWidget);
-    final cta = tester.widget<FilledButton>(
-      find.widgetWithText(FilledButton, 'Confirmar pedido'),
+    // §029 — el cerrado ya no es banner ni botón deshabilitado: el
+    // mensaje ocupa el LUGAR del CTA (mismo copy del rechazo §028).
+    expect(
+      find.text(
+        'El local está cerrado ahora — intenta en el horario '
+        'de atención',
+      ),
+      findsOneWidget,
     );
-    expect(cta.onPressed, isNull);
+    expect(find.widgetWithText(FilledButton, 'Confirmar pedido'), findsNothing);
+    // Solo queda el título naciente — el FilledButton no existe.
+    expect(find.text('Confirmar pedido'), findsOneWidget);
   });
 
   testWidgets('store/config falla → aviso con Reintentar sobre el '
@@ -681,7 +688,10 @@ void main() {
       calls++;
       return calls == 1
           ? const Left(
-              CheckoutOrderRejectedFailure('El perro de la casa se agotó'),
+              CheckoutOrderRejectedFailure(
+                'House special is sold out',
+                code: OrderRejection.unknown,
+              ),
             )
           : const Right(_placedOrder);
     });
@@ -694,7 +704,7 @@ void main() {
     // Fila inline persistente con copy rechazo l10n sobre el CTA —
     // el motivo del servidor (inglés) nunca se muestra y el diálogo
     // de éxito NO aparece.
-    expect(find.text('El perro de la casa se agotó'), findsNothing);
+    expect(find.text('House special is sold out'), findsNothing);
     expect(
       find.text(
         'El local no pudo tomar tu pedido — revísalo e inténtalo de nuevo',
@@ -724,5 +734,39 @@ void main() {
       findsNothing,
     );
     expect(find.text('¡Pedido confirmado!'), findsOneWidget);
+  });
+
+  testWidgets('409 STORE_CLOSED con el local cargado ABIERTO (carrera) '
+      '→ el slot del CTA pasa a mensaje, sin fila de error duplicada '
+      '(§029 — flag storeClosedByRejection)', (tester) async {
+    when(() => createOrder.call(any())).thenAnswer(
+      (_) async => const Left(
+        CheckoutOrderRejectedFailure(
+          'Store is closed',
+          code: OrderRejection.storeClosed,
+        ),
+      ),
+    );
+    await pumpCheckout(tester);
+    await tester.pumpAndSettle();
+
+    // El CTA arranca habilitado: la config llegó con isOpen=true.
+    await tester.tap(find.widgetWithText(FilledButton, 'Confirmar pedido'));
+    await tester.pumpAndSettle();
+
+    // El slot es ahora el mensaje — NO botón deshabilitado ni banner.
+    expect(
+      find.text(
+        'El local está cerrado ahora — intenta en el horario '
+        'de atención',
+      ),
+      findsOneWidget,
+    );
+    expect(find.widgetWithText(FilledButton, 'Confirmar pedido'), findsNothing);
+    // Sin duplicado: el confirmError quedó vacío para este código —
+    // una sola aparición del copy (la del slot), no fila + mensaje.
+    expect(find.byIcon(Icons.error_outline_rounded), findsNothing);
+    expect(find.text('¡Pedido confirmado!'), findsNothing);
+    expect(checkoutCubit.state.storeClosedByRejection, isTrue);
   });
 }

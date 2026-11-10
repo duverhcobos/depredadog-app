@@ -1,24 +1,49 @@
+import 'package:bloc_test/bloc_test.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
+import 'package:mocktail/mocktail.dart';
 import 'package:depredadog_app/core/layout/app_shell_layout.dart';
 import 'package:depredadog_app/core/routes/auth_guard.dart';
 import 'package:depredadog_app/core/screens/module_placeholder_screen.dart';
 import 'package:depredadog_app/core/theme/app_theme.dart';
+import 'package:depredadog_app/core/widgets/store_status_chip.dart';
 import 'package:depredadog_app/features/cart/presentation/cubit/cart_cubit.dart';
 import 'package:depredadog_app/features/cart/presentation/screens/cart_screen.dart';
+import 'package:depredadog_app/features/store/domain/entities/store_open_state.dart';
+import 'package:depredadog_app/features/store/presentation/cubit/store_status_cubit.dart';
 import 'package:depredadog_app/l10n/app_localizations.dart';
+
+class MockStoreStatusCubit extends MockCubit<StoreOpenState>
+    implements StoreStatusCubit {}
 
 void main() {
   // CartCubit real (§020): el badge del header lee sus unidades con
   // context.select — los métodos síncronos no necesitan mock.
   late CartCubit cartCubit;
+  // §029 — el chip del header ahora es real: lo alimenta el
+  // StoreStatusCubit del shell (mock — default abierto).
+  late MockStoreStatusCubit storeCubit;
 
-  setUp(() => cartCubit = CartCubit());
-  tearDown(() => cartCubit.close());
+  void stubStoreState(StoreOpenState state) => whenListen(
+    storeCubit,
+    const Stream<StoreOpenState>.empty(),
+    initialState: state,
+  );
+
+  setUp(() {
+    cartCubit = CartCubit();
+    storeCubit = MockStoreStatusCubit();
+    when(() => storeCubit.refresh()).thenAnswer((_) async {});
+    stubStoreState(StoreOpenState.open);
+  });
+  tearDown(() {
+    cartCubit.close();
+    storeCubit.close();
+  });
 
   GoRouter buildShellRouter() {
     // Misma estructura que app_router (§016) pero sin AuthGuard — la
@@ -80,8 +105,11 @@ void main() {
 
   Future<void> pumpShell(WidgetTester tester) {
     return tester.pumpWidget(
-      BlocProvider<CartCubit>.value(
-        value: cartCubit,
+      MultiBlocProvider(
+        providers: [
+          BlocProvider<CartCubit>.value(value: cartCubit),
+          BlocProvider<StoreStatusCubit>.value(value: storeCubit),
+        ],
         child: MaterialApp.router(
           theme: AppTheme.dark(),
           routerConfig: buildShellRouter(),
@@ -252,4 +280,36 @@ void main() {
       await tester.pump(const Duration(seconds: 2));
     },
   );
+
+  testWidgets('chip del header: open → "Abierto" (§029 — el mock '
+      'isOpen:true quedó atrás)', (tester) async {
+    stubStoreState(StoreOpenState.open);
+    await pumpShell(tester);
+    await tester.pumpAndSettle();
+
+    expect(find.byType(StoreStatusChip), findsOneWidget);
+    expect(find.text('Abierto'), findsOneWidget);
+    expect(find.text('Cerrado'), findsNothing);
+  });
+
+  testWidgets('chip del header: closed → "Cerrado" (§029)', (tester) async {
+    stubStoreState(StoreOpenState.closed);
+    await pumpShell(tester);
+    await tester.pumpAndSettle();
+
+    expect(find.byType(StoreStatusChip), findsOneWidget);
+    expect(find.text('Cerrado'), findsOneWidget);
+    expect(find.text('Abierto'), findsNothing);
+  });
+
+  testWidgets('chip del header: unknown → oculto (§029 — mejor no '
+      'mostrar que mentir)', (tester) async {
+    stubStoreState(StoreOpenState.unknown);
+    await pumpShell(tester);
+    await tester.pumpAndSettle();
+
+    expect(find.byType(StoreStatusChip), findsNothing);
+    expect(find.text('Abierto'), findsNothing);
+    expect(find.text('Cerrado'), findsNothing);
+  });
 }

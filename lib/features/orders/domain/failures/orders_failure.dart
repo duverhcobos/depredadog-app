@@ -16,7 +16,7 @@ final class OrdersOfflineFailure extends OrdersFailure {
 }
 
 /// 4xx/5xx o inesperado — `message` se conserva para logging; la UI
-/// muestra su propio texto salvo en el rechazo de cancelar.
+/// siempre muestra su propio texto l10n.
 final class OrdersServerFailure extends OrdersFailure {
   const OrdersServerFailure(this.message);
 
@@ -26,8 +26,9 @@ final class OrdersServerFailure extends OrdersFailure {
   List<Object?> get props => [message];
 }
 
-/// POST /orders/:id/cancel rechazado (409 — ya no está pending; el
-/// mensaje del servidor viene en español y se muestra tal cual).
+/// POST /orders/:id/cancel rechazado (409 ORDER_NOT_CANCELLABLE — ya
+/// no está pending). `message` llega en inglés y solo sirve para
+/// logging; la UI muestra su copy dedicado (§027/§028).
 final class OrdersCancelRejectedFailure extends OrdersFailure {
   const OrdersCancelRejectedFailure(this.message);
 

@@ -689,7 +689,12 @@ class AppLocalizationsEs extends AppLocalizations {
   String get checkoutStoreError => 'No pudimos cargar los datos del local';
 
   @override
-  String get checkoutStoreClosed => 'El local está cerrado ahora';
+  String get checkoutStoreClosed =>
+      'El local está cerrado ahora — intenta en el horario de atención';
+
+  @override
+  String get cartStoreClosed =>
+      'El local está cerrado ahora — intenta en el horario de atención';
 
   @override
   String get checkoutAddressSaveFailed =>
@@ -702,6 +707,22 @@ class AppLocalizationsEs extends AppLocalizations {
   @override
   String get checkoutOrderRejected =>
       'El local no pudo tomar tu pedido — revísalo e inténtalo de nuevo';
+
+  @override
+  String get checkoutRejectStoreClosed =>
+      'El local está cerrado ahora — intenta en el horario de atención';
+
+  @override
+  String get checkoutRejectMinOrder =>
+      'El pedido no llega al mínimo a domicilio — súmele algo más';
+
+  @override
+  String get checkoutRejectCatalog =>
+      'Algo de tu pedido ya no está disponible — revísalo e inténtalo de nuevo';
+
+  @override
+  String get checkoutRejectInvalidData =>
+      'Revisa los datos del pedido e inténtalo de nuevo';
 
   @override
   String get checkoutOrderOffline =>

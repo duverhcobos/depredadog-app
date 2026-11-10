@@ -19,6 +19,7 @@ import '../../features/orders/domain/entities/customer_order.dart';
 import '../../features/orders/presentation/cubit/orders_cubit.dart';
 import '../../features/orders/presentation/screens/order_detail_screen.dart';
 import '../../features/orders/presentation/screens/orders_screen.dart';
+import '../../features/store/presentation/cubit/store_status_cubit.dart';
 import '../../l10n/app_localizations.dart';
 import '../di/setup_di.dart';
 import '../layout/app_shell_layout.dart';
@@ -61,6 +62,10 @@ class AppRouter {
           providers: [
             BlocProvider.value(value: locator<CatalogCubit>()..load()),
             BlocProvider.value(value: locator<CartCubit>()),
+            // §029 — estado del local al nivel del shell: el chip del
+            // header es real desde el arranque (mata el mock isOpen:
+            // true) y el carrito/checkout lo leen con watch.
+            BlocProvider.value(value: locator<StoreStatusCubit>()..refresh()),
           ],
           child: AppShellLayout(shell: navigationShell),
         ),

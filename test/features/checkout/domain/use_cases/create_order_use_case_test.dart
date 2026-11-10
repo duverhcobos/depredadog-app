@@ -38,9 +38,8 @@ void main() {
 
   test('passthrough: el MISMO comando llega al repo y su Either '
       'devuelve tal cual', () async {
-    when(
-      () => repo.createOrder(params),
-    ).thenAnswer((_) async => const Right(placed));
+    when(() => repo.createOrder(params))
+        .thenAnswer((_) async => const Right(placed));
 
     final result = await useCase(params);
 
@@ -51,7 +50,10 @@ void main() {
   test('el Left del repo viaja sin tocar', () async {
     when(() => repo.createOrder(any())).thenAnswer(
       (_) async => const Left(
-        CheckoutOrderRejectedFailure('El local está cerrado ahora'),
+        CheckoutOrderRejectedFailure(
+          'El local está cerrado ahora',
+          code: OrderRejection.storeClosed,
+        ),
       ),
     );
 
@@ -60,7 +62,10 @@ void main() {
     expect(
       result,
       const Left<CheckoutFailure, PlacedOrder>(
-        CheckoutOrderRejectedFailure('El local está cerrado ahora'),
+        CheckoutOrderRejectedFailure(
+          'El local está cerrado ahora',
+          code: OrderRejection.storeClosed,
+        ),
       ),
     );
   });

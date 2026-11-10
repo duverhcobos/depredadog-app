@@ -1,10 +1,10 @@
 import 'package:flutter/material.dart';
 
-/// Aviso fijo sobre el footer del checkout (§025): el local está
-/// cerrado (isOpen=false — el CTA queda deshabilitado; el backend
-/// rechaza con 409) o GET /store/config falló (texto + retry — el
-/// placeholder cerrado también bloquea el CTA, cerrado por defecto =
-/// seguro). Ícono + mensaje en error + botón opcional.
+/// Aviso fijo sobre el footer del checkout (§025): GET /store/config
+/// falló (texto + retry — el placeholder cerrado también bloquea el
+/// CTA, cerrado por defecto = seguro). El caso "local cerrado" ya no
+/// usa banner: desde §029 el mensaje ocupa el slot del CTA mismo.
+/// Ícono + mensaje en error + botón opcional.
 class StoreStatusBanner extends StatelessWidget {
   const StoreStatusBanner({
     required this.message,

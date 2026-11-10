@@ -3,6 +3,8 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../features/cart/presentation/cubit/cart_cubit.dart';
+import '../../features/store/domain/entities/store_open_state.dart';
+import '../../features/store/presentation/cubit/store_status_cubit.dart';
 import '../../l10n/app_localizations.dart';
 import '../routes/auth_guard.dart';
 import '../widgets/app_toast.dart';
@@ -36,9 +38,14 @@ class ShellHeader extends StatelessWidget {
               semanticLabel: l10n.appName,
             ),
             const Spacer(),
-            // Estado del local — junto a las notificaciones (§017,
-            // isOpen mock provisional; lo alimenta el módulo store).
-            const StoreStatusChip(isOpen: true),
+            // Estado del local REAL (§029 — StoreStatusCubit del
+            // shell; mata el mock §017). `unknown` → chip oculto:
+            // mejor no mostrar que mentir Abierto/Cerrado.
+            BlocBuilder<StoreStatusCubit, StoreOpenState>(
+              builder: (context, status) => status == StoreOpenState.unknown
+                  ? const SizedBox.shrink()
+                  : StoreStatusChip(isOpen: status == StoreOpenState.open),
+            ),
             IconButton(
               icon: const Icon(Icons.notifications_outlined),
               tooltip: l10n.shellNotificationsTooltip,

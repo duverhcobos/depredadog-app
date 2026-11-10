@@ -10,7 +10,8 @@ import '../datasources/interfaces/i_orders_remote_datasource.dart';
 /// SOLID (SRP): orquesta datasource + conectividad; traduce
 /// NetworkException → OrdersFailure (la UI nunca ve excepciones
 /// crudas) — mismo `_guard` genérico de CheckoutRepositoryImpl; el
-/// cancel lleva mapper propio (409 → CancelRejected con el mensaje).
+/// cancel lleva mapper propio (409/ORDER_NOT_CANCELLABLE →
+/// CancelRejected, §028).
 class OrdersRepositoryImpl implements IOrdersRepository {
   const OrdersRepositoryImpl({
     required this._remoteDataSource,
@@ -49,7 +50,12 @@ class OrdersRepositoryImpl implements IOrdersRepository {
     () => _remoteDataSource.cancelOrder(id, reason),
     mapFailure: (e) {
       if (e is NoConnectionException) return const OrdersOfflineFailure();
-      if (e is ServerException && e.statusCode == 409) {
+      // 409 claveado al código del backend (§017/§028); el fallback por
+      // statusCode cubre respuestas sin el campo (el único 409 que
+      // cancel puede emitir hoy es ORDER_NOT_CANCELLABLE).
+      if (e is ServerException &&
+          (e.errorCode == 'ORDER_NOT_CANCELLABLE' ||
+              (e.errorCode == null && e.statusCode == 409))) {
         return OrdersCancelRejectedFailure(e.message);
       }
       return OrdersServerFailure(e.message);

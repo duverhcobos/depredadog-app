@@ -87,16 +87,19 @@ class CheckoutRepositoryImpl implements ICheckoutRepository {
     mapFailure: _mapOrderFailure,
   );
 
-  /// POST /orders distingue el rechazo de negocio (el mensaje del
-  /// servidor ya viene en español y se muestra) de la falla de
-  /// infraestructura (→ genérico con retry). Solo 400/409/422 de un
-  /// ServerException califican: el 401 residual dice 'Unauthorized'
-  /// y un 4xx sin body dice 'Request failed' — inglés crudo que no
-  /// debe llegar a la fila inline.
+  /// POST /orders distingue el rechazo de negocio tipado por
+  /// `errorCode` (§028 — `message` llega en inglés, solo logging) de
+  /// la falla de infraestructura (→ genérico con retry). Solo
+  /// 400/409/422 de un ServerException califican: el 401 residual
+  /// dice 'Unauthorized' y un 4xx sin body dice 'Request failed' —
+  /// inglés crudo que no debe llegar a la fila inline.
   CheckoutFailure _mapOrderFailure(NetworkException e) {
     if (e is NoConnectionException) return const CheckoutOfflineFailure();
     if (e is ServerException && const {400, 409, 422}.contains(e.statusCode)) {
-      return CheckoutOrderRejectedFailure(e.message);
+      return CheckoutOrderRejectedFailure(
+        e.message,
+        code: _parseRejection(e.errorCode),
+      );
     }
     return CheckoutServerFailure(e.message);
   }
@@ -126,5 +129,17 @@ class CheckoutRepositoryImpl implements ICheckoutRepository {
     // ya expulsó la sesión → el guard navega solo; esto es defensivo),
     // 4xx/5xx, timeouts → genérico con retry.
     return CheckoutServerFailure(e.message);
+  }
+
+  /// `errorCode` del backend (§017) → motivo tipado. Código ausente o
+  /// desconocido → `unknown` (el copy genérico sigue sirviendo).
+  OrderRejection _parseRejection(String? errorCode) {
+    return switch (errorCode) {
+      'STORE_CLOSED' => OrderRejection.storeClosed,
+      'MIN_ORDER_AMOUNT' => OrderRejection.minOrderAmount,
+      'ORDER_CATALOG_VIOLATION' => OrderRejection.catalogViolation,
+      'INVALID_ORDER_DATA' => OrderRejection.invalidOrderData,
+      _ => OrderRejection.unknown,
+    };
   }
 }

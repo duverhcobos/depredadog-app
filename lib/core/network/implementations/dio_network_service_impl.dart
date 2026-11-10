@@ -112,9 +112,11 @@ class DioNetworkServiceImpl implements INetworkService {
         e.type == DioExceptionType.connectionTimeout) {
       return const NoConnectionException();
     }
-    final serverMessage = e.response?.data is Map<String, dynamic>
-        ? (e.response!.data as Map<String, dynamic>)['message']
+    final body = e.response?.data is Map<String, dynamic>
+        ? e.response!.data as Map<String, dynamic>
         : null;
+    final serverMessage = body?['message'];
+    final rawCode = body?['errorCode'];
     _logger.warning(
       'HTTP ${e.requestOptions.method} ${e.requestOptions.path} → $status',
       tag: 'Network',
@@ -126,6 +128,10 @@ class DioNetworkServiceImpl implements INetworkService {
                 ? serverMessage.first.toString()
                 : 'Request failed'),
       statusCode: status,
+      // Parseo defensivo como serverMessage: un errorCode no-string
+      // degrada a null (los repos caen a sus fallbacks) en vez de
+      // lanzar CastError y abortar el mapeo (revisor §028).
+      errorCode: rawCode is String ? rawCode : null,
     );
   }
 }

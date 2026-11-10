@@ -49,6 +49,7 @@ class CheckoutState extends Equatable {
     this.addressesFailed = false,
     this.storeFailed = false,
     this.addressSaveFailed = false,
+    this.storeClosedByRejection = false,
     this.justSavedAddress,
     this.confirmError,
   });
@@ -162,6 +163,11 @@ class CheckoutState extends Equatable {
   /// sin error.
   final String? confirmError;
 
+  /// §029 — un 409 STORE_CLOSED ES confirmación de cerrado: el slot
+  /// del CTA pasa a mensaje como si el config ya dijera cerrado (un
+  /// reintento sería fútil mientras el local siga cerrado).
+  final bool storeClosedByRejection;
+
   /// La entrega está resuelta: modo pickup, dirección guardada
   /// elegida, o form nuevo con los campos requeridos completos.
   bool get hasValidDeliveryTarget {
@@ -200,6 +206,7 @@ class CheckoutState extends Equatable {
     bool? addressesFailed,
     bool? storeFailed,
     bool? addressSaveFailed,
+    bool? storeClosedByRejection,
     SavedAddress? Function()? justSavedAddress,
     String? Function()? confirmError,
   }) => CheckoutState(
@@ -229,6 +236,8 @@ class CheckoutState extends Equatable {
     addressesFailed: addressesFailed ?? this.addressesFailed,
     storeFailed: storeFailed ?? this.storeFailed,
     addressSaveFailed: addressSaveFailed ?? this.addressSaveFailed,
+    storeClosedByRejection:
+        storeClosedByRejection ?? this.storeClosedByRejection,
     justSavedAddress: justSavedAddress != null
         ? justSavedAddress()
         : this.justSavedAddress,
@@ -261,6 +270,7 @@ class CheckoutState extends Equatable {
     addressesFailed,
     storeFailed,
     addressSaveFailed,
+    storeClosedByRejection,
     justSavedAddress,
     confirmError,
   ];

@@ -12,9 +12,13 @@ class NoConnectionException extends NetworkException {
   const NoConnectionException() : super('No internet connection');
 }
 
-/// El servidor respondió con error (4xx/5xx) o timeout.
+/// El servidor respondió con error (4xx/5xx) o timeout. `errorCode` es
+/// el contrato machine-readable del backend (§017): solo viene en
+/// errores de DomainException; null en validación/guards/5xx.
 class ServerException extends NetworkException {
-  const ServerException(super.message, {super.statusCode});
+  const ServerException(super.message, {super.statusCode, this.errorCode});
+
+  final String? errorCode;
 }
 
 /// Respuesta 401 — la sesión expiró o el token es inválido.

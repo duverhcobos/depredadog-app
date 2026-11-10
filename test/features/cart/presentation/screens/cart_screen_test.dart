@@ -1,13 +1,20 @@
+import 'package:bloc_test/bloc_test.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:mocktail/mocktail.dart';
 import 'package:depredadog_app/core/theme/app_theme.dart';
 import 'package:depredadog_app/features/cart/domain/entities/cart_modifier.dart';
 import 'package:depredadog_app/features/cart/presentation/cubit/cart_cubit.dart';
 import 'package:depredadog_app/features/cart/presentation/screens/cart_screen.dart';
 import 'package:depredadog_app/features/cart/presentation/widgets/cart_item_tile.dart';
+import 'package:depredadog_app/features/store/domain/entities/store_open_state.dart';
+import 'package:depredadog_app/features/store/presentation/cubit/store_status_cubit.dart';
 import 'package:depredadog_app/l10n/app_localizations.dart';
+
+class MockStoreStatusCubit extends MockCubit<StoreOpenState>
+    implements StoreStatusCubit {}
 
 const _sinMozzarella = CartModifier(
   optionId: 'o-mozzarella',
@@ -24,17 +31,39 @@ const _extraTocineta = CartModifier(
 
 void main() {
   late CartCubit cartCubit;
+  late MockStoreStatusCubit storeCubit;
 
-  setUp(() => cartCubit = CartCubit());
-  tearDown(() => cartCubit.close());
+  void stubStoreState(StoreOpenState state) => whenListen(
+    storeCubit,
+    const Stream<StoreOpenState>.empty(),
+    initialState: state,
+  );
+
+  setUp(() {
+    cartCubit = CartCubit();
+    storeCubit = MockStoreStatusCubit();
+    // §029 — el estado del local alimenta la compuerta del "Ir a
+    // pagar". Default abierto; cada caso de cerrado/unknown lo
+    // re-stubbea antes de pumpCart. El refresh de initState va por
+    // locator (sin DI en tests → no se llama), se stubbea igual.
+    when(() => storeCubit.refresh()).thenAnswer((_) async {});
+    stubStoreState(StoreOpenState.open);
+  });
+  tearDown(() {
+    cartCubit.close();
+    storeCubit.close();
+  });
 
   /// Harness: cubit REAL (los métodos son síncronos — más simple que
   /// mockear) + MaterialApp con l10n. Sin GoRouter: los únicos call
   /// sites de router son la flecha back y "Ver el menú", que estos
   /// casos no disparan.
   Future<void> pumpCart(WidgetTester tester) => tester.pumpWidget(
-    BlocProvider<CartCubit>.value(
-      value: cartCubit,
+    MultiBlocProvider(
+      providers: [
+        BlocProvider<CartCubit>.value(value: cartCubit),
+        BlocProvider<StoreStatusCubit>.value(value: storeCubit),
+      ],
       child: MaterialApp(
         theme: AppTheme.dark(),
         home: const CartScreen(),
@@ -241,5 +270,42 @@ void main() {
     expect(find.text('Ingredientes'), findsNothing);
     expect(find.text('Se le quitó'), findsNothing);
     expect(find.text('Adicionales'), findsNothing);
+  });
+
+  testWidgets('local cerrado CONFIRMADO → el mensaje ocupa el lugar '
+      'del CTA (§029 — no botón deshabilitado)', (tester) async {
+    stubStoreState(StoreOpenState.closed);
+    addCachorro();
+    await pumpCart(tester);
+    await tester.pumpAndSettle();
+
+    expect(
+      find.text(
+        'El local está cerrado ahora — intenta en el horario '
+        'de atención',
+      ),
+      findsOneWidget,
+    );
+    // El botón NO existe — el mensaje ocupa su slot (decisión del
+    // usuario §029).
+    expect(find.widgetWithText(FilledButton, 'Ir a pagar'), findsNothing);
+    expect(find.text('Ir a pagar'), findsNothing);
+  });
+
+  testWidgets('unknown (sin consultar o falló) → el CTA queda '
+      'habilitado (§029 — solo closed confirmado bloquea)', (tester) async {
+    stubStoreState(StoreOpenState.unknown);
+    addCachorro();
+    await pumpCart(tester);
+    await tester.pumpAndSettle();
+
+    expect(find.widgetWithText(FilledButton, 'Ir a pagar'), findsOneWidget);
+    expect(
+      find.text(
+        'El local está cerrado ahora — intenta en el horario '
+        'de atención',
+      ),
+      findsNothing,
+    );
   });
 }

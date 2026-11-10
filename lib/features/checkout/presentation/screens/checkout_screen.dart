@@ -5,6 +5,7 @@ import 'package:go_router/go_router.dart';
 import '../../../../core/di/setup_di.dart';
 import '../../../../core/routes/auth_guard.dart';
 import '../../../../core/widgets/app_toast.dart';
+import '../../../../core/widgets/store_closed_message.dart';
 import '../../../../l10n/app_localizations.dart';
 import '../../../cart/presentation/cubit/cart_cubit.dart';
 import '../../../home/presentation/utils/format_cop.dart';
@@ -130,8 +131,13 @@ class CheckoutScreen extends StatelessWidget {
           final total = context.read<CheckoutCubit>().total;
           // El CTA espera la carga y se bloquea con el local cerrado
           // (§025 — isOpen=false también cubre el placeholder del
-          // store fallido: cerrado por defecto = seguro).
-          final canConfirm = !state.dataLoading && state.store.isOpen;
+          // store fallido: cerrado por defecto = seguro). §029: el
+          // flag de rechazo STORE_CLOSED también lo bloquea — la
+          // guarda del cubit coincide por construcción.
+          final canConfirm =
+              !state.dataLoading &&
+              state.store.isOpen &&
+              !state.storeClosedByRejection;
           return Scaffold(
             // Convención de loading (elevated_button_primary): TODOS
             // los controles se bloquean durante la confirmación sin
@@ -227,8 +233,7 @@ class CheckoutScreen extends StatelessWidget {
                             child: Column(
                               mainAxisSize: MainAxisSize.min,
                               children: [
-                                // §025 — aviso fijo: cerrado
-                                // (isOpen=false) o falla del store
+                                // §025 — aviso fijo: falla del store
                                 // con retry.
                                 if (state.storeFailed)
                                   StoreStatusBanner(
@@ -237,17 +242,18 @@ class CheckoutScreen extends StatelessWidget {
                                     onAction: context
                                         .read<CheckoutCubit>()
                                         .loadCheckoutData,
-                                  )
-                                else if (!state.dataLoading &&
-                                    !state.store.isOpen)
-                                  StoreStatusBanner(
-                                    message: l10n.checkoutStoreClosed,
                                   ),
+                                // §029 — el cerrado ya no es banner
+                                // sobre CTA deshabilitado: el mensaje
+                                // ocupa el LUGAR del botón (abajo).
                                 // §026 — error persistente del POST
                                 // /orders (misma familia de avisos
                                 // inline del §025): el motivo real del
                                 // servidor o el l10n genérico; se
-                                // limpia al reintentar.
+                                // limpia al reintentar. §029: un
+                                // rechazo STORE_CLOSED no llena
+                                // confirmError — el mensaje del slot
+                                // ya dice el mismo copy (ver cubit).
                                 if (state.confirmError != null) ...[
                                   Row(
                                     children: [
@@ -295,29 +301,47 @@ class CheckoutScreen extends StatelessWidget {
                                       ],
                                     ),
                                     const SizedBox(width: 16),
+                                    // §029 — cerrado confirmado → el
+                                    // mensaje ocupa el slot del CTA (no
+                                    // botón deshabilitado). storeFailed
+                                    // conserva banner+retry arriba y el
+                                    // CTA deshabilitado (cerrado por
+                                    // defecto = seguro).
                                     Expanded(
-                                      child: FilledButton(
-                                        // Spinner DENTRO del botón
-                                        // (elevated_button_primary): el
-                                        // CTA sigue mostaza y el cubit
-                                        // ignora re-entradas.
-                                        onPressed: canConfirm
-                                            ? context
-                                                  .read<CheckoutCubit>()
-                                                  .confirm
-                                            : null,
-                                        child: state.confirmInProgress
-                                            ? SizedBox(
-                                                height: 22,
-                                                width: 22,
-                                                child:
-                                                    CircularProgressIndicator(
-                                                      strokeWidth: 2.5,
-                                                      color: colors.onPrimary,
+                                      child:
+                                          !state.dataLoading &&
+                                              (!state.store.isOpen ||
+                                                  state
+                                                      .storeClosedByRejection) &&
+                                              !state.storeFailed
+                                          ? StoreClosedMessage(
+                                              message: l10n.checkoutStoreClosed,
+                                            )
+                                          : FilledButton(
+                                              // Spinner DENTRO del botón
+                                              // (elevated_button_primary):
+                                              // el CTA sigue mostaza y el
+                                              // cubit ignora re-entradas.
+                                              onPressed: canConfirm
+                                                  ? context
+                                                        .read<CheckoutCubit>()
+                                                        .confirm
+                                                  : null,
+                                              child: state.confirmInProgress
+                                                  ? SizedBox(
+                                                      height: 22,
+                                                      width: 22,
+                                                      child:
+                                                          CircularProgressIndicator(
+                                                            strokeWidth: 2.5,
+                                                            color: colors
+                                                                .onPrimary,
+                                                          ),
+                                                    )
+                                                  : Text(
+                                                      l10n.checkoutConfirmCta,
                                                     ),
-                                              )
-                                            : Text(l10n.checkoutConfirmCta),
-                                      ),
+                                            ),
                                     ),
                                   ],
                                 ),

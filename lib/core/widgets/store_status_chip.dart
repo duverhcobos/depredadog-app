@@ -3,9 +3,10 @@ import 'package:flutter/material.dart';
 import '../../l10n/app_localizations.dart';
 
 /// Chip compacto de estado del local para el header del shell
-/// (§017 — isOpen mock provisional; el módulo store lo alimenta con
-/// horario real). Píldora dot + "Abierto"/"Cerrado" junto a las
-/// notificaciones — el ETA vive en el contexto donde aplica.
+/// (§029 — `StoreStatusCubit` lo alimenta con GET /store/config real;
+/// con estado unknown el header no lo renderiza). Píldora dot +
+/// "Abierto"/"Cerrado" junto a las notificaciones — el ETA vive en
+/// el contexto donde aplica.
 class StoreStatusChip extends StatelessWidget {
   const StoreStatusChip({required this.isOpen, super.key});
 

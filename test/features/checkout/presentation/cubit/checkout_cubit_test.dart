@@ -854,12 +854,16 @@ void main() {
       expect(perro.modifiers[1].replacesOptionId, 'opt-mozzarella');
     });
 
-    test('4xx → confirmError con copy rechazo l10n (el motivo del '
+    test('4xx sin código conocido (OrderRejection.unknown) → '
+        'confirmError con copy rechazo genérico l10n (el motivo del '
         'servidor llega en inglés — nunca se muestra), CTA libre '
         'para el retry', () async {
       when(() => createOrder.call(any())).thenAnswer(
         (_) async => const Left(
-          CheckoutOrderRejectedFailure('El perro de la casa se agotó'),
+          CheckoutOrderRejectedFailure(
+            'House special is sold out',
+            code: OrderRejection.unknown,
+          ),
         ),
       );
       final cubit = buildCubit();
@@ -873,6 +877,175 @@ void main() {
       expect(
         cubit.state.confirmError,
         'El local no pudo tomar tu pedido — revísalo e inténtalo de nuevo',
+      );
+    });
+
+    test('OrderRejection.storeClosed → storeClosedByRejection=true y '
+        'confirmError vacío (§029 — el mensaje del slot ya dice el '
+        'mismo copy; la fila de error sería duplicado)', () async {
+      when(() => createOrder.call(any())).thenAnswer(
+        (_) async => const Left(
+          CheckoutOrderRejectedFailure(
+            'Store is closed',
+            code: OrderRejection.storeClosed,
+          ),
+        ),
+      );
+      final cubit = buildCubit();
+      addTearDown(cubit.close);
+      await cubit.loadCheckoutData();
+
+      await cubit.confirm();
+
+      expect(cubit.state.orderConfirmed, isFalse);
+      expect(cubit.state.confirmInProgress, isFalse);
+      expect(cubit.state.storeClosedByRejection, isTrue);
+      expect(cubit.state.confirmError, isNull);
+    });
+
+    test(
+      'storeClosedByRejection=true → confirm() es no-op (el slot '
+      'ya es mensaje; un reintento fútil no debe viajar al backend)',
+      () async {
+        when(() => createOrder.call(any())).thenAnswer(
+          (_) async => const Left(
+            CheckoutOrderRejectedFailure(
+              'Store is closed',
+              code: OrderRejection.storeClosed,
+            ),
+          ),
+        );
+        final cubit = buildCubit();
+        addTearDown(cubit.close);
+        await cubit.loadCheckoutData();
+        await cubit.confirm();
+        expect(cubit.state.storeClosedByRejection, isTrue);
+
+        await cubit.confirm();
+
+        verify(() => createOrder.call(any())).called(1);
+      },
+    );
+
+    test('storeClosedByRejection se resetea cuando un reload confirma '
+        'el local abierto (retry del banner tras un 409 no deja el '
+        'slot cerrado para siempre)', () async {
+      when(() => createOrder.call(any())).thenAnswer(
+        (_) async => const Left(
+          CheckoutOrderRejectedFailure(
+            'Store is closed',
+            code: OrderRejection.storeClosed,
+          ),
+        ),
+      );
+      final cubit = buildCubit();
+      addTearDown(cubit.close);
+      await cubit.loadCheckoutData();
+      await cubit.confirm();
+      expect(cubit.state.storeClosedByRejection, isTrue);
+
+      // El local reabrió entre el 409 y el retry — el stub compartido
+      // lee la variable loadResult, reasignarla cambia su respuesta.
+      loadResult = const CheckoutDataResult(
+        addresses: Right(_addresses),
+        store: Right(_storeOpen),
+      );
+      await cubit.loadCheckoutData();
+
+      expect(cubit.state.storeClosedByRejection, isFalse);
+    });
+
+    test('reload que confirma cerrado también conserva el flag (la '
+        'fuente del fetch vale tanto como el 409)', () async {
+      when(() => createOrder.call(any())).thenAnswer(
+        (_) async => const Left(
+          CheckoutOrderRejectedFailure(
+            'Store is closed',
+            code: OrderRejection.storeClosed,
+          ),
+        ),
+      );
+      final cubit = buildCubit();
+      addTearDown(cubit.close);
+      await cubit.loadCheckoutData();
+      await cubit.confirm();
+      // El primer load llegó abierto (fixture default) y el flag lo
+      // marcó el rechazo; un reload posterior que confirme cerrado
+      // debe conservarlo.
+      loadResult = const CheckoutDataResult(
+        addresses: Right(_addresses),
+        store: Right(_storeClosed),
+      );
+
+      await cubit.loadCheckoutData();
+
+      expect(cubit.state.storeClosedByRejection, isTrue);
+    });
+
+    test('OrderRejection.minOrderAmount → copy dedicado de mínimo '
+        '(§028)', () async {
+      when(() => createOrder.call(any())).thenAnswer(
+        (_) async => const Left(
+          CheckoutOrderRejectedFailure(
+            'Minimum order amount not reached',
+            code: OrderRejection.minOrderAmount,
+          ),
+        ),
+      );
+      final cubit = buildCubit();
+      addTearDown(cubit.close);
+      await cubit.loadCheckoutData();
+
+      await cubit.confirm();
+
+      expect(
+        cubit.state.confirmError,
+        'El pedido no llega al mínimo a domicilio — súmele algo más',
+      );
+    });
+
+    test('OrderRejection.catalogViolation → copy dedicado de catálogo '
+        '(§028)', () async {
+      when(() => createOrder.call(any())).thenAnswer(
+        (_) async => const Left(
+          CheckoutOrderRejectedFailure(
+            'Option is no longer available',
+            code: OrderRejection.catalogViolation,
+          ),
+        ),
+      );
+      final cubit = buildCubit();
+      addTearDown(cubit.close);
+      await cubit.loadCheckoutData();
+
+      await cubit.confirm();
+
+      expect(
+        cubit.state.confirmError,
+        'Algo de tu pedido ya no está disponible — revísalo e inténtalo '
+        'de nuevo',
+      );
+    });
+
+    test('OrderRejection.invalidOrderData → copy dedicado de datos '
+        'inválidos (§028)', () async {
+      when(() => createOrder.call(any())).thenAnswer(
+        (_) async => const Left(
+          CheckoutOrderRejectedFailure(
+            'Invalid order data',
+            code: OrderRejection.invalidOrderData,
+          ),
+        ),
+      );
+      final cubit = buildCubit();
+      addTearDown(cubit.close);
+      await cubit.loadCheckoutData();
+
+      await cubit.confirm();
+
+      expect(
+        cubit.state.confirmError,
+        'Revisa los datos del pedido e inténtalo de nuevo',
       );
     });
 

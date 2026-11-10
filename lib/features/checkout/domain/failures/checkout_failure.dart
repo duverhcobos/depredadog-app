@@ -28,16 +28,27 @@ final class CheckoutServerFailure extends CheckoutFailure {
   List<Object?> get props => [message];
 }
 
+/// Motivo del rechazo del POST /orders — se resuelve del `errorCode`
+/// del backend (§017/§028). `unknown` cubre código ausente (backend
+/// viejo/proxy) o uno que el cliente aún no conoce.
+enum OrderRejection {
+  storeClosed,
+  minOrderAmount,
+  catalogViolation,
+  invalidOrderData,
+  unknown,
+}
+
 /// POST /orders rechazado por el backend (400/409 — validación o
-/// regla de negocio: local cerrado, producto agotado, reemplazo
-/// inválido). `message` es el texto del servidor — llega en INGLÉS y
-/// sin `code` para distinguir casos, así que la UI muestra copy
-/// genérico l10n y conserva esto solo para logging (revisor §027).
+/// regla de negocio). `message` se conserva solo para logging (llega
+/// en inglés); la UI hace pattern-matching en `code` para elegir su
+/// copy dedicado.
 final class CheckoutOrderRejectedFailure extends CheckoutFailure {
-  const CheckoutOrderRejectedFailure(this.message);
+  const CheckoutOrderRejectedFailure(this.message, {required this.code});
 
   final String message;
+  final OrderRejection code;
 
   @override
-  List<Object?> get props => [message];
+  List<Object?> get props => [message, code];
 }

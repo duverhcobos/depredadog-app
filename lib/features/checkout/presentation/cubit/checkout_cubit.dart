@@ -157,7 +157,18 @@ class CheckoutCubit extends Cubit<CheckoutState> {
           storeFailed: true,
         ),
       ),
-      (store) => emit(state.copyWith(store: store, storeFailed: false)),
+      // Un store confirmado abierto limpia storeClosedByRejection: el
+      // flag solo refleja el último estado conocido — si el retry del
+      // banner confirma reapertura, el CTA vuelve (regresión revisor
+      // §029: sin esto un 409 STORE_CLOSED dejaba el slot en mensaje
+      // para siempre aunque el local reabriera).
+      (store) => emit(
+        state.copyWith(
+          store: store,
+          storeFailed: false,
+          storeClosedByRejection: !store.isOpen,
+        ),
+      ),
     );
     emit(state.copyWith(dataLoading: false));
   }
@@ -310,8 +321,13 @@ class CheckoutCubit extends Cubit<CheckoutState> {
     if (state.confirmInProgress || state.orderConfirmed) return;
     // Guardia de cerrado (la UI ya deshabilita el CTA — defensa): el
     // backend rechazaría con 409, mejor ni llegar. Lo mismo aplica
-    // mientras la carga inicial sigue en vuelo.
-    if (state.dataLoading || !state.store.isOpen) return;
+    // mientras la carga inicial sigue en vuelo, y tras un rechazo
+    // STORE_CLOSED confirmado (§029).
+    if (state.dataLoading ||
+        !state.store.isOpen ||
+        state.storeClosedByRejection) {
+      return;
+    }
     final addressOk = state.hasValidDeliveryTarget;
     final phoneOk =
         state.paymentMethod != CheckoutPaymentMethod.nequi ||
@@ -372,12 +388,23 @@ class CheckoutCubit extends Cubit<CheckoutState> {
     result.fold(
       // El usuario pudo salir durante el POST — emitir sobre un cubit
       // cerrado lanza StateError async.
-      (failure) => emit(
-        state.copyWith(
-          confirmInProgress: false,
-          confirmError: () => _confirmErrorText(failure),
-        ),
-      ),
+      (failure) {
+        // §029 — un rechazo STORE_CLOSED es cerrado confirmado: el
+        // slot del CTA pasa a mensaje (revisar-ui: no invitar al
+        // reintento fútil mientras el local siga cerrado). El
+        // confirmError se omite ahí: el mensaje ya dice el mismo copy
+        // (fila + mensaje serían la misma frase apilada).
+        final storeClosed =
+            failure is CheckoutOrderRejectedFailure &&
+            failure.code == OrderRejection.storeClosed;
+        emit(
+          state.copyWith(
+            confirmInProgress: false,
+            confirmError: () => storeClosed ? null : _confirmErrorText(failure),
+            storeClosedByRejection: storeClosed,
+          ),
+        );
+      },
       (_) =>
           emit(state.copyWith(confirmInProgress: false, orderConfirmed: true)),
     );
@@ -430,14 +457,19 @@ class CheckoutCubit extends Cubit<CheckoutState> {
     );
   }
 
-  /// Texto de la fila de error — siempre l10n propio: los mensajes de
-  /// dominio del backend llegan en inglés (revisor §027: la premisa
-  /// "español producto" era falsa) y no hay `code` para distinguir
-  /// casos — el rechazo muestra copy genérico dedicado.
+  /// Texto de la fila de error — siempre l10n propio: `code` tipa el
+  /// rechazo (§028, `errorCode` del backend §017) y cada motivo tiene
+  /// su copy dedicado; código ausente/desconocido → genérico.
   String _confirmErrorText(CheckoutFailure failure) {
     final l10n = AppLocalizationsEs();
     return switch (failure) {
-      CheckoutOrderRejectedFailure() => l10n.checkoutOrderRejected,
+      CheckoutOrderRejectedFailure(:final code) => switch (code) {
+        OrderRejection.storeClosed => l10n.checkoutRejectStoreClosed,
+        OrderRejection.minOrderAmount => l10n.checkoutRejectMinOrder,
+        OrderRejection.catalogViolation => l10n.checkoutRejectCatalog,
+        OrderRejection.invalidOrderData => l10n.checkoutRejectInvalidData,
+        OrderRejection.unknown => l10n.checkoutOrderRejected,
+      },
       CheckoutOfflineFailure() => l10n.checkoutOrderOffline,
       _ => l10n.checkoutOrderFailed,
     };

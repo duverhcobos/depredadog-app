@@ -47,6 +47,12 @@ import '../../features/orders/domain/use_cases/get_order_detail_use_case.dart';
 import '../../features/orders/domain/use_cases/load_more_history_use_case.dart';
 import '../../features/orders/domain/use_cases/load_orders_use_case.dart';
 import '../../features/orders/presentation/cubit/orders_cubit.dart';
+import '../../features/store/data/datasources/implementations/store_remote_datasource_impl.dart';
+import '../../features/store/data/datasources/interfaces/i_store_remote_datasource.dart';
+import '../../features/store/data/repositories/store_repository_impl.dart';
+import '../../features/store/domain/repositories/i_store_repository.dart';
+import '../../features/store/domain/use_cases/get_store_open_state.dart';
+import '../../features/store/presentation/cubit/store_status_cubit.dart';
 import '../auth/auth_session.dart';
 import '../auth/token_refresh_service.dart';
 import '../device/implementations/device_info_provider_impl.dart';
@@ -184,6 +190,25 @@ void setupDI() {
   // entre badge, pantalla y checkout futuro; una sola instancia.
   // En memoria: no persiste entre arranques (decisión MVP).
   locator.registerLazySingleton<CartCubit>(() => CartCubit());
+
+  // --- Store (propuesta 029): estado abierto/cerrado del local —
+  // singleton de shell: alimenta el chip del header y la compuerta
+  // del carrito. El checkout trae su propio fetch (config completo).
+  locator.registerLazySingleton<IStoreRemoteDataSource>(
+    () => StoreRemoteDataSourceImpl(networkService: locator<INetworkService>()),
+  );
+  locator.registerLazySingleton<IStoreRepository>(
+    () => StoreRepositoryImpl(
+      remoteDataSource: locator<IStoreRemoteDataSource>(),
+      networkInfo: locator<INetworkInfo>(),
+    ),
+  );
+  locator.registerLazySingleton<GetStoreOpenStateUseCase>(
+    () => GetStoreOpenStateUseCase(locator<IStoreRepository>()),
+  );
+  locator.registerLazySingleton<StoreStatusCubit>(
+    () => StoreStatusCubit(getOpenState: locator<GetStoreOpenStateUseCase>()),
+  );
 
   // --- Checkout (propuestas 025+026): datasource + repo + use-cases
   // de los endpoints reales (GET /addresses, GET /store/config, POST

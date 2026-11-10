@@ -1354,11 +1354,17 @@ abstract class AppLocalizations {
   /// **'No pudimos cargar los datos del local'**
   String get checkoutStoreError;
 
-  /// Banner inline sobre el CTA cuando isOpen=false — confirmar queda deshabilitado (§025; el backend rechaza con 409)
+  /// Mensaje que ocupa el LUGAR del CTA 'Confirmar pedido' cuando isOpen=false confirmado (§029 — ya no es banner ni botón deshabilitado; storeFailed conserva su banner con retry; el backend rechaza con 409)
   ///
   /// In es, this message translates to:
-  /// **'El local está cerrado ahora'**
+  /// **'El local está cerrado ahora — intenta en el horario de atención'**
   String get checkoutStoreClosed;
+
+  /// Mensaje que reemplaza al CTA 'Ir a pagar' del carrito con el local cerrado (§029)
+  ///
+  /// In es, this message translates to:
+  /// **'El local está cerrado ahora — intenta en el horario de atención'**
+  String get cartStoreClosed;
 
   /// Toast junto al diálogo de éxito cuando POST /addresses falló — el guardado es auxiliar y el pedido siguió igual (§025)
   ///
@@ -1372,11 +1378,35 @@ abstract class AppLocalizations {
   /// **'No pudimos confirmar tu pedido — inténtalo de nuevo'**
   String get checkoutOrderFailed;
 
-  /// Error inline del POST /orders rechazado por el backend (400/409) — el motivo del servidor llega en inglés sin code para distinguir casos, así que se muestra copy genérico dedicado (§027)
+  /// Error inline del POST /orders rechazado por el backend (400/409) — copy genérico cuando el errorCode llega ausente o desconocido; los motivos conocidos tienen su copy dedicado (§028)
   ///
   /// In es, this message translates to:
   /// **'El local no pudo tomar tu pedido — revísalo e inténtalo de nuevo'**
   String get checkoutOrderRejected;
+
+  /// POST /orders rechazado con STORE_CLOSED (§028)
+  ///
+  /// In es, this message translates to:
+  /// **'El local está cerrado ahora — intenta en el horario de atención'**
+  String get checkoutRejectStoreClosed;
+
+  /// POST /orders rechazado con MIN_ORDER_AMOUNT (§028)
+  ///
+  /// In es, this message translates to:
+  /// **'El pedido no llega al mínimo a domicilio — súmele algo más'**
+  String get checkoutRejectMinOrder;
+
+  /// POST /orders rechazado con ORDER_CATALOG_VIOLATION — opción agotada/removida/inválida (§028)
+  ///
+  /// In es, this message translates to:
+  /// **'Algo de tu pedido ya no está disponible — revísalo e inténtalo de nuevo'**
+  String get checkoutRejectCatalog;
+
+  /// POST /orders rechazado con INVALID_ORDER_DATA (§028)
+  ///
+  /// In es, this message translates to:
+  /// **'Revisa los datos del pedido e inténtalo de nuevo'**
+  String get checkoutRejectInvalidData;
 
   /// Error inline del POST /orders sin conectividad
   ///

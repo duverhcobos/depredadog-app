@@ -2,11 +2,15 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../../../core/di/setup_di.dart';
 import '../../../../core/routes/auth_guard.dart';
 import '../../../../core/widgets/app_toast.dart';
+import '../../../../core/widgets/store_closed_message.dart';
 import '../../../../l10n/app_localizations.dart';
 import '../../../home/presentation/utils/format_cop.dart';
 import '../../../home/presentation/widgets/signature_strip.dart';
+import '../../../store/domain/entities/store_open_state.dart';
+import '../../../store/presentation/cubit/store_status_cubit.dart';
 import '../../domain/entities/cart_item.dart';
 import '../cubit/cart_cubit.dart';
 import '../cubit/cart_state.dart';
@@ -23,8 +27,25 @@ import '../widgets/cart_item_tile.dart';
 ///
 /// El CTA "Ir a pagar" hace push a /home/cart/checkout (§022 —
 /// conserva el stack: volver del checkout regresa al carrito).
-class CartScreen extends StatelessWidget {
+class CartScreen extends StatefulWidget {
   const CartScreen({super.key});
+
+  @override
+  State<CartScreen> createState() => _CartScreenState();
+}
+
+class _CartScreenState extends State<CartScreen> {
+  @override
+  void initState() {
+    super.initState();
+    // §029 — estado del local fresco al entrar al carrito: la
+    // compuerta del "Ir a pagar" no puede mostrar un dato viejo.
+    // Guard igual que el reload de OrdersCubit del shell (tests
+    // aislados sin DI no deben reventar).
+    if (locator.isRegistered<StoreStatusCubit>()) {
+      locator<StoreStatusCubit>().refresh();
+    }
+  }
 
   /// Elimina el ítem y avisa — el toast es el feedback mínimo ante
   /// una destrucción sin deshacer (revisor-ui §020; el undo/banner
@@ -157,15 +178,34 @@ class CartScreen extends StatelessWidget {
                                 ],
                               ),
                               const SizedBox(width: 16),
+                              // §029 — solo `closed` CONFIRMADO
+                              // reemplaza el CTA por el mensaje:
+                              // unknown (sin consultar/falló) deja
+                              // pasar — el checkout tiene compuerta
+                              // propia con retry y el backend es la
+                              // última línea.
                               Expanded(
-                                child: FilledButton(
-                                  // §022: push (no go) — volver del
-                                  // checkout regresa al carrito con
-                                  // sus ítems intactos.
-                                  onPressed: () =>
-                                      context.push(AuthGuard.checkoutRoute),
-                                  child: Text(l10n.cartCheckoutCta),
-                                ),
+                                child:
+                                    BlocBuilder<
+                                      StoreStatusCubit,
+                                      StoreOpenState
+                                    >(
+                                      builder: (context, status) =>
+                                          status == StoreOpenState.closed
+                                          ? StoreClosedMessage(
+                                              message: l10n.cartStoreClosed,
+                                            )
+                                          : FilledButton(
+                                              // §022: push (no go) —
+                                              // volver del checkout
+                                              // regresa al carrito con
+                                              // sus ítems intactos.
+                                              onPressed: () => context.push(
+                                                AuthGuard.checkoutRoute,
+                                              ),
+                                              child: Text(l10n.cartCheckoutCta),
+                                            ),
+                                    ),
                               ),
                             ],
                           ),

@@ -294,6 +294,25 @@ void main() {
       verifyNeverSaveSession();
     });
 
+    test('409 con errorCode EMAIL_ALREADY_REGISTERED → '
+        'EmailAlreadyRegisteredFailure (§028 — el código manda)', () async {
+      stubRemoteRegisterThrows(
+        const ServerException(
+          'Email is already registered',
+          statusCode: 409,
+          errorCode: 'EMAIL_ALREADY_REGISTERED',
+        ),
+      );
+
+      final result = await callRegister();
+
+      expect(
+        result,
+        const Left<AuthFailure, Object>(EmailAlreadyRegisteredFailure()),
+      );
+      verifyNeverSaveSession();
+    });
+
     test('429 → TooManyAttemptsFailure', () async {
       stubRemoteRegisterThrows(
         const ServerException('Too many requests', statusCode: 429),
@@ -390,6 +409,53 @@ void main() {
       );
     });
 
+    test('403 con errorCode EMAIL_NOT_VERIFIED → EmailNotVerifiedFailure '
+        '(§028 — el código manda sobre el texto)', () async {
+      stubRemoteThrows(
+        const ServerException(
+          'Email is not verified',
+          statusCode: 403,
+          errorCode: 'EMAIL_NOT_VERIFIED',
+        ),
+      );
+
+      final result = await callLogin();
+
+      expect(
+        result,
+        const Left<AuthFailure, Object>(EmailNotVerifiedFailure()),
+      );
+    });
+
+    test('403 con errorCode USER_SUSPENDED → AccountSuspendedFailure '
+        '(§028 — el código manda sobre el texto)', () async {
+      stubRemoteThrows(
+        const ServerException(
+          'Account is suspended',
+          statusCode: 403,
+          errorCode: 'USER_SUSPENDED',
+        ),
+      );
+
+      final result = await callLogin();
+
+      expect(
+        result,
+        const Left<AuthFailure, Object>(AccountSuspendedFailure()),
+      );
+    });
+
+    test('sin errorCode pero con mensaje inglés legacy → el fallback por '
+        'statusCode/mensaje sigue mapeando igual (§028)', () async {
+      stubRemoteThrows(
+        const ServerException('Invalid or expired code', statusCode: 400),
+      );
+
+      final result = await callLogin();
+
+      expect(result, const Left<AuthFailure, Object>(InvalidCodeFailure()));
+    });
+
     test('429 → TooManyAttemptsFailure', () async {
       stubRemoteThrows(
         const ServerException('Too many requests', statusCode: 429),
@@ -468,6 +534,27 @@ void main() {
     test('400 "Invalid or expired code" → InvalidCodeFailure', () async {
       stubRemoteVerifyThrows(
         const ServerException('Invalid or expired code', statusCode: 400),
+      );
+
+      final result = await callVerify();
+
+      expect(result, const Left<AuthFailure, Object>(InvalidCodeFailure()));
+      verifyNever(
+        () => local.saveSession(
+          accessToken: any(named: 'accessToken'),
+          refreshToken: any(named: 'refreshToken'),
+        ),
+      );
+    });
+
+    test('400 con errorCode INVALID_AUTH_CODE → InvalidCodeFailure '
+        '(§028 — el código manda sobre el texto)', () async {
+      stubRemoteVerifyThrows(
+        const ServerException(
+          'Invalid or expired code',
+          statusCode: 400,
+          errorCode: 'INVALID_AUTH_CODE',
+        ),
       );
 
       final result = await callVerify();

@@ -364,11 +364,35 @@ void main() {
       );
     });
 
-    test('409 con mensaje del servidor → CheckoutOrderRejectedFailure '
-        '(el motivo llega a la fila inline)', () async {
+    test('409 con errorCode STORE_CLOSED → CheckoutOrderRejectedFailure '
+        'con code storeClosed (§028 — el código tipa el motivo)', () async {
       when(() => remote.createOrder(any())).thenThrow(
         const ServerException(
-          'El producto ya no está disponible',
+          'Store is closed',
+          statusCode: 409,
+          errorCode: 'STORE_CLOSED',
+        ),
+      );
+
+      final result = await repository.createOrder(params);
+
+      expect(
+        result,
+        const Left<CheckoutFailure, PlacedOrder>(
+          CheckoutOrderRejectedFailure(
+            'Store is closed',
+            code: OrderRejection.storeClosed,
+          ),
+        ),
+      );
+    });
+
+    test('409 sin errorCode (respuesta vieja/proxy) → '
+        'CheckoutOrderRejectedFailure con code unknown (§028 — el copy '
+        'genérico sigue sirviendo)', () async {
+      when(() => remote.createOrder(any())).thenThrow(
+        const ServerException(
+          'Product is no longer available',
           statusCode: 409,
         ),
       );
@@ -378,9 +402,36 @@ void main() {
       expect(
         result,
         const Left<CheckoutFailure, PlacedOrder>(
-          CheckoutOrderRejectedFailure('El producto ya no está disponible'),
+          CheckoutOrderRejectedFailure(
+            'Product is no longer available',
+            code: OrderRejection.unknown,
+          ),
         ),
       );
+    });
+
+    test('cada errorCode de dominio → su OrderRejection (§028 — la '
+        'traducción vive en data, no en presentation)', () async {
+      const cases = {
+        'MIN_ORDER_AMOUNT': OrderRejection.minOrderAmount,
+        'ORDER_CATALOG_VIOLATION': OrderRejection.catalogViolation,
+        'INVALID_ORDER_DATA': OrderRejection.invalidOrderData,
+      };
+      for (final entry in cases.entries) {
+        when(() => remote.createOrder(any())).thenThrow(
+          ServerException('Rejected', statusCode: 409, errorCode: entry.key),
+        );
+
+        final result = await repository.createOrder(params);
+
+        expect(
+          result,
+          Left<CheckoutFailure, PlacedOrder>(
+            CheckoutOrderRejectedFailure('Rejected', code: entry.value),
+          ),
+          reason: '${entry.key} → ${entry.value}',
+        );
+      }
     });
 
     test('500 → CheckoutServerFailure (infraestructura, no motivo de '

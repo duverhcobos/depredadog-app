@@ -183,8 +183,29 @@ void main() {
             .called(1);
       });
 
-      test('409 con mensaje del servidor → OrdersCancelRejectedFailure '
-          '(el motivo llega al toast tal cual)', () async {
+      test('409 con errorCode ORDER_NOT_CANCELLABLE → '
+          'OrdersCancelRejectedFailure (§028 — el código manda)', () async {
+        when(() => remote.cancelOrder(any(), any())).thenThrow(
+          const ServerException(
+            'Order cannot be cancelled',
+            statusCode: 409,
+            errorCode: 'ORDER_NOT_CANCELLABLE',
+          ),
+        );
+
+        final result = await repository.cancelOrder('ord-1', 'x');
+
+        expect(
+          result,
+          const Left<OrdersFailure, CustomerOrder>(
+            OrdersCancelRejectedFailure('Order cannot be cancelled'),
+          ),
+        );
+      });
+
+      test('409 SIN errorCode (respuesta vieja/proxy) → '
+          'OrdersCancelRejectedFailure igual (fallback por statusCode — '
+          'el único 409 de cancel hoy es ORDER_NOT_CANCELLABLE)', () async {
         when(() => remote.cancelOrder(any(), any())).thenThrow(
           const ServerException('El pedido ya fue confirmado', statusCode: 409),
         );
@@ -195,6 +216,26 @@ void main() {
           result,
           const Left<OrdersFailure, CustomerOrder>(
             OrdersCancelRejectedFailure('El pedido ya fue confirmado'),
+          ),
+        );
+      });
+
+      test('409 con OTRO errorCode → OrdersServerFailure (no finge '
+          '"ya lo tomó")', () async {
+        when(() => remote.cancelOrder(any(), any())).thenThrow(
+          const ServerException(
+            'Something else conflicted',
+            statusCode: 409,
+            errorCode: 'SOME_OTHER_CONFLICT',
+          ),
+        );
+
+        final result = await repository.cancelOrder('ord-1', 'x');
+
+        expect(
+          result,
+          const Left<OrdersFailure, CustomerOrder>(
+            OrdersServerFailure('Something else conflicted'),
           ),
         );
       });

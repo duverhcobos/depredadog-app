@@ -296,10 +296,21 @@ class AuthRepositoryImpl implements IAuthRepository {
     // 401 en /auth/login solo significa credenciales inválidas — el 401 de
     // /auth/me se intercepta en restoreSession antes de llegar acá.
     if (e is UnauthorizedException) return const InvalidCredentialsFailure();
+    // errorCode del backend (§017) manda — el string-matching inglés de
+    // abajo queda solo como fallback para respuestas sin el campo.
+    if (e is ServerException) {
+      final byCode = switch (e.errorCode) {
+        'INVALID_AUTH_CODE' => const InvalidCodeFailure(),
+        'EMAIL_NOT_VERIFIED' => const EmailNotVerifiedFailure(),
+        'USER_SUSPENDED' => const AccountSuspendedFailure(),
+        'EMAIL_ALREADY_REGISTERED' => const EmailAlreadyRegisteredFailure(),
+        _ => null,
+      };
+      if (byCode != null) return byCode;
+    }
+    // Fallbacks por statusCode/mensaje (respuestas sin errorCode):
     // 400 "Invalid or expired code" cubre código errado, expirado y cuenta
-    // no pendiente (el backend no los distingue — anti-enumeración). Otros
-    // 400 (validación de DTO) caen a Unknown — la UI ya impide formatos
-    // inválidos, así que un 400 ajeno al código es un bug, no un caso UX.
+    // no pendiente (el backend no los distingue — anti-enumeración).
     if (e.statusCode == 400 && e.message == 'Invalid or expired code') {
       return const InvalidCodeFailure();
     }
@@ -311,10 +322,6 @@ class AuthRepositoryImpl implements IAuthRepository {
         return const AccountSuspendedFailure();
       }
     }
-    // 409 solo lo emite /auth/register y solo significa "Email is already
-    // registered" — en esta feature no hay otro 409 posible, así que el
-    // mapeo va por statusCode directo (400 "Invalid referral code" no se
-    // mapea: no enviamos referralCode — cae a Unknown, bug nuestro si llega).
     if (e.statusCode == 409) {
       return const EmailAlreadyRegisteredFailure();
     }
