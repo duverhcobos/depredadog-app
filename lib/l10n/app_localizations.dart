@@ -1372,6 +1372,12 @@ abstract class AppLocalizations {
   /// **'No pudimos confirmar tu pedido — inténtalo de nuevo'**
   String get checkoutOrderFailed;
 
+  /// Error inline del POST /orders rechazado por el backend (400/409) — el motivo del servidor llega en inglés sin code para distinguir casos, así que se muestra copy genérico dedicado (§027)
+  ///
+  /// In es, this message translates to:
+  /// **'El local no pudo tomar tu pedido — revísalo e inténtalo de nuevo'**
+  String get checkoutOrderRejected;
+
   /// Error inline del POST /orders sin conectividad
   ///
   /// In es, this message translates to:
@@ -1635,6 +1641,42 @@ abstract class AppLocalizations {
   /// In es, this message translates to:
   /// **'Total'**
   String get orderSummaryTotal;
+
+  /// Aviso inline por sección cuando GET /orders falla (activos o historial — cada pierna degrada por separado, §027)
+  ///
+  /// In es, this message translates to:
+  /// **'No pudimos cargar tus pedidos'**
+  String get ordersLoadError;
+
+  /// Botón de reintento de los avisos inline del tab Pedidos
+  ///
+  /// In es, this message translates to:
+  /// **'Reintentar'**
+  String get ordersRetry;
+
+  /// Botón de la fila final del historial — trae la página siguiente del bucket (§027)
+  ///
+  /// In es, this message translates to:
+  /// **'Cargar más'**
+  String get ordersLoadMore;
+
+  /// Aviso de la misma fila 'Cargar más' cuando la página siguiente del historial falla — el retry queda en el mismo sitio
+  ///
+  /// In es, this message translates to:
+  /// **'No pudimos cargar más pedidos'**
+  String get ordersLoadMoreError;
+
+  /// Toast de error genérico al cancelar (offline/5xx — el 409 tiene su propio texto en ordersCancelRejected)
+  ///
+  /// In es, this message translates to:
+  /// **'No pudimos cancelar el pedido — inténtalo de nuevo'**
+  String get ordersCancelError;
+
+  /// Toast cuando el backend rechaza la cancelación (409 — el pedido ya salió de pending; el mensaje del servidor viene en inglés y nunca se muestra)
+  ///
+  /// In es, this message translates to:
+  /// **'Este pedido ya no se puede cancelar — el local ya lo tomó'**
+  String get ordersCancelRejected;
 }
 
 class _AppLocalizationsDelegate

@@ -854,7 +854,8 @@ void main() {
       expect(perro.modifiers[1].replacesOptionId, 'opt-mozzarella');
     });
 
-    test('4xx → confirmError con el mensaje del servidor, CTA libre '
+    test('4xx → confirmError con copy rechazo l10n (el motivo del '
+        'servidor llega en inglés — nunca se muestra), CTA libre '
         'para el retry', () async {
       when(() => createOrder.call(any())).thenAnswer(
         (_) async => const Left(
@@ -869,7 +870,10 @@ void main() {
 
       expect(cubit.state.orderConfirmed, isFalse);
       expect(cubit.state.confirmInProgress, isFalse);
-      expect(cubit.state.confirmError, 'El perro de la casa se agotó');
+      expect(
+        cubit.state.confirmError,
+        'El local no pudo tomar tu pedido — revísalo e inténtalo de nuevo',
+      );
     });
 
     test('offline → confirmError = l10n de sin conexión', () async {

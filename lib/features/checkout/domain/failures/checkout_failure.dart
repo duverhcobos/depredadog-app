@@ -30,8 +30,9 @@ final class CheckoutServerFailure extends CheckoutFailure {
 
 /// POST /orders rechazado por el backend (400/409 — validación o
 /// regla de negocio: local cerrado, producto agotado, reemplazo
-/// inválido). `message` es el texto del servidor — ya viene en
-/// español producto y la UI lo muestra tal cual.
+/// inválido). `message` es el texto del servidor — llega en INGLÉS y
+/// sin `code` para distinguir casos, así que la UI muestra copy
+/// genérico l10n y conserva esto solo para logging (revisor §027).
 final class CheckoutOrderRejectedFailure extends CheckoutFailure {
   const CheckoutOrderRejectedFailure(this.message);
 

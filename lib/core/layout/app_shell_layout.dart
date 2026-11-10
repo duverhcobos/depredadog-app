@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../features/orders/presentation/cubit/orders_cubit.dart';
 import '../../l10n/app_localizations.dart';
+import '../di/setup_di.dart';
 import 'shell_header.dart';
 
 /// Marco persistente del área autenticada (§016): header de marca +
@@ -36,12 +38,22 @@ class AppShellLayout extends StatelessWidget {
         ),
         bottomNavigationBar: NavigationBar(
           selectedIndex: shell.currentIndex,
-          onDestinationSelected: (index) => shell.goBranch(
-            index,
-            // Tocar el tab ya activo vuelve a la raíz de esa sección
-            // (convención estándar de apps con tabs).
-            initialLocation: index == shell.currentIndex,
-          ),
+          onDestinationSelected: (index) {
+            // Pedidos recarga en CADA visita al tab (§027 — el
+            // cliente entra a ver si su pedido avanzó): el
+            // IndexedStack no re-ejecuta pageBuilder al conmutar de
+            // branch, así que el refresh vive acá — corrección del
+            // revisor (la decisión no estaba implementada).
+            if (index == 1 && locator.isRegistered<OrdersCubit>()) {
+              locator<OrdersCubit>().loadOrders();
+            }
+            shell.goBranch(
+              index,
+              // Tocar el tab ya activo vuelve a la raíz de esa sección
+              // (convención estándar de apps con tabs).
+              initialLocation: index == shell.currentIndex,
+            );
+          },
           destinations: [
             NavigationDestination(
               icon: const Icon(Icons.home_outlined),

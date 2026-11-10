@@ -700,6 +700,10 @@ class AppLocalizationsEs extends AppLocalizations {
       'No pudimos confirmar tu pedido — inténtalo de nuevo';
 
   @override
+  String get checkoutOrderRejected =>
+      'El local no pudo tomar tu pedido — revísalo e inténtalo de nuevo';
+
+  @override
   String get checkoutOrderOffline =>
       'Sin internet — revisa tu conexión e inténtalo de nuevo';
 
@@ -846,4 +850,24 @@ class AppLocalizationsEs extends AppLocalizations {
 
   @override
   String get orderSummaryTotal => 'Total';
+
+  @override
+  String get ordersLoadError => 'No pudimos cargar tus pedidos';
+
+  @override
+  String get ordersRetry => 'Reintentar';
+
+  @override
+  String get ordersLoadMore => 'Cargar más';
+
+  @override
+  String get ordersLoadMoreError => 'No pudimos cargar más pedidos';
+
+  @override
+  String get ordersCancelError =>
+      'No pudimos cancelar el pedido — inténtalo de nuevo';
+
+  @override
+  String get ordersCancelRejected =>
+      'Este pedido ya no se puede cancelar — el local ya lo tomó';
 }

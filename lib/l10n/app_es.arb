@@ -573,6 +573,10 @@
   "@checkoutOrderFailed": {
     "description": "Error genérico inline del POST /orders (5xx/inesperado)"
   },
+  "checkoutOrderRejected": "El local no pudo tomar tu pedido — revísalo e inténtalo de nuevo",
+  "@checkoutOrderRejected": {
+    "description": "Error inline del POST /orders rechazado por el backend (400/409) — el motivo del servidor llega en inglés sin code para distinguir casos, así que se muestra copy genérico dedicado (§027)"
+  },
   "checkoutOrderOffline": "Sin internet — revisa tu conexión e inténtalo de nuevo",
   "@checkoutOrderOffline": {
     "description": "Error inline del POST /orders sin conectividad"
@@ -774,5 +778,29 @@
   "orderSummaryTotal": "Total",
   "@orderSummaryTotal": {
     "description": "Fila del total en los totales del detalle"
+  },
+  "ordersLoadError": "No pudimos cargar tus pedidos",
+  "@ordersLoadError": {
+    "description": "Aviso inline por sección cuando GET /orders falla (activos o historial — cada pierna degrada por separado, §027)"
+  },
+  "ordersRetry": "Reintentar",
+  "@ordersRetry": {
+    "description": "Botón de reintento de los avisos inline del tab Pedidos"
+  },
+  "ordersLoadMore": "Cargar más",
+  "@ordersLoadMore": {
+    "description": "Botón de la fila final del historial — trae la página siguiente del bucket (§027)"
+  },
+  "ordersLoadMoreError": "No pudimos cargar más pedidos",
+  "@ordersLoadMoreError": {
+    "description": "Aviso de la misma fila 'Cargar más' cuando la página siguiente del historial falla — el retry queda en el mismo sitio"
+  },
+  "ordersCancelError": "No pudimos cancelar el pedido — inténtalo de nuevo",
+  "@ordersCancelError": {
+    "description": "Toast de error genérico al cancelar (offline/5xx — el 409 tiene su propio texto en ordersCancelRejected)"
+  },
+  "ordersCancelRejected": "Este pedido ya no se puede cancelar — el local ya lo tomó",
+  "@ordersCancelRejected": {
+    "description": "Toast cuando el backend rechaza la cancelación (409 — el pedido ya salió de pending; el mensaje del servidor viene en inglés y nunca se muestra)"
   }
 }

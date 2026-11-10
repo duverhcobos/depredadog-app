@@ -38,6 +38,14 @@ import '../../features/home/data/repositories/catalog_repository_impl.dart';
 import '../../features/home/domain/repositories/i_catalog_repository.dart';
 import '../../features/home/domain/use_cases/get_catalog_menu_use_case.dart';
 import '../../features/home/presentation/cubit/catalog_cubit.dart';
+import '../../features/orders/data/datasources/implementations/orders_remote_datasource_impl.dart';
+import '../../features/orders/data/datasources/interfaces/i_orders_remote_datasource.dart';
+import '../../features/orders/data/repositories/orders_repository_impl.dart';
+import '../../features/orders/domain/repositories/i_orders_repository.dart';
+import '../../features/orders/domain/use_cases/cancel_order_use_case.dart';
+import '../../features/orders/domain/use_cases/get_order_detail_use_case.dart';
+import '../../features/orders/domain/use_cases/load_more_history_use_case.dart';
+import '../../features/orders/domain/use_cases/load_orders_use_case.dart';
 import '../../features/orders/presentation/cubit/orders_cubit.dart';
 import '../auth/auth_session.dart';
 import '../auth/token_refresh_service.dart';
@@ -214,12 +222,42 @@ void setupDI() {
     ),
   );
 
-  // Pedidos (§023): factory por apertura del tab — estado de pantalla
-  // con mocks hasta la integración de GET /orders (backend 015).
-  // Singleton como CartCubit: el tab y su detalle /orders/:id
-  // comparten la MISMA instancia (el detalle puede cancelar y el
-  // tab refleja la migración al historial — revisor-ui §023).
-  locator.registerLazySingleton<OrdersCubit>(() => OrdersCubit());
+  // --- Pedidos (§027): datasource + repo + use-cases reales
+  // (GET /orders?bucket, GET /orders/:id, POST /orders/:id/cancel —
+  // backend 015). Singleton como CartCubit: el tab y su detalle
+  // /orders/:id comparten la MISMA instancia (el detalle puede
+  // cancelar y el tab refleja la migración al historial — revisor-ui
+  // §023); la recarga la gatilla el pageBuilder del router.
+  locator.registerLazySingleton<IOrdersRemoteDataSource>(
+    () =>
+        OrdersRemoteDataSourceImpl(networkService: locator<INetworkService>()),
+  );
+  locator.registerLazySingleton<IOrdersRepository>(
+    () => OrdersRepositoryImpl(
+      remoteDataSource: locator<IOrdersRemoteDataSource>(),
+      networkInfo: locator<INetworkInfo>(),
+    ),
+  );
+  locator.registerLazySingleton<LoadOrdersUseCase>(
+    () => LoadOrdersUseCase(locator<IOrdersRepository>()),
+  );
+  locator.registerLazySingleton<LoadMoreHistoryUseCase>(
+    () => LoadMoreHistoryUseCase(locator<IOrdersRepository>()),
+  );
+  locator.registerLazySingleton<GetOrderDetailUseCase>(
+    () => GetOrderDetailUseCase(locator<IOrdersRepository>()),
+  );
+  locator.registerLazySingleton<CancelOrderUseCase>(
+    () => CancelOrderUseCase(locator<IOrdersRepository>()),
+  );
+  locator.registerLazySingleton<OrdersCubit>(
+    () => OrdersCubit(
+      loadOrdersUseCase: locator<LoadOrdersUseCase>(),
+      loadMoreHistoryUseCase: locator<LoadMoreHistoryUseCase>(),
+      getOrderDetailUseCase: locator<GetOrderDetailUseCase>(),
+      cancelOrderUseCase: locator<CancelOrderUseCase>(),
+    ),
+  );
 
   // --- Use Cases (auth) ---
   locator.registerLazySingleton<LoginUseCase>(

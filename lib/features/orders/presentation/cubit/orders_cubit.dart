@@ -1,290 +1,196 @@
+import 'dart:async';
+
 import 'package:flutter_bloc/flutter_bloc.dart';
 
-import '../../../cart/domain/entities/cart_modifier.dart';
 import '../../domain/entities/customer_order.dart';
+import '../../domain/failures/orders_failure.dart';
+import '../../domain/repositories/i_orders_repository.dart';
+import '../../domain/use_cases/cancel_order_use_case.dart';
+import '../../domain/use_cases/get_order_detail_use_case.dart';
+import '../../domain/use_cases/load_more_history_use_case.dart';
+import '../../domain/use_cases/load_orders_use_case.dart';
 import 'orders_state.dart';
 
-/// Datos mock del tab Pedidos (§023, solo presentación). En la
-/// integración vendrán de `GET /orders` del backend 015.
-
-/// Domicilio "En la plancha" — con pin adjunto y Nequi pago.
-final kMockOrderDelivery = CustomerOrder(
-  id: 'ord-1',
-  serviceType: OrderServiceType.delivery,
-  status: OrderStatus.preparing,
-  items: const [
-    OrderItem(
-      productId: 'p-cachorro',
-      productSlug: 'cachorro',
-      name: 'El Cachorro',
-      quantity: 2,
-      unitPrice: 14000,
-      includedNames: [
-        'Pan brioche',
-        'Salchicha americana',
-        'Papas a la francesa',
-        'Cebolla grillada',
-      ],
-      modifiers: [
-        CartModifier(
-          optionId: 'opt-mozz',
-          optionName: 'Queso mozzarella',
-          action: CartModifierAction.removed,
-          priceDelta: 0,
-          group: CartModifierGroup.ingredient,
-        ),
-        CartModifier(
-          optionId: 'opt-salami',
-          optionName: 'Salami',
-          action: CartModifierAction.added,
-          priceDelta: 3000,
-          group: CartModifierGroup.extra,
-        ),
-        CartModifier(
-          optionId: 'opt-maiz',
-          optionName: 'Maíz tierno',
-          action: CartModifierAction.added,
-          priceDelta: 0,
-          group: CartModifierGroup.topping,
-        ),
-        CartModifier(
-          optionId: 'opt-rosada',
-          optionName: 'Salsa rosada',
-          action: CartModifierAction.added,
-          priceDelta: 0,
-          group: CartModifierGroup.sauce,
-        ),
-      ],
-    ),
-    OrderItem(
-      productId: 'p-trampa',
-      productSlug: 'trampa',
-      name: 'La Trampa',
-      quantity: 1,
-      unitPrice: 16000,
-      includedNames: [
-        'Pan brioche',
-        'Salchicha americana',
-        'Tocineta',
-        'Huevo de codorniz',
-      ],
-    ),
-  ],
-  paymentMethod: OrderPaymentMethod.nequi,
-  paymentStatus: OrderPaymentStatus.paid,
-  subtotal: 44000,
-  deliveryFee: 0,
-  placedAt: DateTime(2026, 11, 8, 12, 40),
-  statusChangedAt: DateTime(2026, 11, 8, 12, 52),
-  addressLabel: 'Casa',
-  landmark: 'Casa blanca frente a la cancha',
-  neighborhood: 'Vereda El Carmen',
-  hasLocationPin: true,
-  contactPhone: '3001234567',
-  note: 'pago con billete de 50, traer cambio',
-);
-
-/// Local "Recibido" — muestra el botón cancelar (única ventana).
-final kMockOrderPickup = CustomerOrder(
-  id: 'ord-2',
-  serviceType: OrderServiceType.pickup,
-  status: OrderStatus.received,
-  items: const [
-    OrderItem(
-      productId: 'p-depredador',
-      productSlug: 'depredador',
-      name: 'El Depredador',
-      quantity: 1,
-      unitPrice: 25000,
-      includedNames: [
-        'Pan brioche',
-        'Salchicha americana',
-        'Tocineta',
-        'Champiñones',
-      ],
-      modifiers: [
-        CartModifier(
-          optionId: 'opt-tocineta',
-          optionName: 'Tocineta crocante',
-          action: CartModifierAction.added,
-          priceDelta: 4000,
-          group: CartModifierGroup.extra,
-        ),
-      ],
-    ),
-  ],
-  paymentMethod: OrderPaymentMethod.nequi,
-  paymentStatus: OrderPaymentStatus.pending,
-  subtotal: 25000,
-  deliveryFee: 0,
-  placedAt: DateTime(2026, 11, 8, 13, 10),
-  statusChangedAt: DateTime(2026, 11, 8, 13, 10),
-  storeReference: 'Depredadog — Costado norte del parque principal',
-);
-
-/// Domicilio "Confirmado" pagando en efectivo contra entrega — la
-/// única vía donde existe efectivo (el local es prepago, §022c).
-final kMockOrderDeliveryCash = CustomerOrder(
-  id: 'ord-6',
-  serviceType: OrderServiceType.delivery,
-  status: OrderStatus.confirmed,
-  items: const [
-    OrderItem(
-      productId: 'p-ave',
-      productSlug: 'ave-de-presa',
-      name: 'Ave de Presa',
-      quantity: 1,
-      unitPrice: 18000,
-      includedNames: ['Pan brioche', 'Pechuga apanada', 'Queso', 'Lechuga'],
-      modifiers: [
-        CartModifier(
-          optionId: 'opt-salsa-casa',
-          optionName: 'Salsa de la casa',
-          action: CartModifierAction.removed,
-          priceDelta: 0,
-          group: CartModifierGroup.ingredient,
-        ),
-      ],
-    ),
-  ],
-  paymentMethod: OrderPaymentMethod.onDelivery,
-  paymentStatus: OrderPaymentStatus.pending,
-  subtotal: 18000,
-  deliveryFee: 0,
-  placedAt: DateTime(2026, 11, 8, 13, 45),
-  statusChangedAt: DateTime(2026, 11, 8, 13, 50),
-  addressLabel: 'Casa de mi mamá',
-  landmark: 'Portón negro frente a la tienda',
-  neighborhood: 'Vereda El Carmen',
-  // §024 — recibe otra persona (el celular de la mamá): se ve que no
-  // es el de la cuenta.
-  contactPhone: '3109876543',
-  note: 'Traer cambio de 20',
-);
-
-final kMockHistory = <CustomerOrder>[
-  CustomerOrder(
-    id: 'ord-3',
-    serviceType: OrderServiceType.delivery,
-    status: OrderStatus.done,
-    items: const [
-      OrderItem(
-        productId: 'p-coyote',
-        productSlug: 'coyote',
-        name: 'El Coyote',
-        quantity: 2,
-        unitPrice: 18000,
-        includedNames: [
-          'Pan brioche',
-          'Salchicha americana',
-          'Queso mozzarella',
-        ],
-        modifiers: [
-          CartModifier(
-            optionId: 'opt-huevo',
-            optionName: 'Huevo de codorniz',
-            action: CartModifierAction.removed,
-            priceDelta: 0,
-            group: CartModifierGroup.ingredient,
-          ),
-        ],
-      ),
-    ],
-    paymentMethod: OrderPaymentMethod.onDelivery,
-    paymentStatus: OrderPaymentStatus.paid,
-    subtotal: 36000,
-    deliveryFee: 0,
-    placedAt: DateTime(2026, 11, 7, 18, 32),
-    statusChangedAt: DateTime(2026, 11, 7, 19, 5),
-    addressLabel: 'Trabajo',
-    landmark: 'Segundo local del puente hacia arriba',
-    neighborhood: 'Centro',
-  ),
-  CustomerOrder(
-    id: 'ord-4',
-    serviceType: OrderServiceType.pickup,
-    status: OrderStatus.done,
-    items: const [
-      OrderItem(
-        productId: 'p-cachorro',
-        productSlug: 'cachorro',
-        name: 'El Cachorro',
-        quantity: 1,
-        unitPrice: 14000,
-        includedNames: [
-          'Pan brioche',
-          'Salchicha americana',
-          'Papas a la francesa',
-        ],
-      ),
-    ],
-    paymentMethod: OrderPaymentMethod.nequi,
-    paymentStatus: OrderPaymentStatus.paid,
-    subtotal: 14000,
-    deliveryFee: 0,
-    placedAt: DateTime(2026, 11, 4, 20, 15),
-    statusChangedAt: DateTime(2026, 11, 4, 20, 40),
-    storeReference: 'Depredadog — Costado norte del parque principal',
-  ),
-  CustomerOrder(
-    id: 'ord-5',
-    serviceType: OrderServiceType.delivery,
-    status: OrderStatus.cancelled,
-    cancelReason: 'Cancelado por el cliente',
-    items: const [
-      OrderItem(
-        productId: 'p-ave',
-        productSlug: 'ave-de-presa',
-        name: 'Ave de Presa',
-        quantity: 2,
-        unitPrice: 18000,
-        includedNames: ['Pan brioche', 'Pechuga apanada', 'Queso', 'Lechuga'],
-      ),
-    ],
-    paymentMethod: OrderPaymentMethod.onDelivery,
-    paymentStatus: OrderPaymentStatus.pending,
-    subtotal: 36000,
-    deliveryFee: 0,
-    placedAt: DateTime(2026, 11, 1, 19, 0),
-    statusChangedAt: DateTime(2026, 11, 1, 19, 3),
-    landmark: 'Frente a la farmacia',
-  ),
-];
-
-/// SOLID (SRP): único dueño del estado del tab Pedidos (§023) —
-/// listas activo/historial y la acción de pantalla (cancelar).
-/// SINGLETON como CartCubit: el tab y su detalle /orders/:id
-/// comparten la misma instancia (revisor-ui §023).
+/// SOLID (SRP): único dueño del estado del tab Pedidos (§027 — real,
+/// GET/POST /orders del backend 015): listas activo/historial,
+/// paginación del historial, refresh de un pedido y la acción de
+/// cancelar. SINGLETON como CartCubit: el tab y su detalle
+/// /orders/:id comparten la misma instancia (revisor-ui §023).
 class OrdersCubit extends Cubit<OrdersState> {
   OrdersCubit({
-    List<CustomerOrder>? seedActive,
-    List<CustomerOrder>? seedHistory,
-  }) : super(
-         OrdersState(
-           active:
-               seedActive ??
-               [kMockOrderDelivery, kMockOrderPickup, kMockOrderDeliveryCash],
-           history: seedHistory ?? kMockHistory,
-         ),
-       );
+    required LoadOrdersUseCase loadOrdersUseCase,
+    required LoadMoreHistoryUseCase loadMoreHistoryUseCase,
+    required GetOrderDetailUseCase getOrderDetailUseCase,
+    required CancelOrderUseCase cancelOrderUseCase,
+  }) : _loadOrders = loadOrdersUseCase,
+       _loadMoreHistory = loadMoreHistoryUseCase,
+       _getOrderDetail = getOrderDetailUseCase,
+       _cancelOrder = cancelOrderUseCase,
+       super(const OrdersState());
 
-  /// Cancela un pedido "Recibido" (§023 mock — la llamada real es
-  /// `PATCH /orders/:id/cancel` del backend 015, solo válido en
-  /// pending). El pedido migra de En curso al historial como
-  /// cancelado.
-  void cancelOrder(String orderId) {
-    final index = state.active.indexWhere((o) => o.id == orderId);
-    if (index < 0 || !state.active[index].isCancellable) return;
-    final cancelled = state.active[index].copyWith(
-      status: OrderStatus.cancelled,
-      statusChangedAt: DateTime.now(),
-      cancelReason: 'Cancelado por el cliente',
-    );
+  final LoadOrdersUseCase _loadOrders;
+  final LoadMoreHistoryUseCase _loadMoreHistory;
+  final GetOrderDetailUseCase _getOrderDetail;
+  final CancelOrderUseCase _cancelOrder;
+
+  /// Guardia de reentry de loadOrders — es carga completa (inicial,
+  /// pull-to-refresh, reload al entrar al tab y resync tras un
+  /// cancel rechazado); un loading paralelo no compite.
+  bool _loading = false;
+
+  /// Época de la carga completa — loadMoreHistory captura la suya
+  /// antes del await y descarta su página si un loadOrders corrió en
+  /// el medio (sin ella, una page-N vieja se anexaba a la page-1
+  /// fresca: salto + duplicados — revisor §027).
+  int _loadEpoch = 0;
+
+  /// Razón fija de la cancelación del cliente — el diálogo aprobado
+  /// no tiene campo de texto (§023); viaja como `reason` del body.
+  static const _cancelReason = 'Cancelado por el cliente';
+
+  /// Carga inicial / pull-to-refresh / reload al entrar al tab:
+  /// activos + primera página del historial en paralelo — cada pierna
+  /// degrada por separado (una falla no tumba la otra). El spinner de
+  /// pantalla completa solo existe sin datos previos — en refresh el
+  /// contenido queda (el pull no desmonta el árbol — revisor §027).
+  Future<void> loadOrders() async {
+    if (_loading) return;
+    _loading = true;
+    _loadEpoch++;
+    try {
+      emit(
+        state.copyWith(
+          dataLoading: state.isEmpty,
+          activeFailed: false,
+          historyFailed: false,
+          historyLoadingMore: false,
+          historyLoadMoreFailed: false,
+        ),
+      );
+      final result = await _loadOrders();
+      if (isClosed) return;
+      result.active.fold(
+        (failure) => emit(state.copyWith(active: const [], activeFailed: true)),
+        (orders) => emit(state.copyWith(active: orders, activeFailed: false)),
+      );
+      result.history.fold(
+        (failure) => emit(
+          state.copyWith(
+            history: const [],
+            historyTotal: 0,
+            historyFailed: true,
+          ),
+        ),
+        (page) => emit(
+          state.copyWith(
+            history: page.items,
+            historyTotal: page.total,
+            historyFailed: false,
+          ),
+        ),
+      );
+      emit(state.copyWith(dataLoading: false));
+    } finally {
+      _loading = false;
+    }
+  }
+
+  /// "Cargar más" del historial — la página se deriva de lo ya
+  /// cargado (el retry tras falla repite la misma página). No corre
+  /// con un loadOrders en vuelo y descarta su resultado si uno corrió
+  /// en el medio (época); el anexar deduplica por id — un pedido que
+  /// migra a terminal corre el borde de página server-side (revisor
+  /// §027).
+  Future<void> loadMoreHistory() async {
+    if (state.historyLoadingMore || _loading) return;
     emit(
-      state.copyWith(
-        active: state.active.where((o) => o.id != orderId).toList(),
-        history: [cancelled, ...state.history],
+      state.copyWith(historyLoadingMore: true, historyLoadMoreFailed: false),
+    );
+    final epoch = _loadEpoch;
+    final page = state.history.length ~/ kOrdersHistoryPageSize + 1;
+    final result = await _loadMoreHistory(page);
+    if (isClosed || epoch != _loadEpoch) return;
+    result.fold(
+      (failure) => emit(
+        state.copyWith(historyLoadingMore: false, historyLoadMoreFailed: true),
+      ),
+      (page) => emit(
+        state.copyWith(
+          history: [
+            ...state.history,
+            ...page.items.where(
+              (n) => state.history.every((e) => e.id != n.id),
+            ),
+          ],
+          historyTotal: page.total,
+          historyLoadingMore: false,
+        ),
       ),
     );
+  }
+
+  /// Refresh de UN pedido al abrir su detalle — GET /orders/:id trae
+  /// el estado fresco + los modifiers que el listado omite (§015).
+  /// Falla silenciosa: el detalle queda con el snapshot del listado
+  /// (la resincronización la da el pull-to-refresh del tab).
+  Future<void> refreshOrder(String id) async {
+    final result = await _getOrderDetail(id);
+    if (isClosed) return;
+    result.fold((_) {}, _upsert);
+  }
+
+  /// Cancela un pedido "Recibido" (POST /orders/:id/cancel — solo
+  /// pending, §015). Devuelve `null` en éxito o LA FAILURE — la UI
+  /// elige su texto l10n; el `message` del 409 del servidor viene en
+  /// inglés y nunca se muestra crudo (corrección del revisor §027).
+  /// Cualquier falla dispara un loadOrders silencioso de
+  /// resincronización (el 409 dice que el pedido ya cambió server-side).
+  Future<OrdersFailure?> cancelOrder(String id) async {
+    final result = await _cancelOrder(id, _cancelReason);
+    if (isClosed) return null;
+    return result.fold(
+      (failure) {
+        unawaited(loadOrders());
+        return failure;
+      },
+      (order) {
+        _upsert(order);
+        return null;
+      },
+    );
+  }
+
+  /// Inserta/reemplaza la entidad donde corresponda: un terminal va
+  /// al frente del historial y sale de activos (la cancelada por el
+  /// admin cambió de bucket); uno vivo reemplaza su posición en
+  /// activos o en el historial, y si no estaba entra al frente de
+  /// activos (detalle abierto sin snapshot del listado). El migrado a
+  /// terminal es una fila NUEVA del bucket → historyTotal+1 si no
+  /// estaba ya cargado (revisor §027).
+  void _upsert(CustomerOrder order) {
+    if (order.isTerminal) {
+      final alreadyInHistory = state.history.any((o) => o.id == order.id);
+      emit(
+        state.copyWith(
+          active: state.active.where((o) => o.id != order.id).toList(),
+          history: [order, ...state.history.where((o) => o.id != order.id)],
+          historyTotal: alreadyInHistory
+              ? state.historyTotal
+              : state.historyTotal + 1,
+        ),
+      );
+      return;
+    }
+    final activeIndex = state.active.indexWhere((o) => o.id == order.id);
+    if (activeIndex >= 0) {
+      emit(state.copyWith(active: [...state.active]..[activeIndex] = order));
+      return;
+    }
+    final historyIndex = state.history.indexWhere((o) => o.id == order.id);
+    if (historyIndex >= 0) {
+      emit(state.copyWith(history: [...state.history]..[historyIndex] = order));
+      return;
+    }
+    emit(state.copyWith(active: [order, ...state.active]));
   }
 }

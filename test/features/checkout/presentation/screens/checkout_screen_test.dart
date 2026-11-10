@@ -672,9 +672,10 @@ void main() {
     expect(checkoutCubit.state.addressId, kCheckoutNewAddressId);
   });
 
-  testWidgets('POST /orders rechazado → fila inline con el motivo del '
-      'servidor + CTA re-habilitado; el retry confirma y el diálogo '
-      'llega intacto (§026)', (tester) async {
+  testWidgets('POST /orders rechazado → fila inline con copy rechazo '
+      'l10n (motivo del servidor en inglés NO se muestra) + CTA '
+      're-habilitado; el retry confirma y el diálogo llega intacto '
+      '(§026/§027)', (tester) async {
     var calls = 0;
     when(() => createOrder.call(any())).thenAnswer((_) async {
       calls++;
@@ -690,9 +691,16 @@ void main() {
     await tester.tap(find.widgetWithText(FilledButton, 'Confirmar pedido'));
     await tester.pumpAndSettle();
 
-    // Fila inline persistente con el motivo del servidor sobre el
-    // CTA — el diálogo de éxito NO aparece.
-    expect(find.text('El perro de la casa se agotó'), findsOneWidget);
+    // Fila inline persistente con copy rechazo l10n sobre el CTA —
+    // el motivo del servidor (inglés) nunca se muestra y el diálogo
+    // de éxito NO aparece.
+    expect(find.text('El perro de la casa se agotó'), findsNothing);
+    expect(
+      find.text(
+        'El local no pudo tomar tu pedido — revísalo e inténtalo de nuevo',
+      ),
+      findsOneWidget,
+    );
     expect(find.byIcon(Icons.error_outline_rounded), findsOneWidget);
     expect(find.text('¡Pedido confirmado!'), findsNothing);
     // El CTA queda habilitado para reintentar (mismo clientRequestId —
@@ -709,7 +717,12 @@ void main() {
     await tester.tap(find.widgetWithText(FilledButton, 'Confirmar pedido'));
     await tester.pumpAndSettle();
 
-    expect(find.text('El perro de la casa se agotó'), findsNothing);
+    expect(
+      find.text(
+        'El local no pudo tomar tu pedido — revísalo e inténtalo de nuevo',
+      ),
+      findsNothing,
+    );
     expect(find.text('¡Pedido confirmado!'), findsOneWidget);
   });
 }

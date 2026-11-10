@@ -8,33 +8,64 @@ import '../../../home/presentation/utils/format_cop.dart';
 import '../../../home/presentation/widgets/customization_section.dart';
 import '../../../home/presentation/widgets/signature_strip.dart';
 import '../../domain/entities/customer_order.dart';
+import '../../domain/failures/orders_failure.dart';
 import '../cubit/orders_cubit.dart';
+import '../cubit/orders_state.dart';
 import '../utils/format_order_date.dart';
 import '../widgets/order_cancel_dialog.dart';
 import '../widgets/order_item_detail_panel.dart';
 import '../widgets/order_status_chip.dart';
 import '../widgets/order_status_stepper.dart';
 
-/// Detalle del pedido (§023 — drill-down del tab, push slideUp como
-/// cart/checkout): estado con stepper (o chip + razón si cancelado),
-/// ítems completos con modificadores, entrega + pago, observación y
-/// totales. La ruta lleva `extra: CustomerOrder`; el back regresa al
-/// tab. SIN "volver a pedir" — descartado por el usuario para el MVP.
+/// Detalle del pedido (§023/§027 — drill-down del tab, push slideUp
+/// como cart/checkout): estado con stepper (o chip + razón si
+/// cancelado), ítems completos con modificadores, entrega + pago,
+/// observación y totales. El `extra` de la ruta es el snapshot
+/// instantáneo; el pedido se resuelve FRESCO por id desde el
+/// OrdersCubit (refreshOrder al abrir trae estado + modifiers — la
+/// ventana de cancelar desaparece sola si el admin ya confirmó). El
+/// back regresa al tab. SIN "volver a pedir" — descartado por el
+/// usuario para el MVP.
 class OrderDetailScreen extends StatelessWidget {
   const OrderDetailScreen({required this.order, super.key});
 
+  /// Snapshot de la lista que abrió el detalle — fallback instantáneo
+  /// mientras el refresh trae la entidad completa del cubit.
   final CustomerOrder order;
 
+  /// La entidad viva del cubit (active o history) — o el snapshot si
+  /// aún no llega / ya no está en ninguna lista.
+  CustomerOrder _resolve(OrdersState state) {
+    for (final list in [state.active, state.history]) {
+      for (final o in list) {
+        if (o.id == order.id) return o;
+      }
+    }
+    return order;
+  }
+
   /// Cancela desde el detalle (revisor-ui §023 — el drill-down no
-  /// puede ser MENOS capaz que la card): confirma → cancela → toast
-  /// → pop al tab (el `order` de acá es un snapshot; volver muestra
-  /// ya la migración al historial sobre la misma instancia).
+  /// puede ser MENOS capaz que la card): confirma → cancel real
+  /// (POST /orders/:id/cancel, §027) → éxito: toast + pop al tab;
+  /// failure: toast l10n propio y SIN pop (el pedido se ve con su
+  /// estado real tras el resync silencioso del cubit — el mensaje
+  /// del servidor viene en inglés y no se muestra, revisor §027).
   Future<void> _confirmCancel(BuildContext context) async {
     final confirmed = await showOrderCancelDialog(context);
-    if (confirmed && context.mounted) {
-      context.read<OrdersCubit>().cancelOrder(order.id);
-      AppToast.info(context, AppLocalizations.of(context)!.orderCancelledToast);
+    if (!confirmed || !context.mounted) return;
+    final failure = await context.read<OrdersCubit>().cancelOrder(order.id);
+    if (!context.mounted) return;
+    final l10n = AppLocalizations.of(context)!;
+    if (failure == null) {
+      AppToast.info(context, l10n.orderCancelledToast);
       context.pop();
+    } else {
+      AppToast.info(
+        context,
+        failure is OrdersCancelRejectedFailure
+            ? l10n.ordersCancelRejected
+            : l10n.ordersCancelError,
+      );
     }
   }
 
@@ -43,116 +74,124 @@ class OrderDetailScreen extends StatelessWidget {
     final l10n = AppLocalizations.of(context)!;
     final colors = Theme.of(context).colorScheme;
     final text = Theme.of(context).textTheme;
-    final isCancelled = order.status == OrderStatus.cancelled;
     return Scaffold(
       body: Stack(
         children: [
           const SignatureStrip(fraction: kSignatureStripFraction),
-          ListView(
-            padding: const EdgeInsets.only(bottom: 24),
-            children: [
-              const _DetailTitle(),
-              CustomizationSection(
-                title: l10n.orderDetailStatusSection,
+          BlocBuilder<OrdersCubit, OrdersState>(
+            builder: (context, state) {
+              final order = _resolve(state);
+              final isCancelled = order.status == OrderStatus.cancelled;
+              return ListView(
+                padding: const EdgeInsets.only(bottom: 24),
                 children: [
-                  Padding(
-                    padding: const EdgeInsets.fromLTRB(14, 8, 14, 14),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Row(
+                  const _DetailTitle(),
+                  CustomizationSection(
+                    title: l10n.orderDetailStatusSection,
+                    children: [
+                      Padding(
+                        padding: const EdgeInsets.fromLTRB(14, 8, 14, 14),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            Expanded(
-                              // "Pedido el 8 nov · 12:40 p. m." —
-                              // placedAt bajo "Estado" se leía como
-                              // fecha del cambio de estado
-                              // (revisor-ui §023).
-                              child: Text(
-                                l10n.orderPlacedAt(
-                                  formatOrderDate(order.placedAt),
-                                ),
-                                style: text.bodySmall?.copyWith(
-                                  color: colors.onSurface.withValues(
-                                    alpha: 0.6,
+                            Row(
+                              children: [
+                                Expanded(
+                                  // "Pedido el 8 nov · 12:40 p. m." —
+                                  // placedAt bajo "Estado" se leía como
+                                  // fecha del cambio de estado
+                                  // (revisor-ui §023).
+                                  child: Text(
+                                    l10n.orderPlacedAt(
+                                      formatOrderDate(order.placedAt),
+                                    ),
+                                    style: text.bodySmall?.copyWith(
+                                      color: colors.onSurface.withValues(
+                                        alpha: 0.6,
+                                      ),
+                                    ),
                                   ),
                                 ),
-                              ),
+                                OrderStatusChip(order: order),
+                              ],
                             ),
-                            OrderStatusChip(order: order),
+                            if (!isCancelled) ...[
+                              const SizedBox(height: 14),
+                              OrderStatusStepper(order: order),
+                            ],
+                            if (isCancelled && order.cancelReason != null) ...[
+                              const SizedBox(height: 8),
+                              Text(
+                                order.cancelReason!,
+                                style: text.bodySmall?.copyWith(
+                                  color: colors.error.withValues(alpha: 0.8),
+                                ),
+                              ),
+                            ],
+                            if (order.isCancellable) ...[
+                              const SizedBox(height: 10),
+                              Align(
+                                alignment: Alignment.centerRight,
+                                child: TextButton(
+                                  onPressed: () => _confirmCancel(context),
+                                  style: TextButton.styleFrom(
+                                    foregroundColor: colors.error,
+                                  ),
+                                  child: Text(l10n.orderCancelCta),
+                                ),
+                              ),
+                            ],
                           ],
                         ),
-                        if (!isCancelled) ...[
-                          const SizedBox(height: 14),
-                          OrderStatusStepper(order: order),
-                        ],
-                        if (isCancelled && order.cancelReason != null) ...[
-                          const SizedBox(height: 8),
-                          Text(
-                            order.cancelReason!,
-                            style: text.bodySmall?.copyWith(
-                              color: colors.error.withValues(alpha: 0.8),
-                            ),
-                          ),
-                        ],
-                        if (order.isCancellable) ...[
-                          const SizedBox(height: 10),
-                          Align(
-                            alignment: Alignment.centerRight,
-                            child: TextButton(
-                              onPressed: () => _confirmCancel(context),
-                              style: TextButton.styleFrom(
-                                foregroundColor: colors.error,
+                      ),
+                    ],
+                  ),
+                  CustomizationSection(
+                    title: l10n.orderDetailItemsSection,
+                    children: [
+                      for (final item in order.items) _ItemLine(item: item),
+                      Divider(
+                        height: 24,
+                        indent: 14,
+                        endIndent: 14,
+                        color: colors.outlineVariant.withValues(alpha: 0.4),
+                      ),
+                      _Totals(order: order),
+                    ],
+                  ),
+                  CustomizationSection(
+                    title: l10n.orderDetailDeliverySection,
+                    children: [_DeliveryDetail(order: order)],
+                  ),
+                  if (order.note != null && order.note!.isNotEmpty)
+                    CustomizationSection(
+                      title: l10n.orderDetailNoteSection,
+                      children: [
+                        Padding(
+                          padding: const EdgeInsets.fromLTRB(14, 6, 14, 12),
+                          child: Row(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Icon(
+                                Icons.sticky_note_2_outlined,
+                                size: 16,
+                                color: colors.onSurface.withValues(alpha: 0.6),
                               ),
-                              child: Text(l10n.orderCancelCta),
-                            ),
+                              const SizedBox(width: 8),
+                              Expanded(
+                                child: Text(
+                                  order.note!,
+                                  style: text.bodyMedium,
+                                ),
+                              ),
+                            ],
                           ),
-                        ],
+                        ),
                       ],
                     ),
-                  ),
                 ],
-              ),
-              CustomizationSection(
-                title: l10n.orderDetailItemsSection,
-                children: [
-                  for (final item in order.items) _ItemLine(item: item),
-                  Divider(
-                    height: 24,
-                    indent: 14,
-                    endIndent: 14,
-                    color: colors.outlineVariant.withValues(alpha: 0.4),
-                  ),
-                  _Totals(order: order),
-                ],
-              ),
-              CustomizationSection(
-                title: l10n.orderDetailDeliverySection,
-                children: [_DeliveryDetail(order: order)],
-              ),
-              if (order.note != null && order.note!.isNotEmpty)
-                CustomizationSection(
-                  title: l10n.orderDetailNoteSection,
-                  children: [
-                    Padding(
-                      padding: const EdgeInsets.fromLTRB(14, 6, 14, 12),
-                      child: Row(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Icon(
-                            Icons.sticky_note_2_outlined,
-                            size: 16,
-                            color: colors.onSurface.withValues(alpha: 0.6),
-                          ),
-                          const SizedBox(width: 8),
-                          Expanded(
-                            child: Text(order.note!, style: text.bodyMedium),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ],
-                ),
-            ],
+              );
+            },
           ),
           Positioned(
             top: 12,

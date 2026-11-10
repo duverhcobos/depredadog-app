@@ -157,7 +157,10 @@ class AppRouter {
                 pageBuilder: (context, state) => CustomTransitions.fade(
                   state,
                   BlocProvider.value(
-                    value: locator<OrdersCubit>(),
+                    // §027 — cada visita al tab recarga: el estado del
+                    // pedido cambia server-side y el cliente entra a
+                    // revisar si avanzó.
+                    value: locator<OrdersCubit>()..loadOrders(),
                     child: const OrdersScreen(),
                   ),
                 ),
@@ -174,8 +177,12 @@ class AppRouter {
                       state,
                       // Mismo OrdersCubit singleton del tab — el
                       // detalle cancela sobre la misma instancia.
+                      // §027 — al abrir refresca el pedido: estado
+                      // fresco + modifiers completos (el listado los
+                      // omite, §015).
                       BlocProvider.value(
-                        value: locator<OrdersCubit>(),
+                        value: locator<OrdersCubit>()
+                          ..refreshOrder((state.extra! as CustomerOrder).id),
                         child: OrderDetailScreen(
                           order: state.extra! as CustomerOrder,
                         ),

@@ -10,6 +10,7 @@ import '../../../home/presentation/utils/format_cop.dart';
 import '../../../home/presentation/widgets/product_image.dart';
 import '../../../home/presentation/widgets/signature_strip.dart';
 import '../../domain/entities/customer_order.dart';
+import '../../domain/failures/orders_failure.dart';
 import '../cubit/orders_cubit.dart';
 import 'order_cancel_dialog.dart';
 import 'order_status_chip.dart';
@@ -37,12 +38,24 @@ class ActiveOrderCard extends StatelessWidget {
   /// Cancela tras el diálogo compartido y avisa con AppToast — el
   /// feedback efímero es el mínimo de la familia ante una
   /// destrucción sin deshacer (revisor-ui §023, igual que cart §020).
+  /// §027 — await real: null = éxito (toast "Pedido cancelado" y la
+  /// card migra sola al historial); failure = toast l10n propio —
+  /// el mensaje del servidor viene en inglés y no se muestra
+  /// (revisor §027).
   Future<void> _confirmCancel(BuildContext context) async {
     final confirmed = await showOrderCancelDialog(context);
-    if (confirmed && context.mounted) {
-      context.read<OrdersCubit>().cancelOrder(order.id);
-      AppToast.info(context, AppLocalizations.of(context)!.orderCancelledToast);
-    }
+    if (!confirmed || !context.mounted) return;
+    final failure = await context.read<OrdersCubit>().cancelOrder(order.id);
+    if (!context.mounted) return;
+    final l10n = AppLocalizations.of(context)!;
+    AppToast.info(
+      context,
+      failure == null
+          ? l10n.orderCancelledToast
+          : failure is OrdersCancelRejectedFailure
+          ? l10n.ordersCancelRejected
+          : l10n.ordersCancelError,
+    );
   }
 
   @override

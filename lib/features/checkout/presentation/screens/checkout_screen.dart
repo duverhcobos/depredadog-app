@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../../../core/di/setup_di.dart';
 import '../../../../core/routes/auth_guard.dart';
 import '../../../../core/widgets/app_toast.dart';
 import '../../../../l10n/app_localizations.dart';
@@ -9,6 +10,7 @@ import '../../../cart/presentation/cubit/cart_cubit.dart';
 import '../../../home/presentation/utils/format_cop.dart';
 import '../../../home/presentation/widgets/customization_section.dart';
 import '../../../home/presentation/widgets/signature_strip.dart';
+import '../../../orders/presentation/cubit/orders_cubit.dart';
 import '../cubit/checkout_cubit.dart';
 import '../cubit/checkout_state.dart';
 import '../widgets/order_summary_block.dart';
@@ -84,6 +86,12 @@ class CheckoutScreen extends StatelessWidget {
                 // sí y dejaban un checkout fantasma con carrito vacío
                 // al volver al tab (revisor-ui).
                 router.go(AuthGuard.homeRoute);
+                // La orden recién creada debe verse al aterrizar: el
+                // go() programático no pasa por onDestinationSelected
+                // del shell — el reload se dispara acá (§027).
+                if (locator.isRegistered<OrdersCubit>()) {
+                  locator<OrdersCubit>().loadOrders();
+                }
                 WidgetsBinding.instance.addPostFrameCallback((_) {
                   router.go(AuthGuard.ordersRoute);
                 });

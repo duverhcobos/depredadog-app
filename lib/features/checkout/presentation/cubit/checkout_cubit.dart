@@ -430,12 +430,14 @@ class CheckoutCubit extends Cubit<CheckoutState> {
     );
   }
 
-  /// Texto de la fila de error: el motivo del servidor en 4xx
-  /// (español producto), l10n propio en offline/inesperado.
+  /// Texto de la fila de error — siempre l10n propio: los mensajes de
+  /// dominio del backend llegan en inglés (revisor §027: la premisa
+  /// "español producto" era falsa) y no hay `code` para distinguir
+  /// casos — el rechazo muestra copy genérico dedicado.
   String _confirmErrorText(CheckoutFailure failure) {
     final l10n = AppLocalizationsEs();
     return switch (failure) {
-      CheckoutOrderRejectedFailure(:final message) => message,
+      CheckoutOrderRejectedFailure() => l10n.checkoutOrderRejected,
       CheckoutOfflineFailure() => l10n.checkoutOrderOffline,
       _ => l10n.checkoutOrderFailed,
     };
