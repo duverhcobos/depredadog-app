@@ -1195,7 +1195,7 @@ abstract class AppLocalizations {
   /// Hint interior del punto de referencia
   ///
   /// In es, this message translates to:
-  /// **'Ej: casa blanca frente a la cancha'**
+  /// **'Ej: casa blanca, reja negra'**
   String get checkoutLandmarkHint;
 
   /// Error inline del punto de referencia — único campo requerido del form (§022a)
@@ -1707,6 +1707,414 @@ abstract class AppLocalizations {
   /// In es, this message translates to:
   /// **'Este pedido ya no se puede cancelar — el local ya lo tomó'**
   String get ordersCancelRejected;
+
+  /// Título naciente (scrolling_title) del tab Perfil (§030)
+  ///
+  /// In es, this message translates to:
+  /// **'Perfil'**
+  String get profileTitle;
+
+  /// Fila del menú del perfil que empuja a /profile/addresses (§030)
+  ///
+  /// In es, this message translates to:
+  /// **'Mis direcciones'**
+  String get profileAddressesRow;
+
+  /// Subtítulo de la fila 'Mis direcciones' — conteo de direcciones guardadas (§030)
+  ///
+  /// In es, this message translates to:
+  /// **'{count, plural, =0{Sin direcciones} =1{{count} guardada} other{{count} guardadas}}'**
+  String profileAddressesCount(int count);
+
+  /// Label de la tarjeta del código de referido del perfil (§030)
+  ///
+  /// In es, this message translates to:
+  /// **'Tu código para la manada'**
+  String get profileReferralTitle;
+
+  /// Tooltip del botón copiar del número de soporte (§030)
+  ///
+  /// In es, this message translates to:
+  /// **'Copiar número'**
+  String get profileCopyNumber;
+
+  /// Tooltip del botón copiar del código de referido (§030)
+  ///
+  /// In es, this message translates to:
+  /// **'Copiar código'**
+  String get profileCopyCode;
+
+  /// Toast tras copiar el código de referido al portapapeles (§030)
+  ///
+  /// In es, this message translates to:
+  /// **'Código copiado'**
+  String get profileCopiedToast;
+
+  /// Toast tras copiar el número de WhatsApp de soporte al portapapeles (§030)
+  ///
+  /// In es, this message translates to:
+  /// **'Número copiado'**
+  String get profileCopiedNumberToast;
+
+  /// Fila destructiva del menú del perfil — abre el diálogo de confirmación de logout (§030)
+  ///
+  /// In es, this message translates to:
+  /// **'Cerrar sesión'**
+  String get profileLogoutRow;
+
+  /// Título del diálogo de confirmación de cierre de sesión (§030)
+  ///
+  /// In es, this message translates to:
+  /// **'¿Cerrar sesión?'**
+  String get profileLogoutConfirmTitle;
+
+  /// Cuerpo del diálogo de confirmación de cierre de sesión (§030)
+  ///
+  /// In es, this message translates to:
+  /// **'Tendrás que iniciar sesión de nuevo para pedir.'**
+  String get profileLogoutConfirmBody;
+
+  /// Acción destructiva del diálogo — confirma el cierre de sesión (§030)
+  ///
+  /// In es, this message translates to:
+  /// **'Cerrar sesión'**
+  String get profileLogoutConfirmAction;
+
+  /// Toast tras confirmar el cierre de sesión en fase mock — cierra el loop mientras llega POST /auth/logout (§030.1, revisor-ui)
+  ///
+  /// In es, this message translates to:
+  /// **'Muy pronto podrás cerrar sesión'**
+  String get profileLogoutSoonToast;
+
+  /// Acción neutral de los diálogos del perfil — cierra sin hacer nada (§030)
+  ///
+  /// In es, this message translates to:
+  /// **'Cancelar'**
+  String get profileCancelAction;
+
+  /// Fila del menú del perfil que abre el diálogo de soporte (§030)
+  ///
+  /// In es, this message translates to:
+  /// **'Soporte'**
+  String get profileSupportRow;
+
+  /// Título del diálogo de soporte con el WhatsApp del local (§030)
+  ///
+  /// In es, this message translates to:
+  /// **'Soporte'**
+  String get supportDialogTitle;
+
+  /// Cuerpo del diálogo de soporte — antecede el número copiable (§030)
+  ///
+  /// In es, this message translates to:
+  /// **'Escríbenos al WhatsApp del local:'**
+  String get supportDialogBody;
+
+  /// Acción del diálogo de soporte — cierra sin más (§030)
+  ///
+  /// In es, this message translates to:
+  /// **'Cerrar'**
+  String get supportDialogClose;
+
+  /// Título naciente (scrolling_title) de la pantalla de direcciones guardadas (§030)
+  ///
+  /// In es, this message translates to:
+  /// **'Mis direcciones'**
+  String get addressesTitle;
+
+  /// Badge mini de la dirección marcada como default (§030)
+  ///
+  /// In es, this message translates to:
+  /// **'Predeterminada'**
+  String get addressDefaultBadge;
+
+  /// Opción del menú de la fila de dirección — PATCH {isDefault:true} (§030)
+  ///
+  /// In es, this message translates to:
+  /// **'Marcar predeterminada'**
+  String get addressMakeDefault;
+
+  /// Opción destructiva del menú de la fila de dirección (§030)
+  ///
+  /// In es, this message translates to:
+  /// **'Eliminar'**
+  String get addressDelete;
+
+  /// Título del diálogo de confirmación de borrado de dirección (§030)
+  ///
+  /// In es, this message translates to:
+  /// **'¿Eliminar esta dirección?'**
+  String get addressDeleteConfirmTitle;
+
+  /// Cuerpo del diálogo de confirmación de borrado de dirección (§030)
+  ///
+  /// In es, this message translates to:
+  /// **'La quitarás de tus direcciones guardadas.'**
+  String get addressDeleteConfirmBody;
+
+  /// Acción destructiva del diálogo — confirma el borrado (§030)
+  ///
+  /// In es, this message translates to:
+  /// **'Eliminar'**
+  String get addressDeleteConfirmAction;
+
+  /// Título del estado vacío de la pantalla de direcciones (§030)
+  ///
+  /// In es, this message translates to:
+  /// **'Sin direcciones guardadas'**
+  String get addressesEmpty;
+
+  /// Subtítulo del estado vacío de direcciones (§030)
+  ///
+  /// In es, this message translates to:
+  /// **'La próxima vez que pidas a domicilio puedes guardar una.'**
+  String get addressesEmptyHint;
+
+  /// CTA al pie de la lista de direcciones — empuja al form de creación (§030)
+  ///
+  /// In es, this message translates to:
+  /// **'Nueva dirección'**
+  String get addressesNewCta;
+
+  /// Título naciente del form de dirección en modo crear (§030)
+  ///
+  /// In es, this message translates to:
+  /// **'Nueva dirección'**
+  String get addressesNewTitle;
+
+  /// Título naciente del form de dirección en modo editar (§030)
+  ///
+  /// In es, this message translates to:
+  /// **'Editar dirección'**
+  String get addressesEditTitle;
+
+  /// Label del campo punto de referencia del form de dirección — único requerido (§030)
+  ///
+  /// In es, this message translates to:
+  /// **'Punto de referencia'**
+  String get addressesLandmarkLabel;
+
+  /// Error inline del punto de referencia vacío al guardar (§030)
+  ///
+  /// In es, this message translates to:
+  /// **'Cuéntanos el punto de referencia'**
+  String get addressesLandmarkRequired;
+
+  /// Label del campo barrio/sector del form de dirección — opcional (§030)
+  ///
+  /// In es, this message translates to:
+  /// **'Barrio o sector (opcional)'**
+  String get addressesNeighborhoodLabel;
+
+  /// Label del campo nombre propio — visible solo cuando el tipo es 'Otro' (§030)
+  ///
+  /// In es, this message translates to:
+  /// **'Nombre de la dirección'**
+  String get addressesLabelLabel;
+
+  /// Error inline del nombre vacío cuando el tipo es 'Otro' (§030)
+  ///
+  /// In es, this message translates to:
+  /// **'Ponle un nombre'**
+  String get addressesLabelRequired;
+
+  /// CTA del form de dirección — upsert sobre el cubit de la lista (§030)
+  ///
+  /// In es, this message translates to:
+  /// **'Guardar'**
+  String get addressFormSave;
+
+  /// Label de la sección del menú del perfil que agrupa los datos del cliente (§030.1)
+  ///
+  /// In es, this message translates to:
+  /// **'Mi cuenta'**
+  String get profileSectionAccount;
+
+  /// Label de la sección del menú del perfil que agrupa local + soporte (§030.1)
+  ///
+  /// In es, this message translates to:
+  /// **'El negocio'**
+  String get profileSectionBusiness;
+
+  /// Headline de puntos de la tarjeta de fidelidad del perfil (§030.1)
+  ///
+  /// In es, this message translates to:
+  /// **'{count, plural, =1{1 punto} other{{count} puntos}}'**
+  String profileLoyaltyPoints(int count);
+
+  /// Copy de voz bajo el headline de puntos de la tarjeta de fidelidad (§030.1)
+  ///
+  /// In es, this message translates to:
+  /// **'Tu manada te premia'**
+  String get profileLoyaltyCopy;
+
+  /// Línea de referidos de la tarjeta de fidelidad — conteo de personas que entraron con el código (§030.1)
+  ///
+  /// In es, this message translates to:
+  /// **'{count, plural, =0{Nadie se ha sumado todavía con tu código} =1{1 persona ya se sumó con tu código} other{{count} personas ya se sumaron con tu código}}'**
+  String profileLoyaltyReferred(int count);
+
+  /// Tooltip del ícono info (esquina sup. derecha) de la tarjeta de fidelidad (§030.1)
+  ///
+  /// In es, this message translates to:
+  /// **'Cómo funcionan los puntos'**
+  String get profileLoyaltyInfoTooltip;
+
+  /// Título del diálogo que explica puntos y código de referidos (§030.1)
+  ///
+  /// In es, this message translates to:
+  /// **'¿Cómo funciona la manada?'**
+  String get profileLoyaltyInfoTitle;
+
+  /// Párrafo de puntos del diálogo info de fidelidad — reglas genéricas en fase mock (§030.1)
+  ///
+  /// In es, this message translates to:
+  /// **'Acumulas puntos con cada pedido. Cuando tengas suficientes podrás canjearlos por premios del menú.'**
+  String get profileLoyaltyInfoPoints;
+
+  /// Párrafo de referidos del diálogo info de fidelidad — reglas genéricas en fase mock (§030.1)
+  ///
+  /// In es, this message translates to:
+  /// **'Comparte tu código con amigos — cuando hagan su primer pedido se suman a tu manada y tú ganas premios.'**
+  String get profileLoyaltyInfoCode;
+
+  /// Botón cerrar del diálogo info de fidelidad (§030.1)
+  ///
+  /// In es, this message translates to:
+  /// **'Entendido'**
+  String get profileLoyaltyInfoClose;
+
+  /// Fila del menú del perfil que empuja a /profile/data (§030.1)
+  ///
+  /// In es, this message translates to:
+  /// **'Mis datos'**
+  String get profileDataRow;
+
+  /// Título naciente (scrolling_title) del form de datos personales (§030.1)
+  ///
+  /// In es, this message translates to:
+  /// **'Mis datos'**
+  String get profileDataTitle;
+
+  /// Label del campo de correo del form de datos — visible pero read-only (§030.1)
+  ///
+  /// In es, this message translates to:
+  /// **'Correo electrónico'**
+  String get profileDataEmailLabel;
+
+  /// Helper bajo el campo de correo deshabilitado — explica por qué no se edita (§030.1)
+  ///
+  /// In es, this message translates to:
+  /// **'El correo no se puede cambiar'**
+  String get profileDataEmailHelper;
+
+  /// Error inline del teléfono mal formado en Mis datos — copy accionable con la regla (§030.1, revisor-ui)
+  ///
+  /// In es, this message translates to:
+  /// **'Celular de 10 dígitos que inicia en 3'**
+  String get profileDataPhoneInvalid;
+
+  /// Toast tras guardar el form de datos personales (§030.1)
+  ///
+  /// In es, this message translates to:
+  /// **'Datos actualizados'**
+  String get profileDataSavedToast;
+
+  /// Fila del menú del perfil que empuja a /profile/password (§030.1)
+  ///
+  /// In es, this message translates to:
+  /// **'Cambiar contraseña'**
+  String get profilePasswordRow;
+
+  /// Título naciente (scrolling_title) del form de cambio de contraseña (§030.1)
+  ///
+  /// In es, this message translates to:
+  /// **'Cambiar contraseña'**
+  String get profilePasswordTitle;
+
+  /// Label del campo contraseña actual del form de cambio (§030.1)
+  ///
+  /// In es, this message translates to:
+  /// **'Contraseña actual *'**
+  String get profilePasswordCurrentLabel;
+
+  /// Hint del campo contraseña actual del form de cambio (§030.1)
+  ///
+  /// In es, this message translates to:
+  /// **'Escribe tu contraseña'**
+  String get profilePasswordCurrentHint;
+
+  /// Error inline de la contraseña actual vacía al guardar (§030.1)
+  ///
+  /// In es, this message translates to:
+  /// **'Ingresa tu contraseña actual'**
+  String get profilePasswordCurrentRequired;
+
+  /// Toast tras guardar la nueva contraseña (§030.1)
+  ///
+  /// In es, this message translates to:
+  /// **'Contraseña actualizada'**
+  String get profilePasswordSavedToast;
+
+  /// Fila del menú del perfil que empuja a /profile/store (§030.1)
+  ///
+  /// In es, this message translates to:
+  /// **'El local'**
+  String get profileStoreRow;
+
+  /// Título naciente (scrolling_title) de la pantalla de info del local (§030.1)
+  ///
+  /// In es, this message translates to:
+  /// **'El local'**
+  String get profileStoreTitle;
+
+  /// Mini-label sobre las 7 filas del horario semanal dentro de la card del local (§030.1)
+  ///
+  /// In es, this message translates to:
+  /// **'Horario'**
+  String get profileStoreHoursLabel;
+
+  /// Nombre del día dayOfWeek=0 del horario semanal del local (§030.1)
+  ///
+  /// In es, this message translates to:
+  /// **'Domingo'**
+  String get storeDaySunday;
+
+  /// Nombre del día dayOfWeek=1 del horario semanal del local (§030.1)
+  ///
+  /// In es, this message translates to:
+  /// **'Lunes'**
+  String get storeDayMonday;
+
+  /// Nombre del día dayOfWeek=2 del horario semanal del local (§030.1)
+  ///
+  /// In es, this message translates to:
+  /// **'Martes'**
+  String get storeDayTuesday;
+
+  /// Nombre del día dayOfWeek=3 del horario semanal del local (§030.1)
+  ///
+  /// In es, this message translates to:
+  /// **'Miércoles'**
+  String get storeDayWednesday;
+
+  /// Nombre del día dayOfWeek=4 del horario semanal del local (§030.1)
+  ///
+  /// In es, this message translates to:
+  /// **'Jueves'**
+  String get storeDayThursday;
+
+  /// Nombre del día dayOfWeek=5 del horario semanal del local (§030.1)
+  ///
+  /// In es, this message translates to:
+  /// **'Viernes'**
+  String get storeDayFriday;
+
+  /// Nombre del día dayOfWeek=6 del horario semanal del local (§030.1)
+  ///
+  /// In es, this message translates to:
+  /// **'Sábado'**
+  String get storeDaySaturday;
 }
 
 class _AppLocalizationsDelegate

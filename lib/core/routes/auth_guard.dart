@@ -18,6 +18,17 @@ class AuthGuard {
   // no entran a defaultPublicRoutes.
   static const String ordersRoute = '/orders';
   static const String profileRoute = '/profile';
+  // Direcciones del perfil (§030) — hijas de la rama profile dentro
+  // del shell. La edición viaja como SavedAddress en `extra`
+  // (patrón cart/edit).
+  static const String profileAddressesRoute = '/profile/addresses';
+  static const String profileAddressNewRoute = '/profile/addresses/new';
+  static const String profileAddressEditRoute = '/profile/addresses/edit';
+  // Ampliación §030.1 — datos personales, info del local y cambio de
+  // contraseña: hijas directas de la rama profile dentro del shell.
+  static const String profileDataRoute = '/profile/data';
+  static const String profileStoreRoute = '/profile/store';
+  static const String profilePasswordRoute = '/profile/password';
   // Carrito — hijo de la rama home (dentro del shell, §020).
   static const String cartRoute = '/home/cart';
   // Edición de la personalización de un ítem del carrito (§021) —

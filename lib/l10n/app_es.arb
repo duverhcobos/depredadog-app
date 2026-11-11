@@ -453,7 +453,7 @@
   "@checkoutLandmarkLabel": {
     "description": "Label del campo principal de la nueva ubicación — la zona no tiene direcciones, se guía por puntos de referencia (§022a)"
   },
-  "checkoutLandmarkHint": "Ej: casa blanca frente a la cancha",
+  "checkoutLandmarkHint": "Ej: casa blanca, reja negra",
   "@checkoutLandmarkHint": {
     "description": "Hint interior del punto de referencia"
   },
@@ -822,5 +822,292 @@
   "ordersCancelRejected": "Este pedido ya no se puede cancelar — el local ya lo tomó",
   "@ordersCancelRejected": {
     "description": "Toast cuando el backend rechaza la cancelación (409 — el pedido ya salió de pending; el mensaje del servidor viene en inglés y nunca se muestra)"
+  },
+  "profileTitle": "Perfil",
+  "@profileTitle": {
+    "description": "Título naciente (scrolling_title) del tab Perfil (§030)"
+  },
+  "profileAddressesRow": "Mis direcciones",
+  "@profileAddressesRow": {
+    "description": "Fila del menú del perfil que empuja a /profile/addresses (§030)"
+  },
+  "profileAddressesCount": "{count, plural, =0{Sin direcciones} =1{{count} guardada} other{{count} guardadas}}",
+  "@profileAddressesCount": {
+    "description": "Subtítulo de la fila 'Mis direcciones' — conteo de direcciones guardadas (§030)",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "profileReferralTitle": "Tu código para la manada",
+  "@profileReferralTitle": {
+    "description": "Label de la tarjeta del código de referido del perfil (§030)"
+  },
+  "profileCopyNumber": "Copiar número",
+  "@profileCopyNumber": {
+    "description": "Tooltip del botón copiar del número de soporte (§030)"
+  },
+  "profileCopyCode": "Copiar código",
+  "@profileCopyCode": {
+    "description": "Tooltip del botón copiar del código de referido (§030)"
+  },
+  "profileCopiedToast": "Código copiado",
+  "@profileCopiedToast": {
+    "description": "Toast tras copiar el código de referido al portapapeles (§030)"
+  },
+  "profileCopiedNumberToast": "Número copiado",
+  "@profileCopiedNumberToast": {
+    "description": "Toast tras copiar el número de WhatsApp de soporte al portapapeles (§030)"
+  },
+  "profileLogoutRow": "Cerrar sesión",
+  "@profileLogoutRow": {
+    "description": "Fila destructiva del menú del perfil — abre el diálogo de confirmación de logout (§030)"
+  },
+  "profileLogoutConfirmTitle": "¿Cerrar sesión?",
+  "@profileLogoutConfirmTitle": {
+    "description": "Título del diálogo de confirmación de cierre de sesión (§030)"
+  },
+  "profileLogoutConfirmBody": "Tendrás que iniciar sesión de nuevo para pedir.",
+  "@profileLogoutConfirmBody": {
+    "description": "Cuerpo del diálogo de confirmación de cierre de sesión (§030)"
+  },
+  "profileLogoutConfirmAction": "Cerrar sesión",
+  "@profileLogoutConfirmAction": {
+    "description": "Acción destructiva del diálogo — confirma el cierre de sesión (§030)"
+  },
+  "profileLogoutSoonToast": "Muy pronto podrás cerrar sesión",
+  "@profileLogoutSoonToast": {
+    "description": "Toast tras confirmar el cierre de sesión en fase mock — cierra el loop mientras llega POST /auth/logout (§030.1, revisor-ui)"
+  },
+  "profileCancelAction": "Cancelar",
+  "@profileCancelAction": {
+    "description": "Acción neutral de los diálogos del perfil — cierra sin hacer nada (§030)"
+  },
+  "profileSupportRow": "Soporte",
+  "@profileSupportRow": {
+    "description": "Fila del menú del perfil que abre el diálogo de soporte (§030)"
+  },
+  "supportDialogTitle": "Soporte",
+  "@supportDialogTitle": {
+    "description": "Título del diálogo de soporte con el WhatsApp del local (§030)"
+  },
+  "supportDialogBody": "Escríbenos al WhatsApp del local:",
+  "@supportDialogBody": {
+    "description": "Cuerpo del diálogo de soporte — antecede el número copiable (§030)"
+  },
+  "supportDialogClose": "Cerrar",
+  "@supportDialogClose": {
+    "description": "Acción del diálogo de soporte — cierra sin más (§030)"
+  },
+  "addressesTitle": "Mis direcciones",
+  "@addressesTitle": {
+    "description": "Título naciente (scrolling_title) de la pantalla de direcciones guardadas (§030)"
+  },
+  "addressDefaultBadge": "Predeterminada",
+  "@addressDefaultBadge": {
+    "description": "Badge mini de la dirección marcada como default (§030)"
+  },
+  "addressMakeDefault": "Marcar predeterminada",
+  "@addressMakeDefault": {
+    "description": "Opción del menú de la fila de dirección — PATCH {isDefault:true} (§030)"
+  },
+  "addressDelete": "Eliminar",
+  "@addressDelete": {
+    "description": "Opción destructiva del menú de la fila de dirección (§030)"
+  },
+  "addressDeleteConfirmTitle": "¿Eliminar esta dirección?",
+  "@addressDeleteConfirmTitle": {
+    "description": "Título del diálogo de confirmación de borrado de dirección (§030)"
+  },
+  "addressDeleteConfirmBody": "La quitarás de tus direcciones guardadas.",
+  "@addressDeleteConfirmBody": {
+    "description": "Cuerpo del diálogo de confirmación de borrado de dirección (§030)"
+  },
+  "addressDeleteConfirmAction": "Eliminar",
+  "@addressDeleteConfirmAction": {
+    "description": "Acción destructiva del diálogo — confirma el borrado (§030)"
+  },
+  "addressesEmpty": "Sin direcciones guardadas",
+  "@addressesEmpty": {
+    "description": "Título del estado vacío de la pantalla de direcciones (§030)"
+  },
+  "addressesEmptyHint": "La próxima vez que pidas a domicilio puedes guardar una.",
+  "@addressesEmptyHint": {
+    "description": "Subtítulo del estado vacío de direcciones (§030)"
+  },
+  "addressesNewCta": "Nueva dirección",
+  "@addressesNewCta": {
+    "description": "CTA al pie de la lista de direcciones — empuja al form de creación (§030)"
+  },
+  "addressesNewTitle": "Nueva dirección",
+  "@addressesNewTitle": {
+    "description": "Título naciente del form de dirección en modo crear (§030)"
+  },
+  "addressesEditTitle": "Editar dirección",
+  "@addressesEditTitle": {
+    "description": "Título naciente del form de dirección en modo editar (§030)"
+  },
+  "addressesLandmarkLabel": "Punto de referencia",
+  "@addressesLandmarkLabel": {
+    "description": "Label del campo punto de referencia del form de dirección — único requerido (§030)"
+  },
+  "addressesLandmarkRequired": "Cuéntanos el punto de referencia",
+  "@addressesLandmarkRequired": {
+    "description": "Error inline del punto de referencia vacío al guardar (§030)"
+  },
+  "addressesNeighborhoodLabel": "Barrio o sector (opcional)",
+  "@addressesNeighborhoodLabel": {
+    "description": "Label del campo barrio/sector del form de dirección — opcional (§030)"
+  },
+  "addressesLabelLabel": "Nombre de la dirección",
+  "@addressesLabelLabel": {
+    "description": "Label del campo nombre propio — visible solo cuando el tipo es 'Otro' (§030)"
+  },
+  "addressesLabelRequired": "Ponle un nombre",
+  "@addressesLabelRequired": {
+    "description": "Error inline del nombre vacío cuando el tipo es 'Otro' (§030)"
+  },
+  "addressFormSave": "Guardar",
+  "@addressFormSave": {
+    "description": "CTA del form de dirección — upsert sobre el cubit de la lista (§030)"
+  },
+  "profileSectionAccount": "Mi cuenta",
+  "@profileSectionAccount": {
+    "description": "Label de la sección del menú del perfil que agrupa los datos del cliente (§030.1)"
+  },
+  "profileSectionBusiness": "El negocio",
+  "@profileSectionBusiness": {
+    "description": "Label de la sección del menú del perfil que agrupa local + soporte (§030.1)"
+  },
+  "profileLoyaltyPoints": "{count, plural, =1{1 punto} other{{count} puntos}}",
+  "@profileLoyaltyPoints": {
+    "description": "Headline de puntos de la tarjeta de fidelidad del perfil (§030.1)",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "profileLoyaltyCopy": "Tu manada te premia",
+  "@profileLoyaltyCopy": {
+    "description": "Copy de voz bajo el headline de puntos de la tarjeta de fidelidad (§030.1)"
+  },
+  "profileLoyaltyReferred": "{count, plural, =0{Nadie se ha sumado todavía con tu código} =1{1 persona ya se sumó con tu código} other{{count} personas ya se sumaron con tu código}}",
+  "@profileLoyaltyReferred": {
+    "description": "Línea de referidos de la tarjeta de fidelidad — conteo de personas que entraron con el código (§030.1)",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "profileLoyaltyInfoTooltip": "Cómo funcionan los puntos",
+  "@profileLoyaltyInfoTooltip": {
+    "description": "Tooltip del ícono info (esquina sup. derecha) de la tarjeta de fidelidad (§030.1)"
+  },
+  "profileLoyaltyInfoTitle": "¿Cómo funciona la manada?",
+  "@profileLoyaltyInfoTitle": {
+    "description": "Título del diálogo que explica puntos y código de referidos (§030.1)"
+  },
+  "profileLoyaltyInfoPoints": "Acumulas puntos con cada pedido. Cuando tengas suficientes podrás canjearlos por premios del menú.",
+  "@profileLoyaltyInfoPoints": {
+    "description": "Párrafo de puntos del diálogo info de fidelidad — reglas genéricas en fase mock (§030.1)"
+  },
+  "profileLoyaltyInfoCode": "Comparte tu código con amigos — cuando hagan su primer pedido se suman a tu manada y tú ganas premios.",
+  "@profileLoyaltyInfoCode": {
+    "description": "Párrafo de referidos del diálogo info de fidelidad — reglas genéricas en fase mock (§030.1)"
+  },
+  "profileLoyaltyInfoClose": "Entendido",
+  "@profileLoyaltyInfoClose": {
+    "description": "Botón cerrar del diálogo info de fidelidad (§030.1)"
+  },
+  "profileDataRow": "Mis datos",
+  "@profileDataRow": {
+    "description": "Fila del menú del perfil que empuja a /profile/data (§030.1)"
+  },
+  "profileDataTitle": "Mis datos",
+  "@profileDataTitle": {
+    "description": "Título naciente (scrolling_title) del form de datos personales (§030.1)"
+  },
+  "profileDataEmailLabel": "Correo electrónico",
+  "@profileDataEmailLabel": {
+    "description": "Label del campo de correo del form de datos — visible pero read-only (§030.1)"
+  },
+  "profileDataEmailHelper": "El correo no se puede cambiar",
+  "@profileDataEmailHelper": {
+    "description": "Helper bajo el campo de correo deshabilitado — explica por qué no se edita (§030.1)"
+  },
+  "profileDataPhoneInvalid": "Celular de 10 dígitos que inicia en 3",
+  "@profileDataPhoneInvalid": {
+    "description": "Error inline del teléfono mal formado en Mis datos — copy accionable con la regla (§030.1, revisor-ui)"
+  },
+  "profileDataSavedToast": "Datos actualizados",
+  "@profileDataSavedToast": {
+    "description": "Toast tras guardar el form de datos personales (§030.1)"
+  },
+  "profilePasswordRow": "Cambiar contraseña",
+  "@profilePasswordRow": {
+    "description": "Fila del menú del perfil que empuja a /profile/password (§030.1)"
+  },
+  "profilePasswordTitle": "Cambiar contraseña",
+  "@profilePasswordTitle": {
+    "description": "Título naciente (scrolling_title) del form de cambio de contraseña (§030.1)"
+  },
+  "profilePasswordCurrentLabel": "Contraseña actual *",
+  "@profilePasswordCurrentLabel": {
+    "description": "Label del campo contraseña actual del form de cambio (§030.1)"
+  },
+  "profilePasswordCurrentHint": "Escribe tu contraseña",
+  "@profilePasswordCurrentHint": {
+    "description": "Hint del campo contraseña actual del form de cambio (§030.1)"
+  },
+  "profilePasswordCurrentRequired": "Ingresa tu contraseña actual",
+  "@profilePasswordCurrentRequired": {
+    "description": "Error inline de la contraseña actual vacía al guardar (§030.1)"
+  },
+  "profilePasswordSavedToast": "Contraseña actualizada",
+  "@profilePasswordSavedToast": {
+    "description": "Toast tras guardar la nueva contraseña (§030.1)"
+  },
+  "profileStoreRow": "El local",
+  "@profileStoreRow": {
+    "description": "Fila del menú del perfil que empuja a /profile/store (§030.1)"
+  },
+  "profileStoreTitle": "El local",
+  "@profileStoreTitle": {
+    "description": "Título naciente (scrolling_title) de la pantalla de info del local (§030.1)"
+  },
+  "profileStoreHoursLabel": "Horario",
+  "@profileStoreHoursLabel": {
+    "description": "Mini-label sobre las 7 filas del horario semanal dentro de la card del local (§030.1)"
+  },
+  "storeDaySunday": "Domingo",
+  "@storeDaySunday": {
+    "description": "Nombre del día dayOfWeek=0 del horario semanal del local (§030.1)"
+  },
+  "storeDayMonday": "Lunes",
+  "@storeDayMonday": {
+    "description": "Nombre del día dayOfWeek=1 del horario semanal del local (§030.1)"
+  },
+  "storeDayTuesday": "Martes",
+  "@storeDayTuesday": {
+    "description": "Nombre del día dayOfWeek=2 del horario semanal del local (§030.1)"
+  },
+  "storeDayWednesday": "Miércoles",
+  "@storeDayWednesday": {
+    "description": "Nombre del día dayOfWeek=3 del horario semanal del local (§030.1)"
+  },
+  "storeDayThursday": "Jueves",
+  "@storeDayThursday": {
+    "description": "Nombre del día dayOfWeek=4 del horario semanal del local (§030.1)"
+  },
+  "storeDayFriday": "Viernes",
+  "@storeDayFriday": {
+    "description": "Nombre del día dayOfWeek=5 del horario semanal del local (§030.1)"
+  },
+  "storeDaySaturday": "Sábado",
+  "@storeDaySaturday": {
+    "description": "Nombre del día dayOfWeek=6 del horario semanal del local (§030.1)"
   }
 }

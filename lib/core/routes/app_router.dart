@@ -1,4 +1,3 @@
-import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 
@@ -9,6 +8,7 @@ import '../../features/auth/presentation/screens/verify_email_screen.dart';
 import '../../features/cart/domain/entities/cart_item.dart';
 import '../../features/cart/presentation/cubit/cart_cubit.dart';
 import '../../features/cart/presentation/screens/cart_screen.dart';
+import '../../features/checkout/domain/entities/saved_address.dart';
 import '../../features/checkout/presentation/cubit/checkout_cubit.dart';
 import '../../features/checkout/presentation/screens/checkout_screen.dart';
 import '../../features/home/presentation/cubit/catalog_cubit.dart';
@@ -19,11 +19,18 @@ import '../../features/orders/domain/entities/customer_order.dart';
 import '../../features/orders/presentation/cubit/orders_cubit.dart';
 import '../../features/orders/presentation/screens/order_detail_screen.dart';
 import '../../features/orders/presentation/screens/orders_screen.dart';
+import '../../features/profile/presentation/cubit/profile_addresses_cubit.dart';
+import '../../features/profile/presentation/cubit/profile_cubit.dart';
+import '../../features/profile/presentation/cubit/profile_store_cubit.dart';
+import '../../features/profile/presentation/screens/address_form_screen.dart';
+import '../../features/profile/presentation/screens/profile_addresses_screen.dart';
+import '../../features/profile/presentation/screens/profile_data_screen.dart';
+import '../../features/profile/presentation/screens/profile_password_screen.dart';
+import '../../features/profile/presentation/screens/profile_screen.dart';
+import '../../features/profile/presentation/screens/profile_store_screen.dart';
 import '../../features/store/presentation/cubit/store_status_cubit.dart';
-import '../../l10n/app_localizations.dart';
 import '../di/setup_di.dart';
 import '../layout/app_shell_layout.dart';
-import '../screens/module_placeholder_screen.dart';
 import '../screens/splash_screen.dart';
 import 'auth_guard.dart';
 import 'custom_transitions.dart';
@@ -204,11 +211,105 @@ class AppRouter {
                 path: AuthGuard.profileRoute,
                 pageBuilder: (context, state) => CustomTransitions.fade(
                   state,
-                  ModulePlaceholderScreen(
-                    icon: Icons.person_rounded,
-                    moduleLabel: AppLocalizations.of(context)!.shellTabProfile,
+                  // §030 — singleton compartido con las hijas via
+                  // BlocProvider.value (patrón OrdersCubit §027):
+                  // las páginas hijas en go_router son HERMANAS de
+                  // la madre en el Navigator, no heredan su provider.
+                  BlocProvider.value(
+                    value: locator<ProfileCubit>(),
+                    // El subtítulo "N guardadas" lee esta MISMA
+                    // instancia — nunca diverge de la lista.
+                    child: BlocProvider.value(
+                      value: locator<ProfileAddressesCubit>(),
+                      child: const ProfileScreen(),
+                    ),
                   ),
                 ),
+                routes: [
+                  // Mis datos (§030.1) — form pre-llenado que escribe
+                  // con updateUser sobre el MISMO ProfileCubit
+                  // singleton del tab (la página hija es hermana en el
+                  // Navigator: BlocProvider.value como addresses).
+                  GoRoute(
+                    path: 'data',
+                    pageBuilder: (context, state) => CustomTransitions.slideUp(
+                      state,
+                      BlocProvider.value(
+                        value: locator<ProfileCubit>(),
+                        child: const ProfileDataScreen(),
+                      ),
+                    ),
+                  ),
+                  // El local (§030.1) — info + horario del negocio con
+                  // el mock del ProfileStoreCubit singleton; el chip
+                  // abierto/cerrado REAL lo lee del StoreStatusCubit
+                  // que ya vive a nivel shell.
+                  GoRoute(
+                    path: 'store',
+                    pageBuilder: (context, state) => CustomTransitions.slideUp(
+                      state,
+                      BlocProvider.value(
+                        value: locator<ProfileStoreCubit>(),
+                        child: const ProfileStoreScreen(),
+                      ),
+                    ),
+                  ),
+                  // Cambiar contraseña (§030.1) — form autónomo sin
+                  // cubit propio (mock de fase 1: valida y cierra).
+                  GoRoute(
+                    path: 'password',
+                    pageBuilder: (context, state) => CustomTransitions.slideUp(
+                      state,
+                      const ProfilePasswordScreen(),
+                    ),
+                  ),
+                  // Mis direcciones (§030) — gestión completa sobre
+                  // la MISMA instancia del cubit: el form de abajo
+                  // hace upsert sobre esta lista.
+                  GoRoute(
+                    path: 'addresses',
+                    pageBuilder: (context, state) => CustomTransitions.slideUp(
+                      state,
+                      BlocProvider.value(
+                        value: locator<ProfileAddressesCubit>(),
+                        child: const ProfileAddressesScreen(),
+                      ),
+                    ),
+                    routes: [
+                      GoRoute(
+                        path: 'new',
+                        pageBuilder: (context, state) =>
+                            CustomTransitions.slideUp(
+                              state,
+                              BlocProvider.value(
+                                value: locator<ProfileAddressesCubit>(),
+                                child: const AddressFormScreen(),
+                              ),
+                            ),
+                      ),
+                      // Edición — el SavedAddress viaja como extra
+                      // (patrón cart/edit). Sin extra válido (deep
+                      // link, estado restaurado) → a la lista.
+                      GoRoute(
+                        path: 'edit',
+                        redirect: (context, state) =>
+                            state.extra is SavedAddress
+                            ? null
+                            : AuthGuard.profileAddressesRoute,
+                        pageBuilder: (context, state) =>
+                            CustomTransitions.slideUp(
+                              state,
+                              BlocProvider.value(
+                                value: locator<ProfileAddressesCubit>(),
+                                child: AddressFormScreen(
+                                  editing: state.extra! as SavedAddress,
+                                ),
+                              ),
+                            ),
+                      ),
+                    ],
+                  ),
+                ],
               ),
             ],
           ),

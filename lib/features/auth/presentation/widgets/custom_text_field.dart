@@ -20,6 +20,7 @@ class CustomTextField extends StatelessWidget {
     this.autofillHints,
     this.errorText,
     this.helperText = ' ',
+    this.enabled = true,
     this.maxLength,
     this.inputFormatters,
     this.onChanged,
@@ -43,6 +44,10 @@ class CustomTextField extends StatelessWidget {
   /// reserva la línea de error para que mostrar `errorText` no re-fluya
   /// el formulario. Si hay error, Material pinta el error en su lugar.
   final String? helperText;
+
+  /// `false` → campo deshabilitado (gris M3) — para datos visibles que
+  /// no se editan (ej. el correo del form "Mis datos", §030.1).
+  final bool enabled;
   final int? maxLength;
   final List<TextInputFormatter>? inputFormatters;
   final ValueChanged<String>? onChanged;
@@ -57,7 +62,9 @@ class CustomTextField extends StatelessWidget {
         Text(
           label,
           style: theme.textTheme.labelLarge?.copyWith(
-            color: theme.colorScheme.onSurface,
+            color: enabled
+                ? theme.colorScheme.onSurface
+                : theme.colorScheme.onSurfaceVariant,
             fontWeight: FontWeight.w600,
           ),
         ),
@@ -65,6 +72,7 @@ class CustomTextField extends StatelessWidget {
         TextFormField(
           controller: controller,
           focusNode: focusNode,
+          enabled: enabled,
           obscureText: obscureText,
           keyboardType: keyboardType,
           textCapitalization: textCapitalization,

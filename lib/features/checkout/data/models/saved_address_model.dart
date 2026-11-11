@@ -10,6 +10,7 @@ class SavedAddressModel extends SavedAddress {
     required super.landmark,
     super.neighborhood,
     super.type,
+    super.isDefault,
   });
 
   factory SavedAddressModel.fromJson(Map<String, dynamic> json) {
@@ -19,6 +20,10 @@ class SavedAddressModel extends SavedAddress {
       landmark: json['landmark'] as String,
       neighborhood: (json['neighborhood'] as String?) ?? '',
       type: _typeFromString(json['type'] as String?),
+      // §030 — el recurso ya trae el flag; el checkout lo ignora y
+      // profile lo necesita para el badge "Predeterminada". Aditivo:
+      // ausente → false (dirección no-default).
+      isDefault: (json['isDefault'] as bool?) ?? false,
     );
   }
 

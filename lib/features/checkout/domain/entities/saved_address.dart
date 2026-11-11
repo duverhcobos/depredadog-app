@@ -20,6 +20,7 @@ class SavedAddress extends Equatable {
     required this.landmark,
     this.neighborhood = '',
     this.type = SavedAddressType.other,
+    this.isDefault = false,
   });
 
   final String id;
@@ -36,11 +37,41 @@ class SavedAddress extends Equatable {
 
   final SavedAddressType type;
 
+  /// Marca del backend — exclusiva por usuario (una sola por índice
+  /// parcial). El checkout no la usa; profile la muestra como badge
+  /// "Predeterminada" y la cambia con PATCH {isDefault:true} (§030).
+  final bool isDefault;
+
   /// Línea de detalle bajo el label en la fila del checkout — sector
   /// solo cuando existe (es opcional, §022a).
   String get detail =>
       neighborhood.isEmpty ? landmark : '$landmark · $neighborhood';
 
+  SavedAddress copyWith({
+    String? id,
+    String? label,
+    String? landmark,
+    String? neighborhood,
+    SavedAddressType? type,
+    bool? isDefault,
+  }) {
+    return SavedAddress(
+      id: id ?? this.id,
+      label: label ?? this.label,
+      landmark: landmark ?? this.landmark,
+      neighborhood: neighborhood ?? this.neighborhood,
+      type: type ?? this.type,
+      isDefault: isDefault ?? this.isDefault,
+    );
+  }
+
   @override
-  List<Object?> get props => [id, label, landmark, neighborhood, type];
+  List<Object?> get props => [
+    id,
+    label,
+    landmark,
+    neighborhood,
+    type,
+    isDefault,
+  ];
 }

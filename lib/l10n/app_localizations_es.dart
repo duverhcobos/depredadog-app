@@ -605,7 +605,7 @@ class AppLocalizationsEs extends AppLocalizations {
   String get checkoutLandmarkLabel => 'Punto de referencia *';
 
   @override
-  String get checkoutLandmarkHint => 'Ej: casa blanca frente a la cancha';
+  String get checkoutLandmarkHint => 'Ej: casa blanca, reja negra';
 
   @override
   String get checkoutLandmarkRequired => 'Ingresa el punto de referencia';
@@ -891,4 +891,239 @@ class AppLocalizationsEs extends AppLocalizations {
   @override
   String get ordersCancelRejected =>
       'Este pedido ya no se puede cancelar — el local ya lo tomó';
+
+  @override
+  String get profileTitle => 'Perfil';
+
+  @override
+  String get profileAddressesRow => 'Mis direcciones';
+
+  @override
+  String profileAddressesCount(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count guardadas',
+      one: '$count guardada',
+      zero: 'Sin direcciones',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get profileReferralTitle => 'Tu código para la manada';
+
+  @override
+  String get profileCopyNumber => 'Copiar número';
+
+  @override
+  String get profileCopyCode => 'Copiar código';
+
+  @override
+  String get profileCopiedToast => 'Código copiado';
+
+  @override
+  String get profileCopiedNumberToast => 'Número copiado';
+
+  @override
+  String get profileLogoutRow => 'Cerrar sesión';
+
+  @override
+  String get profileLogoutConfirmTitle => '¿Cerrar sesión?';
+
+  @override
+  String get profileLogoutConfirmBody =>
+      'Tendrás que iniciar sesión de nuevo para pedir.';
+
+  @override
+  String get profileLogoutConfirmAction => 'Cerrar sesión';
+
+  @override
+  String get profileLogoutSoonToast => 'Muy pronto podrás cerrar sesión';
+
+  @override
+  String get profileCancelAction => 'Cancelar';
+
+  @override
+  String get profileSupportRow => 'Soporte';
+
+  @override
+  String get supportDialogTitle => 'Soporte';
+
+  @override
+  String get supportDialogBody => 'Escríbenos al WhatsApp del local:';
+
+  @override
+  String get supportDialogClose => 'Cerrar';
+
+  @override
+  String get addressesTitle => 'Mis direcciones';
+
+  @override
+  String get addressDefaultBadge => 'Predeterminada';
+
+  @override
+  String get addressMakeDefault => 'Marcar predeterminada';
+
+  @override
+  String get addressDelete => 'Eliminar';
+
+  @override
+  String get addressDeleteConfirmTitle => '¿Eliminar esta dirección?';
+
+  @override
+  String get addressDeleteConfirmBody =>
+      'La quitarás de tus direcciones guardadas.';
+
+  @override
+  String get addressDeleteConfirmAction => 'Eliminar';
+
+  @override
+  String get addressesEmpty => 'Sin direcciones guardadas';
+
+  @override
+  String get addressesEmptyHint =>
+      'La próxima vez que pidas a domicilio puedes guardar una.';
+
+  @override
+  String get addressesNewCta => 'Nueva dirección';
+
+  @override
+  String get addressesNewTitle => 'Nueva dirección';
+
+  @override
+  String get addressesEditTitle => 'Editar dirección';
+
+  @override
+  String get addressesLandmarkLabel => 'Punto de referencia';
+
+  @override
+  String get addressesLandmarkRequired => 'Cuéntanos el punto de referencia';
+
+  @override
+  String get addressesNeighborhoodLabel => 'Barrio o sector (opcional)';
+
+  @override
+  String get addressesLabelLabel => 'Nombre de la dirección';
+
+  @override
+  String get addressesLabelRequired => 'Ponle un nombre';
+
+  @override
+  String get addressFormSave => 'Guardar';
+
+  @override
+  String get profileSectionAccount => 'Mi cuenta';
+
+  @override
+  String get profileSectionBusiness => 'El negocio';
+
+  @override
+  String profileLoyaltyPoints(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count puntos',
+      one: '1 punto',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get profileLoyaltyCopy => 'Tu manada te premia';
+
+  @override
+  String profileLoyaltyReferred(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count personas ya se sumaron con tu código',
+      one: '1 persona ya se sumó con tu código',
+      zero: 'Nadie se ha sumado todavía con tu código',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get profileLoyaltyInfoTooltip => 'Cómo funcionan los puntos';
+
+  @override
+  String get profileLoyaltyInfoTitle => '¿Cómo funciona la manada?';
+
+  @override
+  String get profileLoyaltyInfoPoints =>
+      'Acumulas puntos con cada pedido. Cuando tengas suficientes podrás canjearlos por premios del menú.';
+
+  @override
+  String get profileLoyaltyInfoCode =>
+      'Comparte tu código con amigos — cuando hagan su primer pedido se suman a tu manada y tú ganas premios.';
+
+  @override
+  String get profileLoyaltyInfoClose => 'Entendido';
+
+  @override
+  String get profileDataRow => 'Mis datos';
+
+  @override
+  String get profileDataTitle => 'Mis datos';
+
+  @override
+  String get profileDataEmailLabel => 'Correo electrónico';
+
+  @override
+  String get profileDataEmailHelper => 'El correo no se puede cambiar';
+
+  @override
+  String get profileDataPhoneInvalid => 'Celular de 10 dígitos que inicia en 3';
+
+  @override
+  String get profileDataSavedToast => 'Datos actualizados';
+
+  @override
+  String get profilePasswordRow => 'Cambiar contraseña';
+
+  @override
+  String get profilePasswordTitle => 'Cambiar contraseña';
+
+  @override
+  String get profilePasswordCurrentLabel => 'Contraseña actual *';
+
+  @override
+  String get profilePasswordCurrentHint => 'Escribe tu contraseña';
+
+  @override
+  String get profilePasswordCurrentRequired => 'Ingresa tu contraseña actual';
+
+  @override
+  String get profilePasswordSavedToast => 'Contraseña actualizada';
+
+  @override
+  String get profileStoreRow => 'El local';
+
+  @override
+  String get profileStoreTitle => 'El local';
+
+  @override
+  String get profileStoreHoursLabel => 'Horario';
+
+  @override
+  String get storeDaySunday => 'Domingo';
+
+  @override
+  String get storeDayMonday => 'Lunes';
+
+  @override
+  String get storeDayTuesday => 'Martes';
+
+  @override
+  String get storeDayWednesday => 'Miércoles';
+
+  @override
+  String get storeDayThursday => 'Jueves';
+
+  @override
+  String get storeDayFriday => 'Viernes';
+
+  @override
+  String get storeDaySaturday => 'Sábado';
 }

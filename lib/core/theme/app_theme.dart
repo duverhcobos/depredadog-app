@@ -67,13 +67,14 @@ class AppTheme {
   );
 
   static ThemeData _base(ColorScheme scheme, {Color? scaffold}) {
+    final textTheme = _displaySlots(
+      ThemeData(brightness: scheme.brightness).textTheme,
+    );
     return ThemeData(
       useMaterial3: true,
       colorScheme: scheme,
       scaffoldBackgroundColor: scaffold ?? scheme.surface,
-      textTheme: _displaySlots(
-        ThemeData(brightness: scheme.brightness).textTheme,
-      ),
+      textTheme: textTheme,
       elevatedButtonTheme: ElevatedButtonThemeData(
         style: ElevatedButton.styleFrom(
           minimumSize: const Size.fromHeight(52),
@@ -113,6 +114,12 @@ class AppTheme {
         contentPadding: const EdgeInsets.symmetric(
           horizontal: 16,
           vertical: 14,
+        ),
+        // Hint a 14 (bodyMedium) — a 16 competía con el label y con el
+        // texto real; el color tenue se fija porque bodyMedium traería
+        // el suyo y lo pintaría como texto escrito (decisión usuario).
+        hintStyle: textTheme.bodyMedium?.copyWith(
+          color: scheme.onSurfaceVariant,
         ),
       ),
       snackBarTheme: const SnackBarThemeData(

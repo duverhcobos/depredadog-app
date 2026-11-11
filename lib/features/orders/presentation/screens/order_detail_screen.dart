@@ -12,6 +12,7 @@ import '../../domain/failures/orders_failure.dart';
 import '../cubit/orders_cubit.dart';
 import '../cubit/orders_state.dart';
 import '../utils/format_order_date.dart';
+import '../utils/format_phone.dart';
 import '../widgets/order_cancel_dialog.dart';
 import '../widgets/order_item_detail_panel.dart';
 import '../widgets/order_status_chip.dart';
@@ -450,12 +451,6 @@ class _Totals extends StatelessWidget {
   );
 }
 
-/// Display `3XX XXX XXXX` del celular de contacto (§024) — máscara
-/// simple; cualquier otro largo se muestra tal cual.
-String _formatPhone(String p) => p.length == 10
-    ? '${p.substring(0, 3)} ${p.substring(3, 6)} ${p.substring(6)}'
-    : p;
-
 /// Bloque "Entrega y pago" del detalle: servicio + referencia completa
 /// (etiqueta / punto de referencia / barrio / pin / celular de quién
 /// recibe §024) o local, y método + estado de pago.
@@ -536,7 +531,7 @@ class _DeliveryDetail extends StatelessWidget {
                     Icon(Icons.phone_rounded, size: 16, color: muted),
                     const SizedBox(width: 8),
                     Text(
-                      l10n.orderContactPhone(_formatPhone(order.contactPhone!)),
+                      l10n.orderContactPhone(formatPhone(order.contactPhone!)),
                       style: text.bodyMedium?.copyWith(color: muted),
                     ),
                   ],

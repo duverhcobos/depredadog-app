@@ -47,6 +47,9 @@ import '../../features/orders/domain/use_cases/get_order_detail_use_case.dart';
 import '../../features/orders/domain/use_cases/load_more_history_use_case.dart';
 import '../../features/orders/domain/use_cases/load_orders_use_case.dart';
 import '../../features/orders/presentation/cubit/orders_cubit.dart';
+import '../../features/profile/presentation/cubit/profile_addresses_cubit.dart';
+import '../../features/profile/presentation/cubit/profile_cubit.dart';
+import '../../features/profile/presentation/cubit/profile_store_cubit.dart';
 import '../../features/store/data/datasources/implementations/store_remote_datasource_impl.dart';
 import '../../features/store/data/datasources/interfaces/i_store_remote_datasource.dart';
 import '../../features/store/data/repositories/store_repository_impl.dart';
@@ -283,6 +286,21 @@ void setupDI() {
       cancelOrderUseCase: locator<CancelOrderUseCase>(),
     ),
   );
+
+  // --- Perfil (§030, solo presentación): singletons como OrdersCubit
+  // — el tab y sus hijas (/profile/addresses, .../new, .../edit) son
+  // páginas HERMANAS en go_router y comparten la misma instancia por
+  // BlocProvider.value; el upsert del form escribe sobre la lista que
+  // queda debajo. Fase 1: constructores vacíos con mocks — fase 2
+  // inyecta use-cases y el refresh al entrar lo gatilla el
+  // pageBuilder como hace orders.
+  locator.registerLazySingleton<ProfileCubit>(() => ProfileCubit());
+  locator.registerLazySingleton<ProfileAddressesCubit>(
+    () => ProfileAddressesCubit(),
+  );
+  // §030.1 — datos del local para "El local": mismo patrón singleton
+  // (la pantalla hija lo recibe por BlocProvider.value).
+  locator.registerLazySingleton<ProfileStoreCubit>(() => ProfileStoreCubit());
 
   // --- Use Cases (auth) ---
   locator.registerLazySingleton<LoginUseCase>(
