@@ -215,7 +215,7 @@ class _GuestProfile extends StatelessWidget {
                     // Misma variante rounded que el ícono del tab
                     // Perfil en la nav (revisor-ui §031).
                     icon: Icons.person_outline_rounded,
-                    iconSize: 64,
+                    tileSize: 80,
                     title: l10n.guestProfileTitle,
                     message: l10n.guestProfileBody,
                     fromRoute: AuthGuard.profileRoute,

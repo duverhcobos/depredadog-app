@@ -20,8 +20,12 @@ class AppShellLayout extends StatelessWidget {
     final l10n = AppLocalizations.of(context)!;
     return PopScope(
       // Back nativo = convención de apps con tabs (decisión del usuario):
-      // fuera de Inicio vuelve al tab Inicio; en Inicio sale de la app.
-      canPop: shell.currentIndex == 0,
+      // con una hija apilada sobre el branch (El local, carrito…)
+      // el back hace POP de esa hija primero — el salto al tab
+      // Inicio solo aplica en la raíz del tab. Sin context.canPop()
+      // el scope se tragaba el pop y /profile/store no podía
+      // regresar (bug reportado por el usuario, §031b).
+      canPop: shell.currentIndex == 0 || context.canPop(),
       onPopInvokedWithResult: (didPop, result) {
         if (!didPop) shell.goBranch(0);
       },

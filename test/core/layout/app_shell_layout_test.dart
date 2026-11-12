@@ -94,6 +94,15 @@ void main() {
                     icon: Icons.person_rounded,
                     moduleLabel: AppLocalizations.of(context)!.shellTabProfile,
                   ),
+                  routes: [
+                    // Hija pública (El local, §031b) — cubre el bug del
+                    // PopScope del shell que se tragaba su back nativo.
+                    GoRoute(
+                      path: 'store',
+                      builder: (context, state) =>
+                          const Scaffold(body: Text('STORE_PAGE')),
+                    ),
+                  ],
                 ),
               ],
             ),
@@ -311,5 +320,79 @@ void main() {
     expect(find.byType(StoreStatusChip), findsNothing);
     expect(find.text('Abierto'), findsNothing);
     expect(find.text('Cerrado'), findsNothing);
+  });
+
+  testWidgets('back nativo con hija apilada en el branch hace POP — no salta a '
+      'Inicio (§031b — bug reportado por el usuario: El local no regresaba)', (
+    tester,
+  ) async {
+    // Router retenido para poder hacer push de la hija pública.
+    final router = buildShellRouter();
+    await tester.pumpWidget(
+      MultiBlocProvider(
+        providers: [
+          BlocProvider<CartCubit>.value(value: cartCubit),
+          BlocProvider<StoreStatusCubit>.value(value: storeCubit),
+        ],
+        child: MaterialApp.router(
+          theme: AppTheme.dark(),
+          routerConfig: router,
+          localizationsDelegates: const [
+            AppLocalizations.delegate,
+            GlobalMaterialLocalizations.delegate,
+            GlobalWidgetsLocalizations.delegate,
+            GlobalCupertinoLocalizations.delegate,
+          ],
+          supportedLocales: AppLocalizations.supportedLocales,
+          locale: const Locale('es'),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    // Al tab Perfil y push de su hija pública /profile/store.
+    await tester.tap(find.text('Perfil'));
+    await tester.pumpAndSettle();
+    router.push('${AuthGuard.profileRoute}/store');
+    await tester.pumpAndSettle();
+    expect(find.text('STORE_PAGE'), findsOneWidget);
+
+    // Back del sistema (handlePopRoute = lo que llega del botón
+    // físico/gesto de Android): debe POPPEAR la hija y quedarse en
+    // el branch Perfil — con el bug el PopScope bloqueaba el pop y
+    // goBranch(0) cambiaba de tab por debajo.
+    await tester.binding.handlePopRoute();
+    await tester.pumpAndSettle();
+
+    expect(find.text('STORE_PAGE'), findsNothing);
+    // Sigue visible el placeholder del branch Perfil (su raíz),
+    // no el placeholder de Inicio.
+    expect(
+      find.descendant(
+        of: find.byType(ModulePlaceholderScreen),
+        matching: find.text('Perfil'),
+      ),
+      findsOneWidget,
+    );
+    expect(
+      tester.widget<NavigationBar>(find.byType(NavigationBar)).selectedIndex,
+      2,
+    );
+
+    // Segundo back en la RAÍZ del tab (sin hija): ahí sí aplica la
+    // convención de la casa → salta al tab Inicio.
+    await tester.binding.handlePopRoute();
+    await tester.pumpAndSettle();
+    expect(
+      find.descendant(
+        of: find.byType(ModulePlaceholderScreen),
+        matching: find.text('Inicio'),
+      ),
+      findsOneWidget,
+    );
+    expect(
+      tester.widget<NavigationBar>(find.byType(NavigationBar)).selectedIndex,
+      0,
+    );
   });
 }

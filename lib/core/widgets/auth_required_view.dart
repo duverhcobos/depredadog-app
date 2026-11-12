@@ -7,8 +7,13 @@ import '../routes/auth_guard.dart';
 /// Muro de auth compartido (§031 — auth por demanda): lo que ve el
 /// invitado donde hace falta cuenta. Familia de las pantallas de
 /// estado de la casa (module_placeholder / catalog_states): ícono
-/// 80px primary + título titleMedium + subtítulo bodyMedium α0.7
-/// centrado + CTA primario a login + link a registro.
+/// de la sección en tile primaryContainer redondeado (la geometría
+/// de las filas del perfil: tile 100% / glifo 50% / radio 25% —
+/// decisión del usuario tras el DIRECCION del revisor-estetico:
+/// el ícono Material pelado era la superficie más plantilla que
+/// le quedaba a la app) + título titleMedium + subtítulo
+/// bodyMedium α0.7 centrado + CTA primario a login + link a
+/// registro.
 ///
 /// `fromRoute` viaja en el `?from=` del login/register — el éxito
 /// devuelve al usuario al punto donde se pidió la sesión.
@@ -22,7 +27,7 @@ class AuthRequiredView extends StatelessWidget {
     required this.title,
     required this.message,
     required this.fromRoute,
-    this.iconSize = 80,
+    this.tileSize = 96,
     super.key,
   });
 
@@ -38,10 +43,10 @@ class AuthRequiredView extends StatelessWidget {
   /// Ruta donde se pidió la sesión — viaja como `?from=` (encodeado).
   final String fromRoute;
 
-  /// Tamaño del ícono — 80 es canon de pantalla de estado; en una
-  /// card acotada (Perfil invitado) 64 respira mejor (revisor-
-  /// estetico §031).
-  final double iconSize;
+  /// Lado del tile que contiene al ícono — 96 es canon de
+  /// pantalla de estado; en una card acotada (Perfil invitado)
+  /// 80 respira mejor (revisor-estetico §031).
+  final double tileSize;
 
   @override
   Widget build(BuildContext context) {
@@ -52,7 +57,21 @@ class AuthRequiredView extends StatelessWidget {
     return Column(
       mainAxisSize: MainAxisSize.min,
       children: [
-        Icon(icon, size: iconSize, color: colors.primary),
+        // Tile de la casa (misma geometría que profile_menu_row):
+        // primaryContainer + glifo al 50% + radio al 25%.
+        Container(
+          width: tileSize,
+          height: tileSize,
+          decoration: BoxDecoration(
+            color: colors.primaryContainer,
+            borderRadius: BorderRadius.circular(tileSize * 0.25),
+          ),
+          child: Icon(
+            icon,
+            size: tileSize * 0.5,
+            color: colors.onPrimaryContainer,
+          ),
+        ),
         const SizedBox(height: 16),
         Text(title, textAlign: TextAlign.center, style: text.titleMedium),
         const SizedBox(height: 4),
