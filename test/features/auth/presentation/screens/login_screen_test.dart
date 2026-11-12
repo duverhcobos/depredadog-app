@@ -212,6 +212,64 @@ void main() {
     ).called(1);
   });
 
+  testWidgets('éxito con ?from= → navega a la ruta pedida (§031 — '
+      'retorno post-login a donde estaba)', (tester) async {
+    when(
+      () => loginUseCase(
+        email: any(named: 'email'),
+        password: any(named: 'password'),
+      ),
+    ).thenAnswer((_) async => const Right(user));
+
+    // Login abierto desde un muro/checkout: llega con ?from=/orders.
+    final router = GoRouter(
+      initialLocation:
+          '/login?from=${Uri.encodeComponent(AuthGuard.ordersRoute)}',
+      routes: [
+        GoRoute(
+          path: AuthGuard.loginRoute,
+          builder: (context, state) => const LoginScreen(),
+        ),
+        GoRoute(
+          path: AuthGuard.ordersRoute,
+          builder: (context, state) =>
+              const Scaffold(body: Text('PANTALLA PEDIDOS')),
+        ),
+        GoRoute(
+          path: AuthGuard.homeRoute,
+          builder: (context, state) =>
+              const Scaffold(body: Text('PANTALLA HOME')),
+        ),
+      ],
+    );
+    await tester.pumpWidget(
+      MaterialApp.router(
+        theme: AppTheme.dark(),
+        routerConfig: router,
+        localizationsDelegates: const [
+          AppLocalizations.delegate,
+          GlobalMaterialLocalizations.delegate,
+          GlobalWidgetsLocalizations.delegate,
+          GlobalCupertinoLocalizations.delegate,
+        ],
+        supportedLocales: AppLocalizations.supportedLocales,
+        locale: const Locale('es'),
+      ),
+    );
+
+    await tester.enterText(
+      find.widgetWithText(TextFormField, 'nombre@ejemplo.com'),
+      'test@depredadog.com',
+    );
+    await tester.enterText(find.byType(TextFormField).at(1), 'secreto1');
+    await tester.tap(find.text('Iniciar sesión'));
+    await tester.pumpAndSettle();
+
+    // El éxito devuelve al ?from=, no al home.
+    expect(find.text('PANTALLA PEDIDOS'), findsOneWidget);
+    expect(find.text('PANTALLA HOME'), findsNothing);
+  });
+
   testWidgets(
     'email no verificado → descarta autofill y navega a /verify-email',
     (tester) async {
@@ -289,4 +347,71 @@ void main() {
       );
     },
   );
+
+  group('flecha de salida (§031 — el login llega por push/redirect)', () {
+    GoRouter buildRouter() => GoRouter(
+      initialLocation: AuthGuard.loginRoute,
+      routes: [
+        GoRoute(
+          path: AuthGuard.homeRoute,
+          builder: (context, state) =>
+              const Scaffold(body: Text('PANTALLA HOME')),
+        ),
+        GoRoute(
+          path: AuthGuard.loginRoute,
+          builder: (context, state) => const LoginScreen(),
+        ),
+      ],
+    );
+
+    Future<void> pumpRouter(WidgetTester tester, GoRouter router) =>
+        tester.pumpWidget(
+          MaterialApp.router(
+            theme: AppTheme.dark(),
+            routerConfig: router,
+            localizationsDelegates: const [
+              AppLocalizations.delegate,
+              GlobalMaterialLocalizations.delegate,
+              GlobalWidgetsLocalizations.delegate,
+              GlobalCupertinoLocalizations.delegate,
+            ],
+            supportedLocales: AppLocalizations.supportedLocales,
+            locale: const Locale('es'),
+          ),
+        );
+
+    testWidgets('pusheado sobre un tab → la flecha hace pop al origen', (
+      tester,
+    ) async {
+      final router = buildRouter();
+      await pumpRouter(tester, router);
+      router.go(AuthGuard.homeRoute);
+      await tester.pumpAndSettle();
+      expect(find.text('PANTALLA HOME'), findsOneWidget);
+
+      // El muro/menú abre el login por push — hay stack que devolver.
+      router.push(AuthGuard.loginRoute);
+      await tester.pumpAndSettle();
+      expect(find.text('VUELVE A LA MANADA'), findsOneWidget);
+
+      await tester.tap(find.byIcon(Icons.arrow_back));
+      await tester.pumpAndSettle();
+
+      expect(find.text('PANTALLA HOME'), findsOneWidget);
+    });
+
+    testWidgets('como raíz (redirect del guard) → la flecha va a /home', (
+      tester,
+    ) async {
+      final router = buildRouter();
+      await pumpRouter(tester, router);
+      await tester.pumpAndSettle();
+      expect(find.text('VUELVE A LA MANADA'), findsOneWidget);
+
+      await tester.tap(find.byIcon(Icons.arrow_back));
+      await tester.pumpAndSettle();
+
+      expect(find.text('PANTALLA HOME'), findsOneWidget);
+    });
+  });
 }

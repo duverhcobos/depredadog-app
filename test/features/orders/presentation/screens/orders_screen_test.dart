@@ -1,11 +1,16 @@
+import 'dart:async';
+
 import 'package:dartz/dartz.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:get_it/get_it.dart';
 import 'package:go_router/go_router.dart';
 import 'package:mocktail/mocktail.dart';
+import 'package:depredadog_app/core/auth/auth_session.dart';
 import 'package:depredadog_app/core/theme/app_theme.dart';
+import 'package:depredadog_app/features/auth/domain/entities/user.dart';
 import 'package:depredadog_app/features/cart/domain/entities/cart_modifier.dart';
 import 'package:depredadog_app/features/orders/domain/entities/customer_order.dart';
 import 'package:depredadog_app/features/orders/domain/failures/orders_failure.dart';
@@ -275,13 +280,24 @@ final _history = <CustomerOrder>[
 ];
 
 void main() {
+  final locator = GetIt.instance;
   late MockLoadOrders loadOrders;
   late MockLoadMoreHistory loadMore;
   late MockGetOrderDetail getDetail;
   late MockCancelOrder cancelOrder;
   late OrdersDataResult loadResult;
   late OrdersCubit ordersCubit;
+  late AuthSession authSession;
   late GoRouter router;
+
+  const user = User(
+    id: 'u1',
+    email: 'test@depredadog.com',
+    firstName: 'Test',
+    firstLastName: 'User',
+    role: 'customer',
+    status: 'active',
+  );
 
   OrdersCubit buildCubit() => OrdersCubit(
     loadOrdersUseCase: loadOrders,
@@ -290,9 +306,17 @@ void main() {
     cancelOrderUseCase: cancelOrder,
   );
 
+  /// §031 — la pantalla resuelve AuthSession y OrdersCubit por
+  /// locator (el cubit solo en la rama autenticada). Tras un
+  /// locator.reset() hay que re-registrar el par.
+  void registerDeps() {
+    locator.registerSingleton<AuthSession>(authSession);
+    locator.registerSingleton<OrdersCubit>(ordersCubit);
+  }
+
   /// GoRouter mínimo (harness): /orders con la hija real :id
-  /// (extra = CustomerOrder, igual que app_router) + stub /home para
-  /// el CTA del estado vacío.
+  /// (extra = CustomerOrder, igual que app_router) + stubs /home,
+  /// /login y /register para los CTAs del muro y del vacío.
   GoRouter buildRouter() => GoRouter(
     initialLocation: '/orders',
     routes: [
@@ -310,6 +334,20 @@ void main() {
       GoRoute(
         path: '/home',
         builder: (_, _) => const Scaffold(body: Text('Inicio')),
+      ),
+      // Los stubs renderizan el ?from= ya DECODIFICADO — el assert
+      // verifica navegación y parámetro de una sola vez (§031).
+      GoRoute(
+        path: '/login',
+        builder: (_, state) => Scaffold(
+          body: Text('PANTALLA LOGIN ${state.uri.queryParameters['from']}'),
+        ),
+      ),
+      GoRoute(
+        path: '/register',
+        builder: (_, state) => Scaffold(
+          body: Text('PANTALLA REGISTRO ${state.uri.queryParameters['from']}'),
+        ),
       ),
     ],
   );
@@ -342,12 +380,17 @@ void main() {
     // §027 — la carga real corre en el pageBuilder del router; el
     // harness la gatilla igual que la app (datos antes de pintar).
     await ordersCubit.loadOrders();
+    // §031 — sesión real marcada por default (los tests históricos
+    // son todos con sesión); el invitado sale con markLoggedOut().
+    authSession = AuthSession()..markAuthenticated(user);
+    registerDeps();
     router = buildRouter();
   });
 
-  tearDown(() {
+  tearDown(() async {
     ordersCubit.close();
     router.dispose();
+    await locator.reset();
   });
 
   /// Harness: cubit REAL con use-cases mockeados (§027 — síncronos
@@ -482,10 +525,17 @@ void main() {
   group('carga real (§027)', () {
     testWidgets('loading inicial → spinner tras el título hasta que '
         'loadOrders resuelve', (tester) async {
-      // Cubit recién nacido: dataLoading arranca en true (no se ha
-      // llamado loadOrders todavía).
+      // Cubit recién nacido: dataLoading arranca en true. §031 — la
+      // rama autenticada dispara el load AL MONTARSE, así que hay que
+      // re-registrar la instancia nueva y mantener la respuesta en
+      // vuelo con un Completer (determinístico, sin carrera de pump).
       await ordersCubit.close();
       ordersCubit = buildCubit();
+      await locator.reset();
+      registerDeps();
+      final pending = Completer<OrdersDataResult>();
+      when(() => loadOrders.call()).thenAnswer((_) => pending.future);
+
       await pumpOrders(tester);
       await tester.pump();
 
@@ -493,7 +543,7 @@ void main() {
       expect(find.byType(CircularProgressIndicator), findsOneWidget);
       expect(find.byType(ActiveOrderCard), findsNothing);
 
-      await ordersCubit.loadOrders();
+      pending.complete(loadResult);
       await tester.pumpAndSettle();
       expect(find.byType(CircularProgressIndicator), findsNothing);
       expect(find.text('En la plancha'), findsOneWidget);
@@ -551,10 +601,12 @@ void main() {
       await tester.fling(find.byType(ListView), const Offset(0, 400), 1000);
       await tester.pumpAndSettle();
 
-      // called(2) = la carga del setUp + la del pull. Un verify
-      // intermedio consumiría la invocación y la cuenta quedaría
-      // en 1 aunque el refresh sí haya disparado loadOrders.
-      verify(() => loadOrders.call()).called(2);
+      // called(3) = la carga del setUp + la del initState de la rama
+      // autenticada al montar (§031 — la pantalla dispara su propio
+      // load) + la del pull. Un verify intermedio consumiría la
+      // invocación y la cuenta quedaría corta aunque el refresh sí
+      // haya disparado loadOrders.
+      verify(() => loadOrders.call()).called(3);
     });
   });
 
@@ -736,7 +788,7 @@ void main() {
     expect(find.text('Tu próximo antojo empieza en el menú'), findsOneWidget);
     expect(find.byType(ActiveOrderCard), findsNothing);
     expect(find.text('Historial'), findsNothing);
-    expect(find.byIcon(Icons.receipt_long_rounded), findsOneWidget);
+    expect(find.byIcon(Icons.receipt_long_outlined), findsOneWidget);
 
     await tester.tap(find.widgetWithText(FilledButton, 'Ver el menú'));
     await tester.pumpAndSettle();
@@ -926,6 +978,81 @@ void main() {
       expect(ordersCubit.state.active, hasLength(2));
       expect(ordersCubit.state.history.first.id, 'ord-2');
       expect(ordersCubit.state.history.first.status, OrderStatus.cancelled);
+    });
+  });
+
+  group('invitado (§031 — muro de auth dentro del tab)', () {
+    testWidgets('sin sesión: muro con CTAs a login/register y el '
+        'cubit nunca se dispara', (tester) async {
+      authSession.markLoggedOut();
+      await pumpOrders(tester);
+      await tester.pumpAndSettle();
+
+      // Mismo esqueleto: SignatureStrip + título "Pedidos" se
+      // conservan — solo cambia el área de contenido.
+      expect(find.text('Pedidos'), findsOneWidget);
+      expect(find.text('Inicia sesión para ver tus pedidos'), findsOneWidget);
+      expect(
+        find.text(
+          'Aquí viven tus pedidos activos y tu historial — entra y síguelos el rastro.',
+        ),
+        findsOneWidget,
+      );
+      expect(find.byIcon(Icons.receipt_long_outlined), findsOneWidget);
+      expect(find.text('Iniciar sesión'), findsOneWidget);
+      // El TextButton es un Text.rich — textContaining mira el
+      // contenido del TextSpan, find.text solo mira Text.data.
+      expect(find.textContaining('Regístrate'), findsOneWidget);
+      expect(find.byType(ActiveOrderCard), findsNothing);
+      expect(find.text('Historial'), findsNothing);
+      // La única llamada fue la del setUp (cuando aún había sesión):
+      // el invitado no dispara el cubit ni su fetch.
+      verify(() => loadOrders.call()).called(1);
+    });
+
+    testWidgets('CTA "Iniciar sesión" del muro → /login?from=/orders', (
+      tester,
+    ) async {
+      authSession.markLoggedOut();
+      await pumpOrders(tester);
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.text('Iniciar sesión'));
+      await tester.pumpAndSettle();
+
+      // El stub renderiza el ?from= ya decodificado — un solo assert
+      // verifica navegación y parámetro (§031).
+      expect(find.text('PANTALLA LOGIN /orders'), findsOneWidget);
+    });
+
+    testWidgets('CTA "Regístrate" del muro → /register?from=/orders', (
+      tester,
+    ) async {
+      authSession.markLoggedOut();
+      await pumpOrders(tester);
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.textContaining('Regístrate'));
+      await tester.pumpAndSettle();
+
+      expect(find.text('PANTALLA REGISTRO /orders'), findsOneWidget);
+    });
+
+    testWidgets('markAuthenticated con la página viva → swap '
+        'muro→contenido sin navegar (ListenableBuilder)', (tester) async {
+      authSession.markLoggedOut();
+      await pumpOrders(tester);
+      await tester.pumpAndSettle();
+      expect(find.text('Inicia sesión para ver tus pedidos'), findsOneWidget);
+
+      // La sesión llega con el tab montado debajo del login — el
+      // ChangeNotifier dispara el swap aunque go() no reconstruya.
+      authSession.markAuthenticated(user);
+      await tester.pumpAndSettle();
+
+      expect(find.text('Inicia sesión para ver tus pedidos'), findsNothing);
+      // La rama autenticada montó el cubit y disparó su load.
+      expect(find.text('En la plancha'), findsOneWidget);
     });
   });
 }

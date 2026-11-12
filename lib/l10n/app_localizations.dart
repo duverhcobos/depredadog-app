@@ -2115,6 +2115,30 @@ abstract class AppLocalizations {
   /// In es, this message translates to:
   /// **'Sábado'**
   String get storeDaySaturday;
+
+  /// Título del muro de auth que ve el invitado en el tab Pedidos (§031)
+  ///
+  /// In es, this message translates to:
+  /// **'Inicia sesión para ver tus pedidos'**
+  String get guestOrdersTitle;
+
+  /// Cuerpo del muro de auth del tab Pedidos para invitado (§031)
+  ///
+  /// In es, this message translates to:
+  /// **'Aquí viven tus pedidos activos y tu historial — entra y síguelos el rastro.'**
+  String get guestOrdersBody;
+
+  /// Título de la wall card de auth que ve el invitado en el tab Perfil (§031)
+  ///
+  /// In es, this message translates to:
+  /// **'Inicia sesión para ver tu perfil'**
+  String get guestProfileTitle;
+
+  /// Cuerpo de la wall card de auth del tab Perfil para invitado (§031)
+  ///
+  /// In es, this message translates to:
+  /// **'Tus datos, direcciones y puntos de la manada te esperan.'**
+  String get guestProfileBody;
 }
 
 class _AppLocalizationsDelegate

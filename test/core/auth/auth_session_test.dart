@@ -35,5 +35,17 @@ void main() {
       expect(session.isAuthenticated, isFalse);
       expect(session.currentUser, isNull);
     });
+
+    test('markAuthenticated/markLoggedOut notifican a los listeners '
+        '(ChangeNotifier §031 — los muros swappean en vivo)', () {
+      final session = AuthSession();
+      var notifications = 0;
+      session.addListener(() => notifications++);
+
+      session.markAuthenticated(user);
+      session.markLoggedOut();
+
+      expect(notifications, 2);
+    });
   });
 }

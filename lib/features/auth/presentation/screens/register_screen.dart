@@ -117,14 +117,28 @@ class _RegisterViewState extends State<_RegisterView> {
     }
   }
 
+  /// El `?from=` del propio URI, sanitizado (§031 — el registro desde
+  /// un muro/checkout también devuelve al punto donde se pidió la
+  /// sesión tras el verify).
+  String? get _from => AuthGuard.sanitizeFrom(
+    GoRouterState.of(context).uri.queryParameters['from'],
+  );
+
+  /// Anexa el `?from=` actual a una ruta de auth.
+  String _withFrom(String route) {
+    final from = _from;
+    return from == null ? route : '$route?from=${Uri.encodeComponent(from)}';
+  }
+
   /// Volver a /login: pop cuando la pantalla quedó apilada (conserva lo
   /// tipeado en login); go() como fallback si el stack quedó vacío
-  /// (deep link directo) — patrón verify_email_screen.
+  /// (deep link directo) — patrón verify_email_screen. El fallback
+  /// conserva el ?from= para que el retorno no se pierda (§031).
   void _backToLogin() {
     if (context.canPop()) {
       context.pop();
     } else {
-      context.go(AuthGuard.loginRoute);
+      context.go(_withFrom(AuthGuard.loginRoute));
     }
   }
 
@@ -260,9 +274,10 @@ class _RegisterViewState extends State<_RegisterView> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              // La flecha SIEMPRE abandona a /login (cualquier paso) y
-              // queda bloqueada durante el submit (IgnorePointer —
-              // apariencia intacta, hallazgo revisor-ui).
+              // La flecha regresa de donde se vino — pop al muro/tab
+              // cuando register se abrió por push (§031), o /login si
+              // fue deep link — y queda bloqueada durante el submit
+              // (IgnorePointer — apariencia intacta, hallazgo revisor-ui).
               BlocBuilder<RegisterCubit, RegisterState>(
                 buildWhen: (p, c) => p.isInProgress != c.isInProgress,
                 builder: (context, state) => IgnorePointer(
@@ -293,12 +308,13 @@ class _RegisterViewState extends State<_RegisterView> {
                       // confirmada en la integración, propuesta 010).
                       TextInput.finishAutofillContext(shouldSave: false);
                       // Google (propuesta 014): la sesión nace completa →
-                      // /home directo; email → /verify-email (intacto).
+                      // de vuelta al ?from= o a la carta (§031); email →
+                      // /verify-email con el ?from= viajando también.
                       if (state.isGoogleAuth) {
-                        context.go(AuthGuard.homeRoute);
+                        context.go(_from ?? AuthGuard.homeRoute);
                       } else {
                         context.go(
-                          AuthGuard.verifyEmailRoute,
+                          _withFrom(AuthGuard.verifyEmailRoute),
                           extra: state.email.value,
                         );
                       }

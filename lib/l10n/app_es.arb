@@ -1109,5 +1109,21 @@
   "storeDaySaturday": "Sábado",
   "@storeDaySaturday": {
     "description": "Nombre del día dayOfWeek=6 del horario semanal del local (§030.1)"
+  },
+  "guestOrdersTitle": "Inicia sesión para ver tus pedidos",
+  "@guestOrdersTitle": {
+    "description": "Título del muro de auth que ve el invitado en el tab Pedidos (§031)"
+  },
+  "guestOrdersBody": "Aquí viven tus pedidos activos y tu historial — entra y síguelos el rastro.",
+  "@guestOrdersBody": {
+    "description": "Cuerpo del muro de auth del tab Pedidos para invitado (§031)"
+  },
+  "guestProfileTitle": "Inicia sesión para ver tu perfil",
+  "@guestProfileTitle": {
+    "description": "Título de la wall card de auth que ve el invitado en el tab Perfil (§031)"
+  },
+  "guestProfileBody": "Tus datos, direcciones y puntos de la manada te esperan.",
+  "@guestProfileBody": {
+    "description": "Cuerpo de la wall card de auth del tab Perfil para invitado (§031)"
   }
 }

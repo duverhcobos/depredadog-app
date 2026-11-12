@@ -43,6 +43,19 @@ class _LoginViewState extends State<_LoginView> {
   late final FocusNode _emailFocus = FocusNode();
   late final FocusNode _passwordFocus = FocusNode();
 
+  /// El `?from=` del propio URI, sanitizado (§031 — retorno post-login
+  /// a donde estaba el usuario: checkout, detalle de pedido, etc.).
+  String? get _from => AuthGuard.sanitizeFrom(
+    GoRouterState.of(context).uri.queryParameters['from'],
+  );
+
+  /// Anexa el `?from=` actual a una ruta de auth — el retorno
+  /// sobrevive al cambio de pantalla (login↔register↔verify/forgot).
+  String _withFrom(String route) {
+    final from = _from;
+    return from == null ? route : '$route?from=${Uri.encodeComponent(from)}';
+  }
+
   @override
   void dispose() {
     _email.dispose();
@@ -111,7 +124,8 @@ class _LoginViewState extends State<_LoginView> {
               // En éxito Google no se guardan las credenciales tipeadas:
               // nunca se enviaron y podrían estar erradas.
               TextInput.finishAutofillContext(shouldSave: !state.isGoogleAuth);
-              context.go(AuthGuard.homeRoute);
+              // §031 — de vuelta a donde estaba (?from=) o a la carta.
+              context.go(_from ?? AuthGuard.homeRoute);
             } else if (state.status == LoginStatus.failure) {
               // Foco al primer campo inválido en orden visual (forms skill).
               if (state.email.isNotValid) {
@@ -139,9 +153,11 @@ class _LoginViewState extends State<_LoginView> {
                 // no sea éxito (p. ej. /register cuando exista).
                 TextInput.finishAutofillContext(shouldSave: false);
                 // El usuario quedó a mitad del flujo de registro — lo
-                // mandamos a verificar con su email ya escrito.
+                // mandamos a verificar con su email ya escrito. El
+                // ?from= viaja también: tras verificar vuelve al punto
+                // donde se pidió la sesión (§031).
                 context.go(
-                  AuthGuard.verifyEmailRoute,
+                  _withFrom(AuthGuard.verifyEmailRoute),
                   extra: state.email.value,
                 );
               } else {
@@ -152,149 +168,190 @@ class _LoginViewState extends State<_LoginView> {
               }
             }
           },
-          child: Center(
-            child: SingleChildScrollView(
-              padding: const EdgeInsets.all(24.0),
-              child: AutofillGroup(
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
-                  children: [
-                    const LoginBrandHeader(),
-                    const SizedBox(height: 24),
-                    LoginFormFields(
-                      emailController: _email,
-                      passwordController: _password,
-                      emailFocus: _emailFocus,
-                      passwordFocus: _passwordFocus,
-                      onSubmit: _submit,
-                    ),
-                    const SizedBox(height: 16),
-                    // ui-design-standard: el estado busy vive DENTRO del
-                    // botón primario (spinner en lugar del texto) y el resto
-                    // de controles interactivos queda bloqueado — nunca se
-                    // reemplaza el grupo de acciones por un spinner suelto.
-                    BlocBuilder<LoginCubit, LoginState>(
-                      buildWhen: (p, c) => p.status != c.status,
-                      builder: (context, state) {
-                        final inProgress = state.isInProgress;
-                        return Column(
-                          crossAxisAlignment: CrossAxisAlignment.stretch,
-                          children: [
-                            ElevatedButton(
-                              // Sigue "enabled" (color de marca intacto): el
-                              // busy se comunica con el spinner interno y el
-                              // cubit ignora re-entradas — deshabilitarlo lo
-                              // atenuaría a gris M3.
-                              onPressed: inProgress ? () {} : _submit,
-                              child: inProgress
-                                  ? SizedBox(
-                                      height: 22,
-                                      width: 22,
-                                      child: CircularProgressIndicator(
-                                        strokeWidth: 2.5,
-                                        // onPrimary (negro) sobre mostaza —
-                                        // el default `primary` sería
-                                        // invisible en este botón.
-                                        color: theme.colorScheme.onPrimary,
-                                      ),
-                                    )
-                                  : Text(l10n.loginButton),
-                            ),
-                            const SizedBox(height: 24),
-                            Row(
+          child: Stack(
+            children: [
+              Center(
+                child: SingleChildScrollView(
+                  padding: const EdgeInsets.all(24.0),
+                  child: AutofillGroup(
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: [
+                        const LoginBrandHeader(),
+                        const SizedBox(height: 24),
+                        LoginFormFields(
+                          emailController: _email,
+                          passwordController: _password,
+                          emailFocus: _emailFocus,
+                          passwordFocus: _passwordFocus,
+                          onSubmit: _submit,
+                        ),
+                        const SizedBox(height: 16),
+                        // ui-design-standard: el estado busy vive DENTRO del
+                        // botón primario (spinner en lugar del texto) y el resto
+                        // de controles interactivos queda bloqueado — nunca se
+                        // reemplaza el grupo de acciones por un spinner suelto.
+                        BlocBuilder<LoginCubit, LoginState>(
+                          buildWhen: (p, c) => p.status != c.status,
+                          builder: (context, state) {
+                            final inProgress = state.isInProgress;
+                            return Column(
+                              crossAxisAlignment: CrossAxisAlignment.stretch,
                               children: [
-                                const Expanded(child: Divider()),
-                                Padding(
-                                  padding: const EdgeInsets.symmetric(
-                                    horizontal: 12,
-                                  ),
-                                  child: Text(
-                                    l10n.loginOrContinueWith,
-                                    style: theme.textTheme.bodySmall,
-                                  ),
+                                ElevatedButton(
+                                  // Sigue "enabled" (color de marca intacto): el
+                                  // busy se comunica con el spinner interno y el
+                                  // cubit ignora re-entradas — deshabilitarlo lo
+                                  // atenuaría a gris M3.
+                                  onPressed: inProgress ? () {} : _submit,
+                                  child: inProgress
+                                      ? SizedBox(
+                                          height: 22,
+                                          width: 22,
+                                          child: CircularProgressIndicator(
+                                            strokeWidth: 2.5,
+                                            // onPrimary (negro) sobre mostaza —
+                                            // el default `primary` sería
+                                            // invisible en este botón.
+                                            color: theme.colorScheme.onPrimary,
+                                          ),
+                                        )
+                                      : Text(l10n.loginButton),
                                 ),
-                                const Expanded(child: Divider()),
-                              ],
-                            ),
-                            const SizedBox(height: 24),
-                            // Misma convención que el formulario: bloqueo por
-                            // IgnorePointer — apariencia intacta, solo se
-                            // ignoran los toques mientras la petición resuelve.
-                            IgnorePointer(
-                              ignoring: inProgress,
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.stretch,
-                                children: [
-                                  // Sin gate de Environment (decisión del
-                                  // usuario): si el client ID está vacío el
-                                  // SDK falla y el usuario ve el toast
-                                  // genérico — comportamiento real desde el
-                                  // primer build.
-                                  GoogleSignInButton(
-                                    onPressed: () => context
-                                        .read<LoginCubit>()
-                                        .signInWithGoogle(),
-                                  ),
-                                  const SizedBox(height: 32),
-                                  Row(
-                                    mainAxisAlignment: MainAxisAlignment.center,
-                                    children: [
-                                      Text(
-                                        l10n.loginNoAccount,
-                                        style: theme.textTheme.bodyMedium,
+                                const SizedBox(height: 24),
+                                Row(
+                                  children: [
+                                    const Expanded(child: Divider()),
+                                    Padding(
+                                      padding: const EdgeInsets.symmetric(
+                                        horizontal: 12,
                                       ),
-                                      // Hit area >=44dp + rol botón:
-                                      // padding interno + opaque.
-                                      GestureDetector(
-                                        behavior: HitTestBehavior.opaque,
-                                        onTap: () {
-                                          // Salida del login sin éxito:
-                                          // autofill se cierra SIN guardar
-                                          // (misma razón que
-                                          // EmailNotVerifiedFailure →
-                                          // /verify-email — el modal "¿Guardar
-                                          // contraseña?" no debe dispararse).
-                                          TextInput.finishAutofillContext(
-                                            shouldSave: false,
-                                          );
-                                          context.push(AuthGuard.registerRoute);
-                                        },
-                                        child: Semantics(
-                                          button: true,
-                                          label: l10n.loginRegisterLink,
-                                          excludeSemantics: true,
-                                          child: Padding(
-                                            padding: const EdgeInsets.symmetric(
-                                              horizontal: 8,
-                                              vertical: 12,
-                                            ),
-                                            child: Text(
-                                              l10n.loginRegisterLink,
-                                              style: theme.textTheme.bodyMedium
-                                                  ?.copyWith(
-                                                    color: theme
-                                                        .colorScheme
-                                                        .primary,
-                                                    fontWeight: FontWeight.w700,
-                                                  ),
+                                      child: Text(
+                                        l10n.loginOrContinueWith,
+                                        style: theme.textTheme.bodySmall,
+                                      ),
+                                    ),
+                                    const Expanded(child: Divider()),
+                                  ],
+                                ),
+                                const SizedBox(height: 24),
+                                // Misma convención que el formulario: bloqueo por
+                                // IgnorePointer — apariencia intacta, solo se
+                                // ignoran los toques mientras la petición resuelve.
+                                IgnorePointer(
+                                  ignoring: inProgress,
+                                  child: Column(
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.stretch,
+                                    children: [
+                                      // Sin gate de Environment (decisión del
+                                      // usuario): si el client ID está vacío el
+                                      // SDK falla y el usuario ve el toast
+                                      // genérico — comportamiento real desde el
+                                      // primer build.
+                                      GoogleSignInButton(
+                                        onPressed: () => context
+                                            .read<LoginCubit>()
+                                            .signInWithGoogle(),
+                                      ),
+                                      const SizedBox(height: 32),
+                                      Row(
+                                        mainAxisAlignment:
+                                            MainAxisAlignment.center,
+                                        children: [
+                                          Text(
+                                            l10n.loginNoAccount,
+                                            style: theme.textTheme.bodyMedium,
+                                          ),
+                                          // Hit area >=44dp + rol botón:
+                                          // padding interno + opaque.
+                                          GestureDetector(
+                                            behavior: HitTestBehavior.opaque,
+                                            onTap: () {
+                                              // Salida del login sin éxito:
+                                              // autofill se cierra SIN guardar
+                                              // (misma razón que
+                                              // EmailNotVerifiedFailure →
+                                              // /verify-email — el modal "¿Guardar
+                                              // contraseña?" no debe dispararse).
+                                              TextInput.finishAutofillContext(
+                                                shouldSave: false,
+                                              );
+                                              // El ?from= se propaga al
+                                              // registro: crear cuenta
+                                              // también devuelve al punto
+                                              // pedido (§031).
+                                              context.push(
+                                                _withFrom(
+                                                  AuthGuard.registerRoute,
+                                                ),
+                                              );
+                                            },
+                                            child: Semantics(
+                                              button: true,
+                                              label: l10n.loginRegisterLink,
+                                              excludeSemantics: true,
+                                              child: Padding(
+                                                padding:
+                                                    const EdgeInsets.symmetric(
+                                                      horizontal: 8,
+                                                      vertical: 12,
+                                                    ),
+                                                child: Text(
+                                                  l10n.loginRegisterLink,
+                                                  style: theme
+                                                      .textTheme
+                                                      .bodyMedium
+                                                      ?.copyWith(
+                                                        color: theme
+                                                            .colorScheme
+                                                            .primary,
+                                                        fontWeight:
+                                                            FontWeight.w700,
+                                                      ),
+                                                ),
+                                              ),
                                             ),
                                           ),
-                                        ),
+                                        ],
                                       ),
                                     ],
                                   ),
-                                ],
-                              ),
-                            ),
-                          ],
-                        );
-                      },
+                                ),
+                              ],
+                            );
+                          },
+                        ),
+                      ],
                     ),
-                  ],
+                  ),
                 ),
               ),
-            ),
+              // §031 — el login ahora también llega por push (muros) o
+              // por redirect del guard: flecha flotante de salida como
+              // sus hermanas register/verify (patrón Positioned del
+              // detalle). pop al muro cuando hay stack; si el guard
+              // reemplazó la pila (raíz), vuelve a la carta. Bloqueada
+              // durante el submit, igual que en register.
+              Positioned(
+                top: 4,
+                left: 4,
+                child: BlocBuilder<LoginCubit, LoginState>(
+                  buildWhen: (p, c) => p.isInProgress != c.isInProgress,
+                  builder: (context, state) => IgnorePointer(
+                    ignoring: state.isInProgress,
+                    child: IconButton(
+                      icon: const Icon(Icons.arrow_back),
+                      tooltip: l10n.commonBack,
+                      onPressed: () => context.canPop()
+                          ? context.pop()
+                          : context.go(AuthGuard.homeRoute),
+                    ),
+                  ),
+                ),
+              ),
+            ],
           ),
         ),
       ),

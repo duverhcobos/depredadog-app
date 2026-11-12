@@ -2,7 +2,10 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../../../core/auth/auth_session.dart';
+import '../../../../core/di/setup_di.dart';
 import '../../../../core/routes/auth_guard.dart';
+import '../../../../core/widgets/auth_required_view.dart';
 import '../../../../l10n/app_localizations.dart';
 import '../../../home/presentation/widgets/customization_section.dart';
 import '../../../home/presentation/widgets/signature_strip.dart';
@@ -18,143 +21,213 @@ import '../widgets/order_history_tile.dart';
 /// a spinner; cada pierna del fan-out degrada con su fila inline de
 /// error+retry (familia §025). Vacío = ícono + CTA al menú; pull-to-
 /// refresh dispara loadOrders real. Es tab — no lleva flecha back.
+///
+/// §031 — el tab es PÚBLICO: el invitado ve el muro de auth dentro
+/// del mismo esqueleto (SignatureStrip + título "Pedidos"), con CTA
+/// a login/register. El contenido se decide por sesión EN VIVO vía
+/// ListenableBuilder — markAuthenticated swappea muro→lista aunque
+/// go(from) no reconstruya la página del tab.
 class OrdersScreen extends StatelessWidget {
   const OrdersScreen({super.key});
 
   @override
   Widget build(BuildContext context) {
-    final l10n = AppLocalizations.of(context)!;
-    final colors = Theme.of(context).colorScheme;
+    final session = locator<AuthSession>();
     return Scaffold(
       body: Stack(
         children: [
           const SignatureStrip(fraction: kSignatureStripFraction),
-          BlocBuilder<OrdersCubit, OrdersState>(
-            builder: (context, state) {
-              if (state.dataLoading) {
-                return Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    const _OrdersTitle(),
-                    Expanded(
-                      child: LayoutBuilder(
-                        builder: (context, c) => Padding(
-                          padding: EdgeInsets.only(
-                            left: c.maxWidth * kSignatureStripFraction,
-                          ),
-                          child: Center(
-                            child: CircularProgressIndicator(
-                              color: colors.primary,
-                            ),
-                          ),
-                        ),
-                      ),
-                    ),
-                  ],
-                );
-              }
-              if (state.isEmpty &&
-                  !state.activeFailed &&
-                  !state.historyFailed) {
-                return Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    const _OrdersTitle(),
-                    // Vacío también refresca — AlwaysScrollable para
-                    // que el pull exista aunque no haya scroll
-                    // (revisor §027).
-                    Expanded(
-                      child: RefreshIndicator(
-                        color: colors.primary,
-                        onRefresh: () =>
-                            context.read<OrdersCubit>().loadOrders(),
-                        child: LayoutBuilder(
-                          builder: (context, c) => ListView(
-                            physics: const AlwaysScrollableScrollPhysics(),
-                            children: [
-                              Padding(
-                                padding: EdgeInsets.only(
-                                  left: c.maxWidth * kSignatureStripFraction,
-                                ),
-                                child: ConstrainedBox(
-                                  constraints: BoxConstraints(
-                                    minHeight: c.maxHeight,
-                                  ),
-                                  child: Center(
-                                    child: _OrdersEmpty(l10n: l10n),
-                                  ),
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                      ),
-                    ),
-                  ],
-                );
-              }
-              return RefreshIndicator(
-                color: colors.primary,
-                onRefresh: () => context.read<OrdersCubit>().loadOrders(),
-                child: ListView(
-                  padding: const EdgeInsets.only(bottom: 24),
-                  children: [
-                    const _OrdersTitle(),
-                    // Cada pedido activo es su propia straddle_card,
-                    // SIN heading "En curso": un título pelado caería
-                    // mostaza sobre franja mostaza (la card straddle
-                    // invade la franja) y las cards ya se auto-
-                    // explican con stepper+chip vivos. La pierna que
-                    // falla deja su fila inline de error+retry en el
-                    // mismo lugar (familia §025).
-                    if (state.activeFailed)
-                      _ActiveErrorCard(
-                        message: l10n.ordersLoadError,
-                        onRetry: () => context.read<OrdersCubit>().loadOrders(),
-                      )
-                    else
-                      for (final order in state.active)
-                        ActiveOrderCard(order: order),
-                    if (state.historyFailed || state.history.isNotEmpty)
-                      CustomizationSection(
-                        title: l10n.ordersSectionHistory,
-                        children: [
-                          if (state.historyFailed)
-                            _OrdersErrorRow(
-                              message: l10n.ordersLoadError,
-                              onRetry: () =>
-                                  context.read<OrdersCubit>().loadOrders(),
-                            )
-                          else ...[
-                            for (final order in state.history)
-                              OrderHistoryTile(order: order),
-                            // Fin del historial paginado: "Cargar más",
-                            // mini-spinner en vuelo, o error+retry en la
-                            // misma fila si la página falló.
-                            if (state.historyLoadMoreFailed)
-                              _OrdersErrorRow(
-                                message: l10n.ordersLoadMoreError,
-                                onRetry: () => context
-                                    .read<OrdersCubit>()
-                                    .loadMoreHistory(),
-                              )
-                            else if (state.historyLoadingMore)
-                              const _LoadingMoreRow()
-                            else if (state.historyHasMore)
-                              _LoadMoreRow(
-                                onTap: () => context
-                                    .read<OrdersCubit>()
-                                    .loadMoreHistory(),
-                              ),
-                          ],
-                        ],
-                      ),
-                  ],
-                ),
-              );
-            },
+          ListenableBuilder(
+            listenable: session,
+            builder: (context, _) => session.isAuthenticated
+                ? const _AuthedOrders()
+                : const _GuestOrders(),
           ),
         ],
+      ),
+    );
+  }
+}
+
+/// Muro del tab para el invitado (§031): mismo esqueleto que los
+/// estados loading/vacío — título fijo + contenido centrado en la
+/// zona negra (padding = franja). El OrdersCubit ni se instancia:
+/// ningún fetch sale sin sesión.
+class _GuestOrders extends StatelessWidget {
+  const _GuestOrders();
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const _OrdersTitle(),
+        Expanded(
+          child: LayoutBuilder(
+            builder: (context, c) => Padding(
+              padding: EdgeInsets.only(
+                left: c.maxWidth * kSignatureStripFraction,
+                // Margen derecho de la familia — sin él el texto del
+                // muro llegaba al borde físico (revisor-ui §031).
+                right: blackZoneMargin(c.maxWidth),
+              ),
+              child: Center(
+                child: AuthRequiredView(
+                  icon: Icons.receipt_long_outlined,
+                  title: l10n.guestOrdersTitle,
+                  message: l10n.guestOrdersBody,
+                  fromRoute: AuthGuard.ordersRoute,
+                ),
+              ),
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+/// Rama con sesión del tab: instala el OrdersCubit singleton y
+/// dispara la carga AL MONTARSE — cubre el swap muro→contenido cuando
+/// la sesión llega con la página viva debajo del login (donde el
+/// pageBuilder podría no re-correr); la visita normal ya gatilló el
+/// load en el pageBuilder y la guardia de reentry del cubit deduplica.
+class _AuthedOrders extends StatefulWidget {
+  const _AuthedOrders();
+
+  @override
+  State<_AuthedOrders> createState() => _AuthedOrdersState();
+}
+
+class _AuthedOrdersState extends State<_AuthedOrders> {
+  @override
+  void initState() {
+    super.initState();
+    locator<OrdersCubit>().loadOrders();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
+    final colors = Theme.of(context).colorScheme;
+    return BlocProvider.value(
+      value: locator<OrdersCubit>(),
+      child: BlocBuilder<OrdersCubit, OrdersState>(
+        builder: (context, state) {
+          if (state.dataLoading) {
+            return Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const _OrdersTitle(),
+                Expanded(
+                  child: LayoutBuilder(
+                    builder: (context, c) => Padding(
+                      padding: EdgeInsets.only(
+                        left: c.maxWidth * kSignatureStripFraction,
+                      ),
+                      child: Center(
+                        child: CircularProgressIndicator(color: colors.primary),
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            );
+          }
+          if (state.isEmpty && !state.activeFailed && !state.historyFailed) {
+            return Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const _OrdersTitle(),
+                // Vacío también refresca — AlwaysScrollable para
+                // que el pull exista aunque no haya scroll
+                // (revisor §027).
+                Expanded(
+                  child: RefreshIndicator(
+                    color: colors.primary,
+                    onRefresh: () => context.read<OrdersCubit>().loadOrders(),
+                    child: LayoutBuilder(
+                      builder: (context, c) => ListView(
+                        physics: const AlwaysScrollableScrollPhysics(),
+                        children: [
+                          Padding(
+                            padding: EdgeInsets.only(
+                              left: c.maxWidth * kSignatureStripFraction,
+                            ),
+                            child: ConstrainedBox(
+                              constraints: BoxConstraints(
+                                minHeight: c.maxHeight,
+                              ),
+                              child: Center(child: _OrdersEmpty(l10n: l10n)),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            );
+          }
+          return RefreshIndicator(
+            color: colors.primary,
+            onRefresh: () => context.read<OrdersCubit>().loadOrders(),
+            child: ListView(
+              padding: const EdgeInsets.only(bottom: 24),
+              children: [
+                const _OrdersTitle(),
+                // Cada pedido activo es su propia straddle_card,
+                // SIN heading "En curso": un título pelado caería
+                // mostaza sobre franja mostaza (la card straddle
+                // invade la franja) y las cards ya se auto-
+                // explican con stepper+chip vivos. La pierna que
+                // falla deja su fila inline de error+retry en el
+                // mismo lugar (familia §025).
+                if (state.activeFailed)
+                  _ActiveErrorCard(
+                    message: l10n.ordersLoadError,
+                    onRetry: () => context.read<OrdersCubit>().loadOrders(),
+                  )
+                else
+                  for (final order in state.active)
+                    ActiveOrderCard(order: order),
+                if (state.historyFailed || state.history.isNotEmpty)
+                  CustomizationSection(
+                    title: l10n.ordersSectionHistory,
+                    children: [
+                      if (state.historyFailed)
+                        _OrdersErrorRow(
+                          message: l10n.ordersLoadError,
+                          onRetry: () =>
+                              context.read<OrdersCubit>().loadOrders(),
+                        )
+                      else ...[
+                        for (final order in state.history)
+                          OrderHistoryTile(order: order),
+                        // Fin del historial paginado: "Cargar más",
+                        // mini-spinner en vuelo, o error+retry en la
+                        // misma fila si la página falló.
+                        if (state.historyLoadMoreFailed)
+                          _OrdersErrorRow(
+                            message: l10n.ordersLoadMoreError,
+                            onRetry: () =>
+                                context.read<OrdersCubit>().loadMoreHistory(),
+                          )
+                        else if (state.historyLoadingMore)
+                          const _LoadingMoreRow()
+                        else if (state.historyHasMore)
+                          _LoadMoreRow(
+                            onTap: () =>
+                                context.read<OrdersCubit>().loadMoreHistory(),
+                          ),
+                      ],
+                    ],
+                  ),
+              ],
+            ),
+          );
+        },
       ),
     );
   }
@@ -216,7 +289,9 @@ class _OrdersEmpty extends StatelessWidget {
         mainAxisSize: MainAxisSize.min,
         children: [
           Icon(
-            Icons.receipt_long_rounded,
+            // Misma variante que el ícono unselected del nav y el
+            // muro de invitado — outlined en los dos estados del tab.
+            Icons.receipt_long_outlined,
             size: 44,
             color: colors.primary.withValues(alpha: 0.85),
           ),

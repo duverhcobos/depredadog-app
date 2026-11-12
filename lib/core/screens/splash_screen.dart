@@ -3,7 +3,6 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../features/auth/presentation/cubit/splash_cubit.dart';
-import '../../features/auth/presentation/cubit/splash_state.dart';
 import '../../l10n/app_localizations.dart';
 import '../constants/hero_tags.dart';
 import '../di/setup_di.dart';
@@ -11,8 +10,10 @@ import '../routes/auth_guard.dart';
 
 /// Splash de marca: imagotipo centrado sobre el fondo del tema (positivo
 /// en claro, negativo a color en oscuro) — continuidad visual con el
-/// splash nativo y el login. Tras la marca mínima (~0.8s) esta pantalla
-/// decide login vs home según el resultado de SplashCubit.restoreSession.
+/// splash nativo y el login. Tras la marca mínima (~0.8s) navega SIEMPRE
+/// a /home (§031 — la carta es el destino default, no el login);
+/// SplashCubit.restoreSession sigue corriendo para dejar la sesión
+/// marcada si el token era válido (los muros de los tabs la leen solos).
 /// Patrón dos clases: `SplashScreen` provee el cubit vía locator,
 /// `_SplashView` renderiza y orquesta la navegación.
 class SplashScreen extends StatelessWidget {
@@ -64,11 +65,9 @@ class _SplashViewState extends State<_SplashView> {
     await Future<void>.delayed(const Duration(milliseconds: 800));
     await restore;
     if (!mounted) return;
-    context.go(
-      cubit.state.status == SplashStatus.restored
-          ? AuthGuard.homeRoute
-          : AuthGuard.loginRoute,
-    );
+    // §031 — éxito o invitado, el destino es la carta: la sesión
+    // restaurada (si hubo) ya quedó marcada en AuthSession.
+    context.go(AuthGuard.homeRoute);
   }
 
   @override

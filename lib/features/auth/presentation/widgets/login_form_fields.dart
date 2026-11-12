@@ -148,7 +148,16 @@ class LoginFormFields extends StatelessWidget {
                       // push, no go: la flecha de /forgot-password vuelve
                       // al login conservando lo tipeado.
                       TextInput.finishAutofillContext(shouldSave: false);
-                      context.push(AuthGuard.forgotPasswordRoute);
+                      // §031 — el ?from= se propaga (best-effort): el
+                      // reset termina en auto-login y vuelve al punto.
+                      final from = AuthGuard.sanitizeFrom(
+                        GoRouterState.of(context).uri.queryParameters['from'],
+                      );
+                      context.push(
+                        from == null
+                            ? AuthGuard.forgotPasswordRoute
+                            : '${AuthGuard.forgotPasswordRoute}?from=${Uri.encodeComponent(from)}',
+                      );
                     },
                     child: Text(
                       l10n.loginForgotPassword,

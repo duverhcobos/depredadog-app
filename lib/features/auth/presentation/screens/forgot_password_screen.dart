@@ -100,14 +100,28 @@ class _ForgotPasswordViewState extends State<_ForgotPasswordView> {
     }
   }
 
+  /// El `?from=` del propio URI, sanitizado (§031 — llega desde el
+  /// link de login; el reset termina en auto-login y debe volver al
+  /// punto donde se pidió la sesión).
+  String? get _from => AuthGuard.sanitizeFrom(
+    GoRouterState.of(context).uri.queryParameters['from'],
+  );
+
+  /// Anexa el `?from=` actual a una ruta de auth.
+  String _withFrom(String route) {
+    final from = _from;
+    return from == null ? route : '$route?from=${Uri.encodeComponent(from)}';
+  }
+
   /// Volver a /login: pop cuando la pantalla quedó apilada (conserva lo
   /// tipeado en login); go() como fallback si el stack quedó vacío
-  /// (deep link directo) — patrón register/verify_email.
+  /// (deep link directo) — patrón register/verify_email. El fallback
+  /// conserva el ?from= (§031).
   void _backToLogin() {
     if (context.canPop()) {
       context.pop();
     } else {
-      context.go(AuthGuard.loginRoute);
+      context.go(_withFrom(AuthGuard.loginRoute));
     }
   }
 
@@ -242,13 +256,14 @@ class _ForgotPasswordViewState extends State<_ForgotPasswordView> {
                       listenWhen: (prev, curr) => prev.status != curr.status,
                       listener: (context, state) {
                         if (state.status == ForgotPasswordStatus.success) {
-                          // Éxito → /home: se GUARDA el autofill — el
+                          // Éxito → destino: se GUARDA el autofill — el
                           // reset termina en auto-login y el gestor debe
                           // ofrecer la NUEVA contraseña (patrón login; en
                           // register era shouldSave:false solo porque
-                          // /verify-email autofocusa su OTP).
+                          // /verify-email autofocusa su OTP). §031 —
+                          // vuelve al ?from= si vino, si no a la carta.
                           TextInput.finishAutofillContext(shouldSave: true);
-                          context.go(AuthGuard.homeRoute);
+                          context.go(_from ?? AuthGuard.homeRoute);
                         } else if (state.status ==
                             ForgotPasswordStatus.failure) {
                           _focusFirstInvalid(state);

@@ -29,6 +29,7 @@ import '../../features/profile/presentation/screens/profile_password_screen.dart
 import '../../features/profile/presentation/screens/profile_screen.dart';
 import '../../features/profile/presentation/screens/profile_store_screen.dart';
 import '../../features/store/presentation/cubit/store_status_cubit.dart';
+import '../auth/auth_session.dart';
 import '../di/setup_di.dart';
 import '../layout/app_shell_layout.dart';
 import '../screens/splash_screen.dart';
@@ -46,7 +47,12 @@ class AppRouter {
 
   late final GoRouter router = GoRouter(
     initialLocation: AuthGuard.splashRoute,
-    redirect: (context, state) => _guard.redirect(state.matchedLocation),
+    // §031 — el `?from=` del propio URI alimenta la regla
+    // "autenticado en ruta de auth → vuelve a donde estaba".
+    redirect: (context, state) => _guard.redirect(
+      state.matchedLocation,
+      from: state.uri.queryParameters['from'],
+    ),
     routes: [
       GoRoute(
         path: AuthGuard.splashRoute,
@@ -166,16 +172,20 @@ class AppRouter {
             routes: [
               GoRoute(
                 path: AuthGuard.ordersRoute,
-                pageBuilder: (context, state) => CustomTransitions.fade(
-                  state,
-                  BlocProvider.value(
-                    // §027 — cada visita al tab recarga: el estado del
-                    // pedido cambia server-side y el cliente entra a
-                    // revisar si avanzó.
-                    value: locator<OrdersCubit>()..loadOrders(),
-                    child: const OrdersScreen(),
-                  ),
-                ),
+                pageBuilder: (context, state) {
+                  // §027 — cada visita al tab recarga: el estado del
+                  // pedido cambia server-side y el cliente entra a
+                  // revisar si avanzó. §031 — solo con sesión: el
+                  // invitado ve el muro dentro del tab y nunca dispara
+                  // el cubit (GET /orders pide JWT). La pantalla misma
+                  // instala el BlocProvider en su rama autenticada —
+                  // el swap muro→contenido ocurre en vivo cuando la
+                  // sesión llega con la página viva debajo del login.
+                  if (locator<AuthSession>().isAuthenticated) {
+                    locator<OrdersCubit>().loadOrders();
+                  }
+                  return CustomTransitions.fade(state, const OrdersScreen());
+                },
                 routes: [
                   // Detalle del pedido (§023 drill-down) — hija del
                   // tab, conserva shell + nav; extra = CustomerOrder.
@@ -209,22 +219,15 @@ class AppRouter {
             routes: [
               GoRoute(
                 path: AuthGuard.profileRoute,
-                pageBuilder: (context, state) => CustomTransitions.fade(
-                  state,
-                  // §030 — singleton compartido con las hijas via
-                  // BlocProvider.value (patrón OrdersCubit §027):
-                  // las páginas hijas en go_router son HERMANAS de
-                  // la madre en el Navigator, no heredan su provider.
-                  BlocProvider.value(
-                    value: locator<ProfileCubit>(),
-                    // El subtítulo "N guardadas" lee esta MISMA
-                    // instancia — nunca diverge de la lista.
-                    child: BlocProvider.value(
-                      value: locator<ProfileAddressesCubit>(),
-                      child: const ProfileScreen(),
-                    ),
-                  ),
-                ),
+                // §031 — sin providers aquí: el invitado ve el muro +
+                // "El negocio" sin disparar cubits de datos de cliente.
+                // La pantalla monta ProfileCubit/ProfileAddressesCubit
+                // (singletons compartidos con las hijas vía
+                // BlocProvider.value, patrón OrdersCubit §027) solo en
+                // su rama autenticada — el swap ocurre en vivo cuando
+                // la sesión llega con la página viva debajo del login.
+                pageBuilder: (context, state) =>
+                    CustomTransitions.fade(state, const ProfileScreen()),
                 routes: [
                   // Mis datos (§030.1) — form pre-llenado que escribe
                   // con updateUser sobre el MISMO ProfileCubit

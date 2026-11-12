@@ -4,8 +4,11 @@ import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:get_it/get_it.dart';
 import 'package:go_router/go_router.dart';
+import 'package:depredadog_app/core/auth/auth_session.dart';
 import 'package:depredadog_app/core/theme/app_theme.dart';
+import 'package:depredadog_app/features/auth/domain/entities/user.dart';
 import 'package:depredadog_app/features/profile/presentation/cubit/profile_addresses_cubit.dart';
 import 'package:depredadog_app/features/profile/presentation/cubit/profile_cubit.dart';
 import 'package:depredadog_app/features/profile/presentation/cubit/profile_store_cubit.dart';
@@ -23,11 +26,22 @@ class MockStoreStatusCubit extends MockCubit<StoreOpenState>
     implements StoreStatusCubit {}
 
 void main() {
+  final locator = GetIt.instance;
   late ProfileCubit profileCubit;
   late ProfileAddressesCubit addressesCubit;
   late ProfileStoreCubit storeCubit;
   late MockStoreStatusCubit storeStatusCubit;
+  late AuthSession authSession;
   late GoRouter router;
+
+  const user = User(
+    id: 'u1',
+    email: 'test@depredadog.com',
+    firstName: 'Test',
+    firstLastName: 'User',
+    role: 'customer',
+    status: 'active',
+  );
 
   /// GoRouter mínimo (harness): /profile con sus hijas reales de
   /// §030/§030.1 — igual que la branch de app_router.
@@ -58,6 +72,13 @@ void main() {
     addressesCubit = ProfileAddressesCubit();
     storeCubit = ProfileStoreCubit();
     storeStatusCubit = MockStoreStatusCubit();
+    // §031 — la pantalla resuelve AuthSession y, solo en la rama
+    // autenticada, ProfileCubit/ProfileAddressesCubit por locator.
+    // Sesión marcada por default; el invitado sale con markLoggedOut().
+    authSession = AuthSession()..markAuthenticated(user);
+    locator.registerSingleton<AuthSession>(authSession);
+    locator.registerSingleton<ProfileCubit>(profileCubit);
+    locator.registerSingleton<ProfileAddressesCubit>(addressesCubit);
     // Chip del local abierto por defecto (§029 pattern — mock
     // MockCubit con estado stubbado, no hay refresh en tests).
     whenListen(
@@ -68,12 +89,13 @@ void main() {
     router = buildRouter();
   });
 
-  tearDown(() {
+  tearDown(() async {
     profileCubit.close();
     addressesCubit.close();
     storeCubit.close();
     storeStatusCubit.close();
     router.dispose();
+    await locator.reset();
   });
 
   /// Harness: cubits reales (fase 1 son mocks sin dependencias) +
@@ -418,5 +440,111 @@ void main() {
     // fluttertoast agenda un timer interno de 1s — hay que dejarlo
     // disparar o el teardown falla con "timer pending".
     await tester.pump(const Duration(seconds: 1, milliseconds: 100));
+  });
+
+  group('invitado (§031 — wall card + "El negocio")', () {
+    testWidgets('sin sesión: wall card + El negocio; sin identidad, '
+        'Mi cuenta, loyalty ni logout', (tester) async {
+      authSession.markLoggedOut();
+      await pumpProfile(tester);
+      await tester.pumpAndSettle();
+
+      expect(find.text('Perfil'), findsOneWidget); // título conserva
+      // El muro como CARD dentro del scroll (no pantalla de estado).
+      expect(find.byIcon(Icons.person_outline_rounded), findsOneWidget);
+      expect(find.text('Inicia sesión para ver tu perfil'), findsOneWidget);
+      expect(
+        find.text('Tus datos, direcciones y puntos de la manada te esperan.'),
+        findsOneWidget,
+      );
+      expect(find.text('Iniciar sesión'), findsOneWidget);
+      // El TextButton es un Text.rich — textContaining mira el
+      // contenido del TextSpan, find.text solo mira Text.data.
+      expect(find.textContaining('Regístrate'), findsOneWidget);
+
+      // "El negocio" con las 2 filas públicas de hoy.
+      await scrollTo(tester, find.text('Soporte'));
+      expect(find.text('El negocio'), findsOneWidget);
+      expect(find.text('El local'), findsOneWidget);
+      expect(find.text('Soporte'), findsOneWidget);
+
+      // Lo que NO se muestra al invitado (decisión del usuario §031).
+      expect(find.text('Ana López'), findsNothing);
+      expect(find.text('Mi cuenta'), findsNothing);
+      expect(find.text('Mis datos'), findsNothing);
+      expect(find.text('120 puntos'), findsNothing);
+      expect(find.text('Cerrar sesión'), findsNothing);
+    });
+
+    testWidgets('"El local" del invitado → /profile/store (ruta '
+        'pública §031)', (tester) async {
+      authSession.markLoggedOut();
+      await pumpProfile(tester);
+      await tester.pumpAndSettle();
+
+      await scrollTo(tester, find.text('El local'));
+      await tester.tap(find.text('El local'));
+      await tester.pumpAndSettle();
+
+      // Push imperativo: el uri agregado del match list no lo refleja —
+      // se mira la última pierna, igual que en el detalle de Pedidos.
+      expect(
+        router.routerDelegate.currentConfiguration.matches.last.matchedLocation,
+        '/profile/store',
+      );
+      expect(find.text('Depredadog'), findsOneWidget);
+      expect(find.text('Abierto'), findsOneWidget); // chip real stub
+    });
+
+    testWidgets('"Soporte" del invitado abre el mismo diálogo de hoy', (
+      tester,
+    ) async {
+      stubToast(tester);
+      authSession.markLoggedOut();
+      await pumpProfile(tester);
+      await tester.pumpAndSettle();
+
+      await scrollTo(tester, find.text('Soporte'));
+      await tester.tap(find.text('Soporte'));
+      await tester.pumpAndSettle();
+
+      expect(find.byType(AlertDialog), findsOneWidget);
+      expect(find.text('+57 300 000 0000'), findsOneWidget);
+
+      await tester.tap(find.text('Cerrar'));
+      await tester.pumpAndSettle();
+      expect(find.byType(AlertDialog), findsNothing);
+    });
+
+    testWidgets('el invitado ni siquiera resuelve los cubits de '
+        'cliente (sin registro en el locator → no crash)', (tester) async {
+      // Si la rama invitado tocara locator<ProfileCubit> esto
+      // explotaría — el muro no necesita datos de cliente (§031).
+      await locator.unregister<ProfileCubit>();
+      await locator.unregister<ProfileAddressesCubit>();
+      authSession.markLoggedOut();
+      await pumpProfile(tester);
+      await tester.pumpAndSettle();
+
+      expect(find.text('Inicia sesión para ver tu perfil'), findsOneWidget);
+      expect(find.text('El local'), findsOneWidget);
+    });
+
+    testWidgets('markAuthenticated con la página viva → swap '
+        'muro→perfil sin navegar (ListenableBuilder)', (tester) async {
+      authSession.markLoggedOut();
+      await pumpProfile(tester);
+      await tester.pumpAndSettle();
+      expect(find.text('Inicia sesión para ver tu perfil'), findsOneWidget);
+
+      // La sesión llega con el tab montado debajo del login — el
+      // ChangeNotifier dispara el swap aunque go() no reconstruya.
+      authSession.markAuthenticated(user);
+      await tester.pumpAndSettle();
+
+      expect(find.text('Inicia sesión para ver tu perfil'), findsNothing);
+      expect(find.text('Ana López'), findsOneWidget);
+      expect(find.text('Mi cuenta'), findsOneWidget);
+    });
   });
 }

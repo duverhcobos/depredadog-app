@@ -47,7 +47,7 @@ class _VerifyEmailViewState extends State<_VerifyEmailView> {
     // acceso directo con extra vacío devuelve al login.
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (mounted && context.read<VerifyEmailCubit>().state.email.isEmpty) {
-        context.go(AuthGuard.loginRoute);
+        context.go(_withFrom(AuthGuard.loginRoute));
       }
     });
   }
@@ -63,12 +63,25 @@ class _VerifyEmailViewState extends State<_VerifyEmailView> {
     context.read<VerifyEmailCubit>().submit();
   }
 
+  /// El `?from=` del propio URI, sanitizado (§031 — llega acá desde el
+  /// login no-verificado o el register; verificar emite sesión y el
+  /// retorno debe ser al punto donde se pidió la cuenta).
+  String? get _from => AuthGuard.sanitizeFrom(
+    GoRouterState.of(context).uri.queryParameters['from'],
+  );
+
+  /// Anexa el `?from=` actual a una ruta de auth.
+  String _withFrom(String route) {
+    final from = _from;
+    return from == null ? route : '$route?from=${Uri.encodeComponent(from)}';
+  }
+
   void _backToLogin() {
     // Submit o reenvío en vuelo: el back espera — bloqueado, no atenuado
     // (misma homologación que register — hallazgo revisor-ui).
     final s = context.read<VerifyEmailCubit>().state;
     if (s.isInProgress || s.isResending) return;
-    context.go(AuthGuard.loginRoute);
+    context.go(_withFrom(AuthGuard.loginRoute));
   }
 
   /// La UI nunca muestra el texto crudo del backend (i18n-workflow) —
@@ -133,9 +146,10 @@ class _VerifyEmailViewState extends State<_VerifyEmailView> {
                       listener: (context, state) {
                         if (state.status == VerifyEmailStatus.success) {
                           TextInput.finishAutofillContext();
-                          // Verificar emite sesión (auto-login) — directo
-                          // a /home, sin re-pedir credenciales.
-                          context.go(AuthGuard.homeRoute);
+                          // Verificar emite sesión (auto-login) — de
+                          // vuelta al ?from= o a la carta, sin re-pedir
+                          // credenciales (§031).
+                          context.go(_from ?? AuthGuard.homeRoute);
                         } else if (state.status == VerifyEmailStatus.failure) {
                           _codeFocus.requestFocus();
                           AppToast.error(context, l10n.verifyEmailFormInvalid);

@@ -1126,4 +1126,18 @@ class AppLocalizationsEs extends AppLocalizations {
 
   @override
   String get storeDaySaturday => 'Sábado';
+
+  @override
+  String get guestOrdersTitle => 'Inicia sesión para ver tus pedidos';
+
+  @override
+  String get guestOrdersBody =>
+      'Aquí viven tus pedidos activos y tu historial — entra y síguelos el rastro.';
+
+  @override
+  String get guestProfileTitle => 'Inicia sesión para ver tu perfil';
+
+  @override
+  String get guestProfileBody =>
+      'Tus datos, direcciones y puntos de la manada te esperan.';
 }
