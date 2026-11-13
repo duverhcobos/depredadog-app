@@ -183,7 +183,7 @@ void main() {
     await tester.pumpAndSettle();
 
     // Título naciente + card de identidad del mock.
-    expect(find.text('Perfil'), findsOneWidget);
+    expect(find.text('PERFIL'), findsOneWidget);
     expect(find.text('Ana López'), findsOneWidget);
     expect(find.text('ana@test.com'), findsOneWidget);
     expect(find.text('300 123 4567'), findsOneWidget);
@@ -449,7 +449,7 @@ void main() {
       await pumpProfile(tester);
       await tester.pumpAndSettle();
 
-      expect(find.text('Perfil'), findsOneWidget); // título conserva
+      expect(find.text('PERFIL'), findsOneWidget); // título conserva
       // El muro como CARD dentro del scroll (no pantalla de estado).
       expect(find.byIcon(Icons.person_outline_rounded), findsOneWidget);
       expect(find.text('Inicia sesión para ver tu perfil'), findsOneWidget);

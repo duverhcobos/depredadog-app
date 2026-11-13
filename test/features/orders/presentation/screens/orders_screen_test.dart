@@ -460,7 +460,7 @@ void main() {
     await pumpOrders(tester);
     await tester.pumpAndSettle();
 
-    expect(find.text('Pedidos'), findsOneWidget);
+    expect(find.text('PEDIDOS'), findsOneWidget);
     // Las straddle cards activas no llevan heading: un título pelado
     // caería mostaza sobre franja (revisor-estetico §023).
 
@@ -539,7 +539,7 @@ void main() {
       await pumpOrders(tester);
       await tester.pump();
 
-      expect(find.text('Pedidos'), findsOneWidget);
+      expect(find.text('PEDIDOS'), findsOneWidget);
       expect(find.byType(CircularProgressIndicator), findsOneWidget);
       expect(find.byType(ActiveOrderCard), findsNothing);
 
@@ -783,7 +783,7 @@ void main() {
     await pumpOrders(tester);
     await tester.pumpAndSettle();
 
-    expect(find.text('Pedidos'), findsOneWidget);
+    expect(find.text('PEDIDOS'), findsOneWidget);
     expect(find.text('Aún no has pedido'), findsOneWidget);
     expect(find.text('Tu próximo antojo empieza en el menú'), findsOneWidget);
     expect(find.byType(ActiveOrderCard), findsNothing);
@@ -990,7 +990,7 @@ void main() {
 
       // Mismo esqueleto: SignatureStrip + título "Pedidos" se
       // conservan — solo cambia el área de contenido.
-      expect(find.text('Pedidos'), findsOneWidget);
+      expect(find.text('PEDIDOS'), findsOneWidget);
       expect(find.text('Inicia sesión para ver tus pedidos'), findsOneWidget);
       expect(
         find.text(

@@ -1417,7 +1417,7 @@ abstract class AppLocalizations {
   /// Título naciente (scrolling_title) del tab Pedidos (§023)
   ///
   /// In es, this message translates to:
-  /// **'Pedidos'**
+  /// **'PEDIDOS'**
   String get ordersTitle;
 
   /// Título de la sección de pedidos terminados del tab (§023)
@@ -1711,7 +1711,7 @@ abstract class AppLocalizations {
   /// Título naciente (scrolling_title) del tab Perfil (§030)
   ///
   /// In es, this message translates to:
-  /// **'Perfil'**
+  /// **'PERFIL'**
   String get profileTitle;
 
   /// Fila del menú del perfil que empuja a /profile/addresses (§030)
@@ -2139,6 +2139,150 @@ abstract class AppLocalizations {
   /// In es, this message translates to:
   /// **'Tus datos, direcciones y puntos de la manada te esperan.'**
   String get guestProfileBody;
+
+  /// Label del 4º destino del NavigationBar — solo visible con sesión admin (§034)
+  ///
+  /// In es, this message translates to:
+  /// **'Cocina'**
+  String get shellTabAdmin;
+
+  /// Título naciente (scrolling_title) del tab admin — la cola del local (§034)
+  ///
+  /// In es, this message translates to:
+  /// **'COCINA'**
+  String get adminQueueTitle;
+
+  /// Píldora del filtro segmentado de la cola admin — pedidos vivos (pending/confirmed/preparing)
+  ///
+  /// In es, this message translates to:
+  /// **'Activos'**
+  String get adminQueueFilterActive;
+
+  /// Píldora del filtro segmentado de la cola admin — pedidos terminados/cancelados
+  ///
+  /// In es, this message translates to:
+  /// **'Historial'**
+  String get adminQueueFilterHistory;
+
+  /// Chip de canal del pedido admin — llegó por la app (channel=online del backend)
+  ///
+  /// In es, this message translates to:
+  /// **'Online'**
+  String get adminChannelOnline;
+
+  /// Chip de canal del pedido admin — tomado en el local por el dueño (channel=presencial)
+  ///
+  /// In es, this message translates to:
+  /// **'Presencial'**
+  String get adminChannelInPerson;
+
+  /// Cliente del pedido admin presencial con mesa — table = tableLabel del backend ('Mesa 3')
+  ///
+  /// In es, this message translates to:
+  /// **'En el local · {table}'**
+  String adminOrderAtTable(String table);
+
+  /// Cliente del pedido admin presencial sin mesa ni nombre — pedido de mostrador
+  ///
+  /// In es, this message translates to:
+  /// **'En el local'**
+  String get adminOrderInHouse;
+
+  /// Tiempo transcurrido del pedido admin cuando lleva menos de 1 h — la cola se opera por frescura
+  ///
+  /// In es, this message translates to:
+  /// **'{count, plural, =1{hace 1 min} other{hace {count} min}}'**
+  String adminOrderElapsedMinutes(int count);
+
+  /// Tiempo transcurrido del pedido admin cuando lleva 1+ h y menos de 24 h
+  ///
+  /// In es, this message translates to:
+  /// **'{count, plural, =1{hace 1 h} other{hace {count} h}}'**
+  String adminOrderElapsedHours(int count);
+
+  /// Chip de estado del pedido admin en pending del backend (el cliente lo lee 'Recibido' — el dueño lo opera como pendiente de confirmar)
+  ///
+  /// In es, this message translates to:
+  /// **'Pendiente'**
+  String get adminStatusPending;
+
+  /// Método de pago del pedido admin — cash del backend
+  ///
+  /// In es, this message translates to:
+  /// **'Efectivo'**
+  String get adminPaymentCash;
+
+  /// Método de pago del pedido admin — transfer del backend (Nequi/gateway)
+  ///
+  /// In es, this message translates to:
+  /// **'Transf.'**
+  String get adminPaymentTransfer;
+
+  /// Chip de estado de pago del pedido admin — aún no se confirma el pago
+  ///
+  /// In es, this message translates to:
+  /// **'Pago pendiente'**
+  String get adminPaymentPending;
+
+  /// Chip de estado de pago del pedido admin — pago confirmado
+  ///
+  /// In es, this message translates to:
+  /// **'Pagado'**
+  String get adminPaymentPaid;
+
+  /// Chip de estado de pago del pedido admin — la pasarela rechazó el cobro
+  ///
+  /// In es, this message translates to:
+  /// **'Pago fallido'**
+  String get adminPaymentFailed;
+
+  /// Título del vacío de la cola admin sin pedidos vivos
+  ///
+  /// In es, this message translates to:
+  /// **'Sin pedidos activos'**
+  String get adminQueueEmptyActiveTitle;
+
+  /// Cuerpo del vacío de la cola admin sin pedidos vivos (§034)
+  ///
+  /// In es, this message translates to:
+  /// **'La cocina descansa — los pedidos nuevos caen aquí solos.'**
+  String get adminQueueEmptyActiveBody;
+
+  /// Título del vacío del historial de la cola admin
+  ///
+  /// In es, this message translates to:
+  /// **'Historial vacío'**
+  String get adminQueueEmptyHistoryTitle;
+
+  /// Cuerpo del vacío del historial de la cola admin
+  ///
+  /// In es, this message translates to:
+  /// **'Los pedidos terminados y cancelados quedan aquí.'**
+  String get adminQueueEmptyHistoryBody;
+
+  /// Estado de error de la cola admin — acompaña el botón Reintentar
+  ///
+  /// In es, this message translates to:
+  /// **'No pudimos cargar la cola'**
+  String get adminQueueLoadError;
+
+  /// Label del FAB de la cola admin — orden presencial a un clic (§034, form en ciclo 3)
+  ///
+  /// In es, this message translates to:
+  /// **'Nueva orden'**
+  String get adminNewOrder;
+
+  /// Toast al tocar una card de la cola admin — el detalle con acciones es el ciclo 2 (mock fase 1)
+  ///
+  /// In es, this message translates to:
+  /// **'El detalle llega en el próximo ciclo'**
+  String get adminOrderDetailSoon;
+
+  /// Sufijo del resumen de ítems de la card admin cuando no caben todos en 2 líneas — recorte honesto: el dueño sabe cuántos faltan sin abrir el detalle (decisión §034)
+  ///
+  /// In es, this message translates to:
+  /// **'+{count} más'**
+  String adminOrderItemsMore(int count);
 }
 
 class _AppLocalizationsDelegate

@@ -1,6 +1,6 @@
 /// Guardia de rutas — lógica de protección aislada del framework de routing
-/// (regla 10 SOLID): recibe `isAuthenticated` y el `location` como String,
-/// nunca GoRouterState, para que sea testeable y portable.
+/// (regla 10 SOLID): recibe `isAuthenticated`/`isAdmin` y el `location`
+/// como String, nunca GoRouterState, para que sea testeable y portable.
 ///
 /// Modelo §031 (carta pública para invitados): el default es PÚBLICO —
 /// la vitrina (home + catálogo + carrito) y los tabs con muro propio
@@ -10,12 +10,22 @@
 /// Las `authRoutes` son las pantallas de entrada: con sesión ya dentro
 /// no tienen sentido y devuelven a `from` o al home.
 ///
+/// §034 — segunda dimensión del guard: los `adminPrefixes` exigen
+/// sesión Y `role == 'admin'`. El invitado cae al mismo login con
+/// `?from=` (un deep link a la cola aterriza tras el login); el
+/// cliente autenticado sin rol devuelve a /home — esa superficie
+/// simplemente no es suya (su NavigationBar ni la dibuja).
+///
 /// Las constantes de ruta completas viven AQUÍ (navigation-routing):
 /// la UI navega siempre con estas constantes, nunca con strings sueltos.
 class AuthGuard {
-  const AuthGuard({required this._isAuthenticated});
+  const AuthGuard({required this._isAuthenticated, required this._isAdmin});
 
   final bool Function() _isAuthenticated;
+
+  /// Rol admin del usuario en sesión (User.role == 'admin') — lo lee
+  /// síncrono del AuthSession en memoria, igual que el flag.
+  final bool Function() _isAdmin;
 
   // ---- Rutas (constantes públicas, siempre completas) ----
   static const String splashRoute = '/';
@@ -47,6 +57,10 @@ class AuthGuard {
   // carrito está vacío. PRIMERA ruta protegida del embudo (§031):
   // "Ir a pagar" sin sesión → /login?from=/home/cart/checkout.
   static const String checkoutRoute = '/home/cart/checkout';
+  // Cocina del dueño (§034) — 4ª branch del shell, raíz = cola de
+  // pedidos del local. Solo con sesión Y rol admin: es la única
+  // sección del shell que no es ni pública ni de cliente.
+  static const String adminRoute = '/admin';
 
   // Rutas de la feature auth — declaradas ya para que el guard las
   // conozca; se registran en app_router cuando existan sus pantallas.
@@ -69,6 +83,13 @@ class AuthGuard {
     '/profile/password',
   };
 
+  /// Prefijos que exigen sesión **y** `role == 'admin'` (§034):
+  /// el default público sigue — estos prefijos son la superficie
+  /// del dueño. Invitado → `/login?from=<ruta>` (mismo mecanismo
+  /// sanitizeFrom: un deep link a la cola aterriza tras el login);
+  /// cliente autenticado sin rol → `/home`.
+  static const Set<String> adminPrefixes = {'/admin'};
+
   /// Pantallas de entrada a la cuenta — entrar CON sesión devuelve a
   /// `?from=` (si vino) o al home (match exacto: no tienen hijas).
   static const Set<String> authRoutes = {
@@ -89,17 +110,25 @@ class AuthGuard {
       : null;
 
   /// Devuelve la ruta de redirect o `null` si el acceso es válido.
-  /// - Invitado pidiendo ruta protegida → `/login?from=<location>`
+  /// - Invitado pidiendo ruta protegida o de admin → `/login?from=<location>`
   ///   (el location viaja encodeado — solo el path: `matchedLocation`
   ///   no trae query, así que `/orders/abc?x=1` llega como `/orders/abc`).
+  /// - Con sesión pidiendo ruta de admin sin rol → homeRoute (no es
+  ///   "error": esa superficie no es del cliente y su tab ni se dibuja).
   /// - Con sesión entrando a una ruta de auth → `from` sanitizado
   ///   o homeRoute (mismo default de hoy: /login sin from → /home).
   /// - Todo lo demás es público (splash incluido — nunca protegido).
   String? redirect(String location, {String? from}) {
     final authed = _isAuthenticated();
+    final adminOnly = adminPrefixes.any(location.startsWith);
 
-    if (!authed && protectedPrefixes.any(location.startsWith)) {
+    if (!authed && (adminOnly || protectedPrefixes.any(location.startsWith))) {
       return '$loginRoute?from=${Uri.encodeComponent(location)}';
+    }
+    // Check de rol DESPUÉS del de sesión (§034): sin sesión la regla
+    // anterior ya mandó a login; acá solo queda "cliente sin rol".
+    if (authed && adminOnly && !_isAdmin()) {
+      return homeRoute;
     }
     if (authed && authRoutes.contains(location)) {
       return sanitizeFrom(from) ?? homeRoute;

@@ -1,6 +1,7 @@
 import 'package:get_it/get_it.dart';
 import 'package:internet_connection_checker/internet_connection_checker.dart';
 
+import '../../features/admin/presentation/cubit/admin_queue_cubit.dart';
 import '../../features/auth/data/datasources/implementations/auth_local_datasource_impl.dart';
 import '../../features/auth/data/datasources/implementations/auth_remote_datasource_impl.dart';
 import '../../features/auth/data/datasources/implementations/google_sign_in_gateway_impl.dart';
@@ -302,6 +303,12 @@ void setupDI() {
   // (la pantalla hija lo recibe por BlocProvider.value).
   locator.registerLazySingleton<ProfileStoreCubit>(() => ProfileStoreCubit());
 
+  // --- Cocina del dueño (§034, solo presentación): singleton como
+  // OrdersCubit — la cola vive en su branch del IndexedStack y la
+  // recarga al entrar al tab la gatilla el pageBuilder del router.
+  // Fase 1: mocks dentro del cubit — fase 2 inyecta el use-case real.
+  locator.registerLazySingleton<AdminQueueCubit>(() => AdminQueueCubit());
+
   // --- Use Cases (auth) ---
   locator.registerLazySingleton<LoginUseCase>(
     () => LoginUseCase(locator<IAuthRepository>()),
@@ -380,9 +387,11 @@ void setupDI() {
   // --- Router ---
   // AuthGuard lee la sesión real en memoria — login/verify la marcan al
   // tener éxito y el splash la restaura vía /auth/me al abrir la app.
+  // §034: además lee el ROL — los prefijos /admin exigen 'admin'.
   locator.registerLazySingleton<AuthGuard>(
     () => AuthGuard(
       isAuthenticated: () => locator<AuthSession>().isAuthenticated,
+      isAdmin: () => locator<AuthSession>().currentUser?.role == 'admin',
     ),
   );
   locator.registerLazySingleton<AppRouter>(

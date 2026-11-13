@@ -7,7 +7,10 @@ void main() {
 
   group('AuthGuard (§031 — default público + prefijos protegidos)', () {
     test('invitado: la vitrina completa pasa — splash, carta, carrito', () {
-      final guard = AuthGuard(isAuthenticated: () => false);
+      final guard = AuthGuard(
+        isAuthenticated: () => false,
+        isAdmin: () => false,
+      );
 
       expect(guard.redirect(AuthGuard.splashRoute), isNull);
       expect(guard.redirect(AuthGuard.homeRoute), isNull);
@@ -18,7 +21,10 @@ void main() {
     });
 
     test('invitado: los tabs con muro y las pantallas de auth pasan', () {
-      final guard = AuthGuard(isAuthenticated: () => false);
+      final guard = AuthGuard(
+        isAuthenticated: () => false,
+        isAdmin: () => false,
+      );
 
       // Los roots de Pedidos/Perfil NO redirigen — el muro de auth
       // vive DENTRO del tab (decisión del usuario §031).
@@ -34,7 +40,10 @@ void main() {
     });
 
     test('invitado: prefijos protegidos → /login?from=<ruta encodeada>', () {
-      final guard = AuthGuard(isAuthenticated: () => false);
+      final guard = AuthGuard(
+        isAuthenticated: () => false,
+        isAdmin: () => false,
+      );
 
       // Primera ruta protegida del embudo: "Ir a pagar" sin sesión.
       expect(
@@ -68,7 +77,10 @@ void main() {
     });
 
     test('con sesión: protegidas y públicas pasan, rutas de auth → /home', () {
-      final guard = AuthGuard(isAuthenticated: () => true);
+      final guard = AuthGuard(
+        isAuthenticated: () => true,
+        isAdmin: () => false,
+      );
 
       expect(guard.redirect(AuthGuard.checkoutRoute), isNull);
       expect(guard.redirect('/orders/abc'), isNull);
@@ -88,7 +100,10 @@ void main() {
     });
 
     test('con sesión en ruta de auth: ?from= interno se honra', () {
-      final guard = AuthGuard(isAuthenticated: () => true);
+      final guard = AuthGuard(
+        isAuthenticated: () => true,
+        isAdmin: () => false,
+      );
 
       expect(guard.redirect(AuthGuard.loginRoute, from: '/orders'), '/orders');
       expect(
@@ -103,7 +118,10 @@ void main() {
 
     test('con sesión en ruta de auth: ?from= externo o relativo se '
         'descarta → /home (anti open-redirect)', () {
-      final guard = AuthGuard(isAuthenticated: () => true);
+      final guard = AuthGuard(
+        isAuthenticated: () => true,
+        isAdmin: () => false,
+      );
 
       expect(
         guard.redirect(AuthGuard.loginRoute, from: 'https://evil.com'),
@@ -120,8 +138,51 @@ void main() {
     });
 
     test('con sesión: splash no redirige (decide la propia pantalla)', () {
-      final guard = AuthGuard(isAuthenticated: () => true);
+      final guard = AuthGuard(
+        isAuthenticated: () => true,
+        isAdmin: () => false,
+      );
       expect(guard.redirect(AuthGuard.splashRoute), isNull);
+    });
+  });
+
+  group('AuthGuard (§034 — prefijos admin exigen sesión Y rol)', () {
+    test('invitado: /admin y sus hijas → /login?from=<ruta encodeada>', () {
+      final guard = AuthGuard(
+        isAuthenticated: () => false,
+        isAdmin: () => false,
+      );
+
+      expect(
+        guard.redirect(AuthGuard.adminRoute),
+        loginFrom(AuthGuard.adminRoute),
+      );
+      // El deep link a una hija de la cola también aterriza tras el
+      // login (mismo mecanismo sanitizeFrom de los protegidos).
+      expect(
+        guard.redirect('/admin/orders/abc'),
+        loginFrom('/admin/orders/abc'),
+      );
+    });
+
+    test('cliente con sesión sin rol admin: /admin → /home', () {
+      final guard = AuthGuard(
+        isAuthenticated: () => true,
+        isAdmin: () => false,
+      );
+
+      expect(guard.redirect(AuthGuard.adminRoute), AuthGuard.homeRoute);
+      expect(guard.redirect('/admin/orders/abc'), AuthGuard.homeRoute);
+      // El resto de la app del cliente no se toca.
+      expect(guard.redirect(AuthGuard.homeRoute), isNull);
+      expect(guard.redirect('/orders/abc'), isNull);
+    });
+
+    test('admin con sesión: /admin y sus hijas pasan', () {
+      final guard = AuthGuard(isAuthenticated: () => true, isAdmin: () => true);
+
+      expect(guard.redirect(AuthGuard.adminRoute), isNull);
+      expect(guard.redirect('/admin/orders/abc'), isNull);
     });
   });
 }

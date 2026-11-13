@@ -729,7 +729,7 @@ class AppLocalizationsEs extends AppLocalizations {
       'Sin internet — revisa tu conexión e inténtalo de nuevo';
 
   @override
-  String get ordersTitle => 'Pedidos';
+  String get ordersTitle => 'PEDIDOS';
 
   @override
   String get ordersSectionHistory => 'Historial';
@@ -893,7 +893,7 @@ class AppLocalizationsEs extends AppLocalizations {
       'Este pedido ya no se puede cancelar — el local ya lo tomó';
 
   @override
-  String get profileTitle => 'Perfil';
+  String get profileTitle => 'PERFIL';
 
   @override
   String get profileAddressesRow => 'Mis direcciones';
@@ -1140,4 +1140,98 @@ class AppLocalizationsEs extends AppLocalizations {
   @override
   String get guestProfileBody =>
       'Tus datos, direcciones y puntos de la manada te esperan.';
+
+  @override
+  String get shellTabAdmin => 'Cocina';
+
+  @override
+  String get adminQueueTitle => 'COCINA';
+
+  @override
+  String get adminQueueFilterActive => 'Activos';
+
+  @override
+  String get adminQueueFilterHistory => 'Historial';
+
+  @override
+  String get adminChannelOnline => 'Online';
+
+  @override
+  String get adminChannelInPerson => 'Presencial';
+
+  @override
+  String adminOrderAtTable(String table) {
+    return 'En el local · $table';
+  }
+
+  @override
+  String get adminOrderInHouse => 'En el local';
+
+  @override
+  String adminOrderElapsedMinutes(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'hace $count min',
+      one: 'hace 1 min',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String adminOrderElapsedHours(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'hace $count h',
+      one: 'hace 1 h',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get adminStatusPending => 'Pendiente';
+
+  @override
+  String get adminPaymentCash => 'Efectivo';
+
+  @override
+  String get adminPaymentTransfer => 'Transf.';
+
+  @override
+  String get adminPaymentPending => 'Pago pendiente';
+
+  @override
+  String get adminPaymentPaid => 'Pagado';
+
+  @override
+  String get adminPaymentFailed => 'Pago fallido';
+
+  @override
+  String get adminQueueEmptyActiveTitle => 'Sin pedidos activos';
+
+  @override
+  String get adminQueueEmptyActiveBody =>
+      'La cocina descansa — los pedidos nuevos caen aquí solos.';
+
+  @override
+  String get adminQueueEmptyHistoryTitle => 'Historial vacío';
+
+  @override
+  String get adminQueueEmptyHistoryBody =>
+      'Los pedidos terminados y cancelados quedan aquí.';
+
+  @override
+  String get adminQueueLoadError => 'No pudimos cargar la cola';
+
+  @override
+  String get adminNewOrder => 'Nueva orden';
+
+  @override
+  String get adminOrderDetailSoon => 'El detalle llega en el próximo ciclo';
+
+  @override
+  String adminOrderItemsMore(int count) {
+    return '+$count más';
+  }
 }

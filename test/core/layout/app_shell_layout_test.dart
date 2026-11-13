@@ -4,13 +4,16 @@ import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:get_it/get_it.dart';
 import 'package:go_router/go_router.dart';
 import 'package:mocktail/mocktail.dart';
+import 'package:depredadog_app/core/auth/auth_session.dart';
 import 'package:depredadog_app/core/layout/app_shell_layout.dart';
 import 'package:depredadog_app/core/routes/auth_guard.dart';
 import 'package:depredadog_app/core/screens/module_placeholder_screen.dart';
 import 'package:depredadog_app/core/theme/app_theme.dart';
 import 'package:depredadog_app/core/widgets/store_status_chip.dart';
+import 'package:depredadog_app/features/auth/domain/entities/user.dart';
 import 'package:depredadog_app/features/cart/presentation/cubit/cart_cubit.dart';
 import 'package:depredadog_app/features/cart/presentation/screens/cart_screen.dart';
 import 'package:depredadog_app/features/store/domain/entities/store_open_state.dart';
@@ -21,12 +24,33 @@ class MockStoreStatusCubit extends MockCubit<StoreOpenState>
     implements StoreStatusCubit {}
 
 void main() {
+  final locator = GetIt.instance;
   // CartCubit real (§020): el badge del header lee sus unidades con
   // context.select — los métodos síncronos no necesitan mock.
   late CartCubit cartCubit;
   // §029 — el chip del header ahora es real: lo alimenta el
   // StoreStatusCubit del shell (mock — default abierto).
   late MockStoreStatusCubit storeCubit;
+  // §034 — el NavigationBar lee el rol por locator<AuthSession>:
+  // invitado/customer → 3 destinos; admin → 4 (Cocina).
+  late AuthSession authSession;
+
+  const customer = User(
+    id: 'u1',
+    email: 'cliente@depredadog.com',
+    firstName: 'Cliente',
+    firstLastName: 'Uno',
+    role: 'customer',
+    status: 'active',
+  );
+  const admin = User(
+    id: 'u2',
+    email: 'dueno@depredadog.com',
+    firstName: 'Dueño',
+    firstLastName: 'Local',
+    role: 'admin',
+    status: 'active',
+  );
 
   void stubStoreState(StoreOpenState state) => whenListen(
     storeCubit,
@@ -39,10 +63,14 @@ void main() {
     storeCubit = MockStoreStatusCubit();
     when(() => storeCubit.refresh()).thenAnswer((_) async {});
     stubStoreState(StoreOpenState.open);
+    // Default: sin sesión (invitado = no-admin → 3 destinos).
+    authSession = AuthSession();
+    locator.registerSingleton<AuthSession>(authSession);
   });
-  tearDown(() {
+  tearDown(() async {
     cartCubit.close();
     storeCubit.close();
+    await locator.reset();
   });
 
   GoRouter buildShellRouter() {
@@ -103,6 +131,19 @@ void main() {
                           const Scaffold(body: Text('STORE_PAGE')),
                     ),
                   ],
+                ),
+              ],
+            ),
+            // Rama 4 — Cocina (§034): estática como en app_router; el
+            // destino condicional por rol es lo que este archivo prueba.
+            StatefulShellBranch(
+              routes: [
+                GoRoute(
+                  path: AuthGuard.adminRoute,
+                  builder: (context, state) => ModulePlaceholderScreen(
+                    icon: Icons.soup_kitchen_rounded,
+                    moduleLabel: AppLocalizations.of(context)!.shellTabAdmin,
+                  ),
                 ),
               ],
             ),
@@ -393,6 +434,102 @@ void main() {
     expect(
       tester.widget<NavigationBar>(find.byType(NavigationBar)).selectedIndex,
       0,
+    );
+  });
+
+  testWidgets('§034 — customer con sesión ve 3 destinos (sin Cocina)', (
+    tester,
+  ) async {
+    authSession.markAuthenticated(customer);
+    await pumpShell(tester);
+    await tester.pumpAndSettle();
+
+    expect(find.byType(NavigationDestination), findsNWidgets(3));
+    expect(find.text('Cocina'), findsNothing);
+  });
+
+  testWidgets('§034 — admin ve 4 destinos con Cocina como ÚLTIMO tab', (
+    tester,
+  ) async {
+    authSession.markAuthenticated(admin);
+    await pumpShell(tester);
+    await tester.pumpAndSettle();
+
+    expect(find.byType(NavigationDestination), findsNWidgets(4));
+    final nav = find.byType(NavigationBar);
+    expect(
+      find.descendant(of: nav, matching: find.text('Cocina')),
+      findsOneWidget,
+    );
+    // Índice 3 = branch /admin — el orden importa (decisión "a un clic").
+    final destinations = tester
+        .widgetList<NavigationDestination>(find.byType(NavigationDestination))
+        .toList();
+    expect(destinations.last.label, 'Cocina');
+  });
+
+  testWidgets('§034 — el swap de rol es EN VIVO: login admin dibuja '
+      'Cocina y logout la quita, sin rebuild del router', (tester) async {
+    await pumpShell(tester);
+    await tester.pumpAndSettle();
+    expect(find.byType(NavigationDestination), findsNWidgets(3));
+
+    // Login admin → ListenableBuilder repinta la barra con 4 destinos.
+    authSession.markAuthenticated(admin);
+    await tester.pumpAndSettle();
+    expect(find.byType(NavigationDestination), findsNWidgets(4));
+    expect(find.text('Cocina'), findsOneWidget);
+
+    // Logout → vuelve a 3.
+    authSession.markLoggedOut();
+    await tester.pumpAndSettle();
+    expect(find.byType(NavigationDestination), findsNWidgets(3));
+    expect(find.text('Cocina'), findsNothing);
+  });
+
+  testWidgets('§034 — logout estando en Cocina devuelve a Inicio '
+      '(postFrame goBranch, sin crash por índice fuera de rango)', (
+    tester,
+  ) async {
+    authSession.markAuthenticated(admin);
+    await pumpShell(tester);
+    await tester.pumpAndSettle();
+
+    await tester.tap(
+      find.descendant(
+        of: find.byType(NavigationBar),
+        matching: find.text('Cocina'),
+      ),
+    );
+    await tester.pumpAndSettle();
+    expect(
+      tester.widget<NavigationBar>(find.byType(NavigationBar)).selectedIndex,
+      3,
+    );
+    expect(
+      find.descendant(
+        of: find.byType(ModulePlaceholderScreen),
+        matching: find.text('Cocina'),
+      ),
+      findsOneWidget,
+    );
+
+    // Logout con el branch 3 activo: la barra baja a 3 destinos y el
+    // postFrameCallback devuelve el shell a Inicio.
+    authSession.markLoggedOut();
+    await tester.pumpAndSettle();
+
+    expect(find.byType(NavigationDestination), findsNWidgets(3));
+    expect(
+      tester.widget<NavigationBar>(find.byType(NavigationBar)).selectedIndex,
+      0,
+    );
+    expect(
+      find.descendant(
+        of: find.byType(ModulePlaceholderScreen),
+        matching: find.text('Inicio'),
+      ),
+      findsOneWidget,
     );
   });
 }

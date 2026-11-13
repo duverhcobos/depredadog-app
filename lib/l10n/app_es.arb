@@ -601,7 +601,7 @@
   "@checkoutOrderOffline": {
     "description": "Error inline del POST /orders sin conectividad"
   },
-  "ordersTitle": "Pedidos",
+  "ordersTitle": "PEDIDOS",
   "@ordersTitle": {
     "description": "Título naciente (scrolling_title) del tab Pedidos (§023)"
   },
@@ -823,7 +823,7 @@
   "@ordersCancelRejected": {
     "description": "Toast cuando el backend rechaza la cancelación (409 — el pedido ya salió de pending; el mensaje del servidor viene en inglés y nunca se muestra)"
   },
-  "profileTitle": "Perfil",
+  "profileTitle": "PERFIL",
   "@profileTitle": {
     "description": "Título naciente (scrolling_title) del tab Perfil (§030)"
   },
@@ -1125,5 +1125,121 @@
   "guestProfileBody": "Tus datos, direcciones y puntos de la manada te esperan.",
   "@guestProfileBody": {
     "description": "Cuerpo de la wall card de auth del tab Perfil para invitado (§031)"
+  },
+  "shellTabAdmin": "Cocina",
+  "@shellTabAdmin": {
+    "description": "Label del 4º destino del NavigationBar — solo visible con sesión admin (§034)"
+  },
+  "adminQueueTitle": "COCINA",
+  "@adminQueueTitle": {
+    "description": "Título naciente (scrolling_title) del tab admin — la cola del local (§034)"
+  },
+  "adminQueueFilterActive": "Activos",
+  "@adminQueueFilterActive": {
+    "description": "Píldora del filtro segmentado de la cola admin — pedidos vivos (pending/confirmed/preparing)"
+  },
+  "adminQueueFilterHistory": "Historial",
+  "@adminQueueFilterHistory": {
+    "description": "Píldora del filtro segmentado de la cola admin — pedidos terminados/cancelados"
+  },
+  "adminChannelOnline": "Online",
+  "@adminChannelOnline": {
+    "description": "Chip de canal del pedido admin — llegó por la app (channel=online del backend)"
+  },
+  "adminChannelInPerson": "Presencial",
+  "@adminChannelInPerson": {
+    "description": "Chip de canal del pedido admin — tomado en el local por el dueño (channel=presencial)"
+  },
+  "adminOrderAtTable": "En el local · {table}",
+  "@adminOrderAtTable": {
+    "description": "Cliente del pedido admin presencial con mesa — table = tableLabel del backend ('Mesa 3')",
+    "placeholders": {
+      "table": {
+        "type": "String"
+      }
+    }
+  },
+  "adminOrderInHouse": "En el local",
+  "@adminOrderInHouse": {
+    "description": "Cliente del pedido admin presencial sin mesa ni nombre — pedido de mostrador"
+  },
+  "adminOrderElapsedMinutes": "{count, plural, =1{hace 1 min} other{hace {count} min}}",
+  "@adminOrderElapsedMinutes": {
+    "description": "Tiempo transcurrido del pedido admin cuando lleva menos de 1 h — la cola se opera por frescura",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "adminOrderElapsedHours": "{count, plural, =1{hace 1 h} other{hace {count} h}}",
+  "@adminOrderElapsedHours": {
+    "description": "Tiempo transcurrido del pedido admin cuando lleva 1+ h y menos de 24 h",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "adminStatusPending": "Pendiente",
+  "@adminStatusPending": {
+    "description": "Chip de estado del pedido admin en pending del backend (el cliente lo lee 'Recibido' — el dueño lo opera como pendiente de confirmar)"
+  },
+  "adminPaymentCash": "Efectivo",
+  "@adminPaymentCash": {
+    "description": "Método de pago del pedido admin — cash del backend"
+  },
+  "adminPaymentTransfer": "Transf.",
+  "@adminPaymentTransfer": {
+    "description": "Método de pago del pedido admin — transfer del backend (Nequi/gateway)"
+  },
+  "adminPaymentPending": "Pago pendiente",
+  "@adminPaymentPending": {
+    "description": "Chip de estado de pago del pedido admin — aún no se confirma el pago"
+  },
+  "adminPaymentPaid": "Pagado",
+  "@adminPaymentPaid": {
+    "description": "Chip de estado de pago del pedido admin — pago confirmado"
+  },
+  "adminPaymentFailed": "Pago fallido",
+  "@adminPaymentFailed": {
+    "description": "Chip de estado de pago del pedido admin — la pasarela rechazó el cobro"
+  },
+  "adminQueueEmptyActiveTitle": "Sin pedidos activos",
+  "@adminQueueEmptyActiveTitle": {
+    "description": "Título del vacío de la cola admin sin pedidos vivos"
+  },
+  "adminQueueEmptyActiveBody": "La cocina descansa — los pedidos nuevos caen aquí solos.",
+  "@adminQueueEmptyActiveBody": {
+    "description": "Cuerpo del vacío de la cola admin sin pedidos vivos (§034)"
+  },
+  "adminQueueEmptyHistoryTitle": "Historial vacío",
+  "@adminQueueEmptyHistoryTitle": {
+    "description": "Título del vacío del historial de la cola admin"
+  },
+  "adminQueueEmptyHistoryBody": "Los pedidos terminados y cancelados quedan aquí.",
+  "@adminQueueEmptyHistoryBody": {
+    "description": "Cuerpo del vacío del historial de la cola admin"
+  },
+  "adminQueueLoadError": "No pudimos cargar la cola",
+  "@adminQueueLoadError": {
+    "description": "Estado de error de la cola admin — acompaña el botón Reintentar"
+  },
+  "adminNewOrder": "Nueva orden",
+  "@adminNewOrder": {
+    "description": "Label del FAB de la cola admin — orden presencial a un clic (§034, form en ciclo 3)"
+  },
+  "adminOrderDetailSoon": "El detalle llega en el próximo ciclo",
+  "@adminOrderDetailSoon": {
+    "description": "Toast al tocar una card de la cola admin — el detalle con acciones es el ciclo 2 (mock fase 1)"
+  },
+  "adminOrderItemsMore": "+{count} más",
+  "@adminOrderItemsMore": {
+    "description": "Sufijo del resumen de ítems de la card admin cuando no caben todos en 2 líneas — recorte honesto: el dueño sabe cuántos faltan sin abrir el detalle (decisión §034)",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
   }
 }

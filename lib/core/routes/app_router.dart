@@ -1,6 +1,8 @@
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../features/admin/presentation/cubit/admin_queue_cubit.dart';
+import '../../features/admin/presentation/screens/admin_queue_screen.dart';
 import '../../features/auth/presentation/screens/forgot_password_screen.dart';
 import '../../features/auth/presentation/screens/login_screen.dart';
 import '../../features/auth/presentation/screens/register_screen.dart';
@@ -313,6 +315,25 @@ class AppRouter {
                     ],
                   ),
                 ],
+              ),
+            ],
+          ),
+          // Rama 4 — Cocina del dueño (§034): las branches son
+          // estáticas (existe para todos); lo condicional por rol es
+          // el DESTINO del NavigationBar y el guard de la ruta.
+          StatefulShellBranch(
+            routes: [
+              GoRoute(
+                path: AuthGuard.adminRoute,
+                // La cola se re-consulta por visita (paridad Pedidos
+                // §027); el guard ya dejó pasar solo admins.
+                pageBuilder: (context, state) {
+                  locator<AdminQueueCubit>().load();
+                  return CustomTransitions.fade(
+                    state,
+                    const AdminQueueScreen(),
+                  );
+                },
               ),
             ],
           ),
