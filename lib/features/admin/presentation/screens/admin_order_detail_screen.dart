@@ -9,10 +9,12 @@ import '../../domain/entities/admin_order.dart';
 import '../cubit/admin_queue_cubit.dart';
 import '../cubit/admin_queue_state.dart';
 import '../widgets/order_detail/admin_order_cancel_dialog.dart';
+import '../widgets/order_detail/admin_order_delivery_section.dart';
 import '../widgets/order_detail/admin_order_detail_actions.dart';
 import '../widgets/order_detail/admin_order_detail_header.dart';
 import '../widgets/order_detail/admin_order_detail_items.dart';
 import '../widgets/order_detail/admin_order_detail_payment.dart';
+import '../widgets/order_detail/admin_order_note_section.dart';
 
 /// Detalle del pedido admin (§035 — hija `/admin/:id`, slideUp como
 /// el detalle del cliente §023): el `extra` de la ruta es el snapshot
@@ -66,6 +68,8 @@ class AdminOrderDetailScreen extends StatelessWidget {
                       children: [
                         const _DetailTitle(),
                         AdminOrderDetailHeader(order: resolved),
+                        AdminOrderNoteSection(order: resolved),
+                        AdminOrderDeliverySection(order: resolved),
                         AdminOrderDetailItems(order: resolved),
                         AdminOrderDetailPayment(order: resolved, busy: busy),
                       ],

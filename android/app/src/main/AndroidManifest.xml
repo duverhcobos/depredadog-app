@@ -46,5 +46,12 @@
             <action android:name="android.intent.action.PROCESS_TEXT"/>
             <data android:mimeType="text/plain"/>
         </intent>
+        <!-- §037 — pin del cliente nel detalle admin apre Maps: senza la
+             query VIEW/https la package visibility di Android 11+ rende
+             launchUrl() sempre false. -->
+        <intent>
+            <action android:name="android.intent.action.VIEW"/>
+            <data android:scheme="https"/>
+        </intent>
     </queries>
 </manifest>

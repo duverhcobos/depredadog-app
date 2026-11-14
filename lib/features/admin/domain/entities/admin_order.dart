@@ -27,9 +27,7 @@ enum AdminServiceType { pickup, delivery, dineIn }
 /// mocks del cubit). Es la OrderResponse + lo que la vista cliente
 /// oculta a propósito: `channel`, `tableLabel` y `customerName`.
 ///
-/// SOLID (SRP): solo los campos que la cola y el detalle usan hoy —
-/// orderNumber, contactPhone, deliveryAddress, discount y notes
-/// llegan cuando el detalle se integre.
+/// SOLID (SRP): solo los campos que la cola y el detalle usan hoy.
 class AdminOrder extends Equatable {
   const AdminOrder({
     required this.id,
@@ -39,11 +37,22 @@ class AdminOrder extends Equatable {
     required this.items,
     required this.paymentMethod,
     required this.paymentStatus,
-    required this.total,
+    required this.subtotal,
+    required this.deliveryFee,
     required this.placedAt,
     this.tableLabel,
     this.customerName,
     this.cancelReason,
+    this.addressLabel,
+    this.landmark,
+    this.neighborhood,
+    this.hasLocationPin = false,
+    this.contactPhone,
+    this.note,
+    this.locationLat,
+    this.locationLng,
+    this.locationUrl,
+    this.statusChangedAt,
   });
 
   final String id;
@@ -66,9 +75,14 @@ class AdminOrder extends Equatable {
   final AdminPaymentMethod paymentMethod;
   final OrderPaymentStatus paymentStatus;
 
-  /// Total cobrado (subtotal + deliveryFee — el DTO ya lo trae
-  /// compuesto).
-  final int total;
+  /// Subtotal de ítems y domicilio — el DTO los trae separados
+  /// (OrderResponse del backend §015). El desglose los muestra.
+  final int subtotal;
+  final int deliveryFee;
+
+  /// Total cobrado = subtotal + domicilio (misma regla del
+  /// CustomerOrder).
+  int get total => subtotal + deliveryFee;
   final DateTime placedAt;
 
   /// Mesa del pedido presencial dine_in ("Mesa 3") — null cuando no
@@ -82,6 +96,38 @@ class AdminOrder extends Equatable {
   /// Motivo de la cancelación — el PATCH status del backend ya lo
   /// acepta (§019); null cuando no se canceló o se canceló sin nota.
   final String? cancelReason;
+
+  /// Bloque de entrega (solo delivery — null en pickup/dineIn):
+  /// etiqueta de la dirección ("Casa"), punto de referencia (la zona
+  /// no tiene direcciones formales), barrio, pin de Maps adjunto y
+  /// celular de quién recibe (§024).
+  final String? addressLabel;
+  final String? landmark;
+  final String? neighborhood;
+  final bool hasLocationPin;
+  final String? contactPhone;
+
+  /// Observación libre del cliente ("sin picante, es para el niño").
+  final String? note;
+
+  /// Coordenadas del pin que el cliente fijó en Maps (espejo
+  /// `addresses.latitude/longitude` del backend) — solo cuando
+  /// hasLocationPin: el tap abre Maps con el punto y el ícono
+  /// copia el enlace (§037).
+  final double? locationLat;
+  final double? locationLng;
+
+  /// Enlace compartido de Maps que el cliente guardó al fijar el
+  /// pin ("https://maps.app.goo.gl/…") — si existe es el enlace
+  /// canónico: el tap lo abre y el ícono lo copia verbatim, en vez
+  /// de reconstruirlo desde lat/lng (§037 — decisión del dueño).
+  final String? locationUrl;
+
+  /// Cuándo entró al estado/carril actual — la cola del carril se
+  /// ordena por este reloj (recién movido cae al fondo), no por
+  /// placedAt (§037 — decisión del dueño: cola por carril). Null =
+  /// nació en el estado actual (entró al carril en placedAt).
+  final DateTime? statusChangedAt;
 
   /// Terminal = done o cancelled — sin más pasos de avance; el
   /// done sigue vivo en la cola (carril Entregado) hasta el cierre
@@ -109,14 +155,27 @@ class AdminOrder extends Equatable {
     channel: channel,
     serviceType: serviceType,
     status: status ?? this.status,
+    statusChangedAt: status != null && status != this.status
+        ? DateTime.now()
+        : statusChangedAt,
     items: items,
     paymentMethod: paymentMethod,
     paymentStatus: paymentStatus ?? this.paymentStatus,
-    total: total,
+    subtotal: subtotal,
+    deliveryFee: deliveryFee,
     placedAt: placedAt,
     tableLabel: tableLabel,
     customerName: customerName,
     cancelReason: cancelReason ?? this.cancelReason,
+    addressLabel: addressLabel,
+    landmark: landmark,
+    neighborhood: neighborhood,
+    hasLocationPin: hasLocationPin,
+    contactPhone: contactPhone,
+    note: note,
+    locationLat: locationLat,
+    locationLng: locationLng,
+    locationUrl: locationUrl,
   );
 
   @override
@@ -128,10 +187,21 @@ class AdminOrder extends Equatable {
     items,
     paymentMethod,
     paymentStatus,
-    total,
+    subtotal,
+    deliveryFee,
     placedAt,
     tableLabel,
     customerName,
     cancelReason,
+    addressLabel,
+    landmark,
+    neighborhood,
+    hasLocationPin,
+    contactPhone,
+    note,
+    locationLat,
+    locationLng,
+    locationUrl,
+    statusChangedAt,
   ];
 }

@@ -16,7 +16,8 @@ AdminOrder _order(AdminOrderChannel channel) => AdminOrder(
   items: const [],
   paymentMethod: AdminPaymentMethod.cash,
   paymentStatus: OrderPaymentStatus.paid,
-  total: 10000,
+  subtotal: 10000,
+  deliveryFee: 0,
   // Reciente: una fecha vieja dibuja un "hace N" larguísimo en la
   // fila cliente y revienta la card en superficies angostas.
   placedAt: DateTime.now().subtract(const Duration(minutes: 5)),

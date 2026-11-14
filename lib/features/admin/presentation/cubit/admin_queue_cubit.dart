@@ -1,5 +1,6 @@
 import 'package:flutter_bloc/flutter_bloc.dart';
 
+import '../../../cart/domain/entities/cart_modifier.dart';
 import '../../../orders/domain/entities/customer_order.dart';
 import '../../domain/entities/admin_day_close.dart';
 import '../../domain/entities/admin_order.dart';
@@ -291,6 +292,31 @@ class AdminQueueCubit extends Cubit<AdminQueueState> {
             name: 'El Depredador',
             quantity: 2,
             unitPrice: 25000,
+            includedNames: [
+              'Pan artesanal', 'Salchicha', 'Papitas', 'Queso', 'Salsas',
+            ],
+            modifiers: [
+              CartModifier(
+                optionId: 'ing-cebolla',
+                optionName: 'Cebolla',
+                action: CartModifierAction.removed,
+                priceDelta: 0,
+              ),
+              CartModifier(
+                optionId: 'ex-queso',
+                optionName: 'Queso cheddar',
+                action: CartModifierAction.added,
+                priceDelta: 2500,
+                group: CartModifierGroup.extra,
+              ),
+              CartModifier(
+                optionId: 'sa-pina',
+                optionName: 'Piña',
+                action: CartModifierAction.added,
+                priceDelta: 0,
+                group: CartModifierGroup.sauce,
+              ),
+            ],
           ),
           OrderItem(
             productId: 'p-papas',
@@ -298,13 +324,24 @@ class AdminQueueCubit extends Cubit<AdminQueueState> {
             name: 'Manada de papas',
             quantity: 1,
             unitPrice: 6000,
+            includedNames: ['Papas criollas', 'Queso', 'Salsas de la casa'],
           ),
         ],
         paymentMethod: AdminPaymentMethod.transfer,
         paymentStatus: OrderPaymentStatus.pending,
-        total: 56000,
+        subtotal: 56000,
+        deliveryFee: 5000,
         placedAt: now.subtract(const Duration(minutes: 12)),
         customerName: 'Ana Uno',
+        addressLabel: 'Casa',
+        landmark: 'Portón negro frente a la cancha',
+        neighborhood: 'Barrio La Esperanza',
+        hasLocationPin: true,
+        locationUrl: 'https://maps.app.goo.gl/s5RiFni6LsV4Ptmj9',
+        locationLat: 6.2442,
+        locationLng: -75.5812,
+        contactPhone: '3001234567',
+        note: 'Sin picante — es para el niño',
       ),
       // CONFIRMADO — dine_in Mesa 3, cash pendiente (cobrar no es
       // la acción de card en estados tempranos — en mesa se sirve
@@ -314,6 +351,7 @@ class AdminQueueCubit extends Cubit<AdminQueueState> {
         channel: AdminOrderChannel.presencial,
         serviceType: AdminServiceType.dineIn,
         status: OrderStatus.confirmed,
+        statusChangedAt: now.subtract(const Duration(minutes: 9)),
         items: const [
           OrderItem(
             productId: 'p-cachorro',
@@ -325,7 +363,8 @@ class AdminQueueCubit extends Cubit<AdminQueueState> {
         ],
         paymentMethod: AdminPaymentMethod.cash,
         paymentStatus: OrderPaymentStatus.pending,
-        total: 14000,
+        subtotal: 14000,
+        deliveryFee: 0,
         placedAt: now.subtract(const Duration(minutes: 4)),
         tableLabel: 'Mesa 3',
       ),
@@ -337,6 +376,7 @@ class AdminQueueCubit extends Cubit<AdminQueueState> {
         channel: AdminOrderChannel.presencial,
         serviceType: AdminServiceType.pickup,
         status: OrderStatus.confirmed,
+        statusChangedAt: now.subtract(const Duration(minutes: 8)),
         items: const [
           OrderItem(
             productId: 'p-coyote',
@@ -344,11 +384,30 @@ class AdminQueueCubit extends Cubit<AdminQueueState> {
             name: 'El Coyote',
             quantity: 2,
             unitPrice: 18000,
+            includedNames: [
+              'Pan artesanal', 'Salchicha', 'Papitas', 'Queso', 'Salsas',
+            ],
+            modifiers: [
+              CartModifier(
+                optionId: 'ing-cebolla',
+                optionName: 'Cebolla',
+                action: CartModifierAction.removed,
+                priceDelta: 0,
+              ),
+              CartModifier(
+                optionId: 'sa-pina',
+                optionName: 'Piña',
+                action: CartModifierAction.added,
+                priceDelta: 0,
+                group: CartModifierGroup.sauce,
+              ),
+            ],
           ),
         ],
         paymentMethod: AdminPaymentMethod.cash,
         paymentStatus: OrderPaymentStatus.paid,
-        total: 36000,
+        subtotal: 36000,
+        deliveryFee: 0,
         placedAt: now.subtract(const Duration(minutes: 1)),
       ),
       // CONFIRMADO — online delivery NEQUI ya pagado: el webhook
@@ -360,6 +419,7 @@ class AdminQueueCubit extends Cubit<AdminQueueState> {
         channel: AdminOrderChannel.online,
         serviceType: AdminServiceType.delivery,
         status: OrderStatus.confirmed,
+        statusChangedAt: now.subtract(const Duration(minutes: 7)),
         items: const [
           OrderItem(
             productId: 'p-depredador',
@@ -371,9 +431,14 @@ class AdminQueueCubit extends Cubit<AdminQueueState> {
         ],
         paymentMethod: AdminPaymentMethod.nequi,
         paymentStatus: OrderPaymentStatus.paid,
-        total: 25000,
+        subtotal: 25000,
+        deliveryFee: 3000,
         placedAt: now.subtract(const Duration(minutes: 3)),
         customerName: 'Wanda Treintaidós',
+        addressLabel: 'Trabajo',
+        landmark: 'Edificio azul de la esquina, segundo piso',
+        neighborhood: 'Barrio El Centro',
+        contactPhone: '3019876543',
       ),
       // PREPARANDO — Mesa 5 (la orden grande) dine_in cash paid:
       // 1× de cada producto del menú (7 líneas) — cubre el resumen
@@ -383,6 +448,7 @@ class AdminQueueCubit extends Cubit<AdminQueueState> {
         channel: AdminOrderChannel.presencial,
         serviceType: AdminServiceType.dineIn,
         status: OrderStatus.preparing,
+        statusChangedAt: now.subtract(const Duration(minutes: 5)),
         items: const [
           OrderItem(
             productId: 'p-depredador',
@@ -390,6 +456,24 @@ class AdminQueueCubit extends Cubit<AdminQueueState> {
             name: 'El Depredador',
             quantity: 1,
             unitPrice: 25000,
+            includedNames: [
+              'Pan artesanal', 'Salchicha', 'Papitas', 'Queso', 'Salsas',
+            ],
+            modifiers: [
+              CartModifier(
+                optionId: 'ing-cebolla',
+                optionName: 'Cebolla',
+                action: CartModifierAction.removed,
+                priceDelta: 0,
+              ),
+              CartModifier(
+                optionId: 'ex-tocineta',
+                optionName: 'Tocineta',
+                action: CartModifierAction.added,
+                priceDelta: 3500,
+                group: CartModifierGroup.extra,
+              ),
+            ],
           ),
           OrderItem(
             productId: 'p-carnicero',
@@ -397,6 +481,18 @@ class AdminQueueCubit extends Cubit<AdminQueueState> {
             name: 'El Carnicero',
             quantity: 1,
             unitPrice: 17000,
+            includedNames: [
+              'Pan artesanal', 'Salchicha', 'Papitas', 'Queso', 'Salsas',
+            ],
+            modifiers: [
+              CartModifier(
+                optionId: 'ex-queso',
+                optionName: 'Queso cheddar',
+                action: CartModifierAction.added,
+                priceDelta: 2500,
+                group: CartModifierGroup.extra,
+              ),
+            ],
           ),
           OrderItem(
             productId: 'p-coyote',
@@ -404,6 +500,9 @@ class AdminQueueCubit extends Cubit<AdminQueueState> {
             name: 'El Coyote',
             quantity: 1,
             unitPrice: 18000,
+            includedNames: [
+              'Pan artesanal', 'Salchicha', 'Papitas', 'Queso', 'Salsas',
+            ],
           ),
           OrderItem(
             productId: 'p-ave',
@@ -411,6 +510,21 @@ class AdminQueueCubit extends Cubit<AdminQueueState> {
             name: 'Ave de Presa',
             quantity: 1,
             unitPrice: 18000,
+            modifiers: [
+              CartModifier(
+                optionId: 'ing-tomate',
+                optionName: 'Tomate',
+                action: CartModifierAction.removed,
+                priceDelta: 0,
+              ),
+              CartModifier(
+                optionId: 'sa-pina',
+                optionName: 'Piña',
+                action: CartModifierAction.added,
+                priceDelta: 0,
+                group: CartModifierGroup.sauce,
+              ),
+            ],
           ),
           OrderItem(
             productId: 'p-trampa',
@@ -418,6 +532,17 @@ class AdminQueueCubit extends Cubit<AdminQueueState> {
             name: 'La Trampa',
             quantity: 1,
             unitPrice: 16000,
+            includedNames: [
+              'Pan artesanal', 'Salchicha', 'Papitas', 'Queso', 'Salsas',
+            ],
+            modifiers: [
+              CartModifier(
+                optionId: 'ing-repollo',
+                optionName: 'Repollo',
+                action: CartModifierAction.removed,
+                priceDelta: 0,
+              ),
+            ],
           ),
           OrderItem(
             productId: 'p-cachorro',
@@ -432,13 +557,16 @@ class AdminQueueCubit extends Cubit<AdminQueueState> {
             name: 'Manada de Papas',
             quantity: 1,
             unitPrice: 10000,
+            includedNames: ['Papas criollas', 'Queso', 'Salsas de la casa'],
           ),
         ],
         paymentMethod: AdminPaymentMethod.cash,
         paymentStatus: OrderPaymentStatus.paid,
-        total: 118000,
+        subtotal: 118000,
+        deliveryFee: 0,
         placedAt: now.subtract(const Duration(minutes: 8)),
         tableLabel: 'Mesa 5',
+        note: 'Uno sin cebolla porfa',
       ),
       // PENDIENTE — online pickup NEQUI FALLIDO: el webhook ya
       // rechazó el cobro — online pickup SOLO acepta Nequi (§036:
@@ -467,9 +595,11 @@ class AdminQueueCubit extends Cubit<AdminQueueState> {
         ],
         paymentMethod: AdminPaymentMethod.nequi,
         paymentStatus: OrderPaymentStatus.failed,
-        total: 46000,
+        subtotal: 46000,
+        deliveryFee: 0,
         placedAt: now.subtract(const Duration(minutes: 3)),
         customerName: 'Daniela Cuatro',
+        contactPhone: '3171234567',
       ),
       // PENDIENTE — online delivery, transfer pendiente, pedido
       // de ítem único grande.
@@ -489,9 +619,18 @@ class AdminQueueCubit extends Cubit<AdminQueueState> {
         ],
         paymentMethod: AdminPaymentMethod.transfer,
         paymentStatus: OrderPaymentStatus.pending,
-        total: 48000,
+        subtotal: 48000,
+        deliveryFee: 4000,
         placedAt: now.subtract(const Duration(minutes: 2)),
         customerName: 'Elena Cinco',
+        addressLabel: 'Casa',
+        landmark: 'Al lado de la tienda Don Pedro',
+        neighborhood: 'Barrio San José',
+        hasLocationPin: true,
+        locationUrl: 'https://maps.app.goo.gl/s5RiFni6LsV4Ptmj9',
+        locationLat: 6.2518,
+        locationLng: -75.5636,
+        contactPhone: '3023456789',
       ),
       // PENDIENTE — online delivery PAGADO: prepaid, confirma sin
       // fricción (contracara de los delivery sin cobrar).
@@ -511,9 +650,14 @@ class AdminQueueCubit extends Cubit<AdminQueueState> {
         ],
         paymentMethod: AdminPaymentMethod.transfer,
         paymentStatus: OrderPaymentStatus.paid,
-        total: 18000,
+        subtotal: 18000,
+        deliveryFee: 3000,
         placedAt: now.subtract(const Duration(minutes: 11)),
         customerName: 'Mario Doce',
+        addressLabel: 'Casa de mi mamá',
+        landmark: 'Casa verde de dos pisos',
+        neighborhood: 'Barrio La Floresta',
+        contactPhone: '3104567890',
       ),
       // PENDIENTE — online delivery CONTRAENTREGA (efectivo en la
       // puerta): pidió por la app y paga al recibir — SÍ confirma
@@ -542,9 +686,18 @@ class AdminQueueCubit extends Cubit<AdminQueueState> {
         ],
         paymentMethod: AdminPaymentMethod.cash,
         paymentStatus: OrderPaymentStatus.pending,
-        total: 23000,
+        subtotal: 23000,
+        deliveryFee: 3000,
         placedAt: now.subtract(const Duration(minutes: 7)),
         customerName: 'Pablo Veintiocho',
+        addressLabel: 'Casa',
+        landmark: 'Frente a la iglesia',
+        neighborhood: 'Barrio El Carmen',
+        hasLocationPin: true,
+        locationUrl: 'https://maps.app.goo.gl/s5RiFni6LsV4Ptmj9',
+        locationLat: 6.2309,
+        locationLng: -75.5901,
+        contactPhone: '3115678901',
       ),
       // PENDIENTE — online pickup NEQUI esperando webhook (§036):
       // el cobro dentro de la app no lo toca el dueño — la card
@@ -565,9 +718,11 @@ class AdminQueueCubit extends Cubit<AdminQueueState> {
         ],
         paymentMethod: AdminPaymentMethod.nequi,
         paymentStatus: OrderPaymentStatus.pending,
-        total: 36000,
+        subtotal: 36000,
+        deliveryFee: 0,
         placedAt: now.subtract(const Duration(minutes: 6)),
         customerName: 'Tomás Veintinueve',
+        contactPhone: '3182345678',
       ),
       // PENDIENTE — online delivery NEQUI esperando webhook: la
       // regla congela TAMBIÉN el domicilio — aunque el dueño
@@ -585,13 +740,36 @@ class AdminQueueCubit extends Cubit<AdminQueueState> {
             name: 'La Trampa',
             quantity: 2,
             unitPrice: 16000,
+            includedNames: [
+              'Pan artesanal', 'Salchicha', 'Papitas', 'Queso', 'Salsas',
+            ],
+            modifiers: [
+              CartModifier(
+                optionId: 'ing-repollo',
+                optionName: 'Repollo',
+                action: CartModifierAction.removed,
+                priceDelta: 0,
+              ),
+              CartModifier(
+                optionId: 'ex-tocineta',
+                optionName: 'Tocineta',
+                action: CartModifierAction.added,
+                priceDelta: 3500,
+                group: CartModifierGroup.extra,
+              ),
+            ],
           ),
         ],
         paymentMethod: AdminPaymentMethod.nequi,
         paymentStatus: OrderPaymentStatus.pending,
-        total: 32000,
+        subtotal: 32000,
+        deliveryFee: 4000,
         placedAt: now.subtract(const Duration(minutes: 5)),
         customerName: 'Uriel Treinta',
+        addressLabel: 'Oficina',
+        landmark: 'Local 4, centro comercial La Esquina',
+        neighborhood: 'Barrio El Centro',
+        contactPhone: '3126789012',
       ),
       // PENDIENTE — online pickup NEQUI FALLIDO: el webhook ya
       // reportó el rechazo — sin botones de avance ni cobro, la
@@ -612,9 +790,11 @@ class AdminQueueCubit extends Cubit<AdminQueueState> {
         ],
         paymentMethod: AdminPaymentMethod.nequi,
         paymentStatus: OrderPaymentStatus.failed,
-        total: 14000,
+        subtotal: 14000,
+        deliveryFee: 0,
         placedAt: now.subtract(const Duration(minutes: 2)),
         customerName: 'Valeria Treintaiuno',
+        contactPhone: '3193456789',
       ),
       // PENDIENTE — online pickup NEQUI PAGADO: el webhook ya
       // confirmó — la recogida sí confirma (contracara de los
@@ -635,9 +815,12 @@ class AdminQueueCubit extends Cubit<AdminQueueState> {
         ],
         paymentMethod: AdminPaymentMethod.nequi,
         paymentStatus: OrderPaymentStatus.paid,
-        total: 16000,
+        subtotal: 16000,
+        deliveryFee: 0,
         placedAt: now.subtract(const Duration(minutes: 10)),
         customerName: 'Nora Trece',
+        contactPhone: '3204567890',
+        note: 'La recoge mi hermano',
       ),
       // CONFIRMADO NATURAL — presencial delivery sin cobrar
       // (pedido tomado por teléfono): el dueño ES el confirmador —
@@ -648,6 +831,7 @@ class AdminQueueCubit extends Cubit<AdminQueueState> {
         channel: AdminOrderChannel.presencial,
         serviceType: AdminServiceType.delivery,
         status: OrderStatus.confirmed,
+        statusChangedAt: now.subtract(const Duration(minutes: 6)),
         items: const [
           OrderItem(
             productId: 'p-depredador',
@@ -659,9 +843,18 @@ class AdminQueueCubit extends Cubit<AdminQueueState> {
         ],
         paymentMethod: AdminPaymentMethod.transfer,
         paymentStatus: OrderPaymentStatus.pending,
-        total: 25000,
+        subtotal: 25000,
+        deliveryFee: 3000,
         placedAt: now.subtract(const Duration(minutes: 9)),
         customerName: 'Óscar Catorce',
+        addressLabel: 'Casa',
+        landmark: 'Portón blanco con reja',
+        neighborhood: 'Barrio La Esperanza',
+        hasLocationPin: true,
+        locationUrl: 'https://maps.app.goo.gl/s5RiFni6LsV4Ptmj9',
+        locationLat: 6.2701,
+        locationLng: -75.5723,
+        contactPhone: '3137890123',
       ),
       // CONFIRMADO NATURAL — presencial dineIn cash pendiente
       // (Mesa 4): el dueño la tomó → nace confirmed (§036); en
@@ -671,6 +864,7 @@ class AdminQueueCubit extends Cubit<AdminQueueState> {
         channel: AdminOrderChannel.presencial,
         serviceType: AdminServiceType.dineIn,
         status: OrderStatus.confirmed,
+        statusChangedAt: now.subtract(const Duration(minutes: 5)),
         items: const [
           OrderItem(
             productId: 'p-carnicero',
@@ -682,7 +876,8 @@ class AdminQueueCubit extends Cubit<AdminQueueState> {
         ],
         paymentMethod: AdminPaymentMethod.cash,
         paymentStatus: OrderPaymentStatus.pending,
-        total: 34000,
+        subtotal: 34000,
+        deliveryFee: 0,
         placedAt: now.subtract(const Duration(minutes: 8)),
         tableLabel: 'Mesa 4',
       ),
@@ -694,6 +889,7 @@ class AdminQueueCubit extends Cubit<AdminQueueState> {
         channel: AdminOrderChannel.presencial,
         serviceType: AdminServiceType.dineIn,
         status: OrderStatus.confirmed,
+        statusChangedAt: now.subtract(const Duration(minutes: 4)),
         items: const [
           OrderItem(
             productId: 'p-cachorro',
@@ -705,7 +901,8 @@ class AdminQueueCubit extends Cubit<AdminQueueState> {
         ],
         paymentMethod: AdminPaymentMethod.transfer,
         paymentStatus: OrderPaymentStatus.pending,
-        total: 42000,
+        subtotal: 42000,
+        deliveryFee: 0,
         placedAt: now.subtract(const Duration(minutes: 7)),
         tableLabel: 'Mesa 6',
       ),
@@ -729,9 +926,11 @@ class AdminQueueCubit extends Cubit<AdminQueueState> {
         ],
         paymentMethod: AdminPaymentMethod.nequi,
         paymentStatus: OrderPaymentStatus.pending,
-        total: 18000,
+        subtotal: 18000,
+        deliveryFee: 0,
         placedAt: now.subtract(const Duration(minutes: 5)),
         customerName: 'Sara Quince',
+        contactPhone: '3215678901',
       ),
       // PENDIENTE — presencial pickup (mostrador) cash PENDIENTE:
       // en mostrador se cobra al tomar — sin cobrar no entra a
@@ -753,7 +952,8 @@ class AdminQueueCubit extends Cubit<AdminQueueState> {
         ],
         paymentMethod: AdminPaymentMethod.cash,
         paymentStatus: OrderPaymentStatus.pending,
-        total: 18000,
+        subtotal: 18000,
+        deliveryFee: 0,
         placedAt: now.subtract(const Duration(minutes: 4)),
       ),
       // PENDIENTE — presencial pickup (mostrador) cash PAGADO:
@@ -781,7 +981,8 @@ class AdminQueueCubit extends Cubit<AdminQueueState> {
         ],
         paymentMethod: AdminPaymentMethod.cash,
         paymentStatus: OrderPaymentStatus.paid,
-        total: 26000,
+        subtotal: 26000,
+        deliveryFee: 0,
         placedAt: now.subtract(const Duration(minutes: 3)),
       ),
       // PENDIENTE — presencial pickup por TELÉFONO, transfer
@@ -805,7 +1006,8 @@ class AdminQueueCubit extends Cubit<AdminQueueState> {
         ],
         paymentMethod: AdminPaymentMethod.transfer,
         paymentStatus: OrderPaymentStatus.pending,
-        total: 17000,
+        subtotal: 17000,
+        deliveryFee: 0,
         placedAt: now.subtract(const Duration(minutes: 1)),
       ),
       // CONFIRMADO — online delivery YA PAGADO por adelantado: la
@@ -815,6 +1017,7 @@ class AdminQueueCubit extends Cubit<AdminQueueState> {
         channel: AdminOrderChannel.online,
         serviceType: AdminServiceType.delivery,
         status: OrderStatus.confirmed,
+        statusChangedAt: now.subtract(const Duration(minutes: 3)),
         items: const [
           OrderItem(
             productId: 'p-ave',
@@ -826,9 +1029,14 @@ class AdminQueueCubit extends Cubit<AdminQueueState> {
         ],
         paymentMethod: AdminPaymentMethod.transfer,
         paymentStatus: OrderPaymentStatus.paid,
-        total: 36000,
+        subtotal: 36000,
+        deliveryFee: 4000,
         placedAt: now.subtract(const Duration(minutes: 6)),
         customerName: 'Felipe Seis',
+        addressLabel: 'Casa',
+        landmark: 'Al final del callejón, casa amarilla',
+        neighborhood: 'Barrio San Antonio',
+        contactPhone: '3148901234',
       ),
       // PREPARANDO — online pickup sin cobrar (el cliente paga
       // transfer al recoger — pickup no acepta efectivo).
@@ -837,6 +1045,7 @@ class AdminQueueCubit extends Cubit<AdminQueueState> {
         channel: AdminOrderChannel.online,
         serviceType: AdminServiceType.pickup,
         status: OrderStatus.preparing,
+        statusChangedAt: now.subtract(const Duration(minutes: 3)),
         items: const [
           OrderItem(
             productId: 'p-depredador',
@@ -848,9 +1057,11 @@ class AdminQueueCubit extends Cubit<AdminQueueState> {
         ],
         paymentMethod: AdminPaymentMethod.transfer,
         paymentStatus: OrderPaymentStatus.pending,
-        total: 25000,
+        subtotal: 25000,
+        deliveryFee: 0,
         placedAt: now.subtract(const Duration(minutes: 5)),
         customerName: 'Gabriel Siete',
+        contactPhone: '3226789012',
       ),
       // PREPARANDO — online delivery pagado.
       AdminOrder(
@@ -858,6 +1069,7 @@ class AdminQueueCubit extends Cubit<AdminQueueState> {
         channel: AdminOrderChannel.online,
         serviceType: AdminServiceType.delivery,
         status: OrderStatus.preparing,
+        statusChangedAt: now.subtract(const Duration(minutes: 1)),
         items: const [
           OrderItem(
             productId: 'p-cachorro',
@@ -876,9 +1088,18 @@ class AdminQueueCubit extends Cubit<AdminQueueState> {
         ],
         paymentMethod: AdminPaymentMethod.transfer,
         paymentStatus: OrderPaymentStatus.paid,
-        total: 34000,
+        subtotal: 34000,
+        deliveryFee: 4000,
         placedAt: now.subtract(const Duration(minutes: 7)),
         customerName: 'Héctor Ocho',
+        addressLabel: 'Trabajo',
+        landmark: 'Bodega de la esquina, preguntar por él',
+        neighborhood: 'Barrio El Progreso',
+        hasLocationPin: true,
+        locationUrl: 'https://maps.app.goo.gl/s5RiFni6LsV4Ptmj9',
+        locationLat: 6.2178,
+        locationLng: -75.6044,
+        contactPhone: '3159012345',
       ),
       // LISTO delivery pagado — "Entregado" (ya salió en camino
       // cobrado).
@@ -887,6 +1108,7 @@ class AdminQueueCubit extends Cubit<AdminQueueState> {
         channel: AdminOrderChannel.online,
         serviceType: AdminServiceType.delivery,
         status: OrderStatus.ready,
+        statusChangedAt: now.subtract(const Duration(minutes: 7)),
         items: const [
           OrderItem(
             productId: 'p-carnicero',
@@ -905,9 +1127,14 @@ class AdminQueueCubit extends Cubit<AdminQueueState> {
         ],
         paymentMethod: AdminPaymentMethod.transfer,
         paymentStatus: OrderPaymentStatus.paid,
-        total: 27000,
+        subtotal: 27000,
+        deliveryFee: 3000,
         placedAt: now.subtract(const Duration(minutes: 22)),
         customerName: 'Inés Nueve',
+        addressLabel: 'Casa',
+        landmark: 'Casa rosada junto al parqueadero',
+        neighborhood: 'Barrio La Paz',
+        contactPhone: '3160123456',
       ),
       // LISTO dine_in YA COBRADO — Mesa 1: "Entregado" libera la
       // mesa (la contracara de Mesa 7, que aún debe).
@@ -916,6 +1143,7 @@ class AdminQueueCubit extends Cubit<AdminQueueState> {
         channel: AdminOrderChannel.presencial,
         serviceType: AdminServiceType.dineIn,
         status: OrderStatus.ready,
+        statusChangedAt: now.subtract(const Duration(minutes: 5)),
         items: const [
           OrderItem(
             productId: 'p-coyote',
@@ -927,7 +1155,8 @@ class AdminQueueCubit extends Cubit<AdminQueueState> {
         ],
         paymentMethod: AdminPaymentMethod.cash,
         paymentStatus: OrderPaymentStatus.paid,
-        total: 36000,
+        subtotal: 36000,
+        deliveryFee: 0,
         placedAt: now.subtract(const Duration(minutes: 30)),
         tableLabel: 'Mesa 1',
       ),
@@ -938,6 +1167,7 @@ class AdminQueueCubit extends Cubit<AdminQueueState> {
         channel: AdminOrderChannel.presencial,
         serviceType: AdminServiceType.dineIn,
         status: OrderStatus.done,
+        statusChangedAt: now.subtract(const Duration(minutes: 8)),
         items: const [
           OrderItem(
             productId: 'p-trampa',
@@ -956,7 +1186,8 @@ class AdminQueueCubit extends Cubit<AdminQueueState> {
         ],
         paymentMethod: AdminPaymentMethod.cash,
         paymentStatus: OrderPaymentStatus.paid,
-        total: 26000,
+        subtotal: 26000,
+        deliveryFee: 0,
         placedAt: now.subtract(const Duration(hours: 4)),
         tableLabel: 'Mesa 9',
       ),
@@ -966,6 +1197,7 @@ class AdminQueueCubit extends Cubit<AdminQueueState> {
         channel: AdminOrderChannel.online,
         serviceType: AdminServiceType.pickup,
         status: OrderStatus.done,
+        statusChangedAt: now.subtract(const Duration(minutes: 5)),
         items: const [
           OrderItem(
             productId: 'p-cachorro',
@@ -977,9 +1209,11 @@ class AdminQueueCubit extends Cubit<AdminQueueState> {
         ],
         paymentMethod: AdminPaymentMethod.transfer,
         paymentStatus: OrderPaymentStatus.paid,
-        total: 14000,
+        subtotal: 14000,
+        deliveryFee: 0,
         placedAt: now.subtract(const Duration(hours: 2)),
         customerName: 'Jorge Diez',
+        contactPhone: '3237890123',
       ),
       // LISTO pickup pagado — Beto ya está en `ready`: su acción
       // de card es "Entregado" (pagado), no el label del paso.
@@ -988,6 +1222,7 @@ class AdminQueueCubit extends Cubit<AdminQueueState> {
         channel: AdminOrderChannel.online,
         serviceType: AdminServiceType.pickup,
         status: OrderStatus.ready,
+        statusChangedAt: now.subtract(const Duration(minutes: 3)),
         items: const [
           OrderItem(
             productId: 'p-ave',
@@ -1006,9 +1241,11 @@ class AdminQueueCubit extends Cubit<AdminQueueState> {
         ],
         paymentMethod: AdminPaymentMethod.transfer,
         paymentStatus: OrderPaymentStatus.paid,
-        total: 34000,
+        subtotal: 34000,
+        deliveryFee: 0,
         placedAt: now.subtract(const Duration(minutes: 26)),
         customerName: 'Beto Dos',
+        contactPhone: '3248901234',
       ),
       // LISTO dine_in sin cobrar — Mesa 7: la card muestra "Me
       // pagó" (el cobro bloquea el Entregado — caso del §022).
@@ -1017,6 +1254,7 @@ class AdminQueueCubit extends Cubit<AdminQueueState> {
         channel: AdminOrderChannel.presencial,
         serviceType: AdminServiceType.dineIn,
         status: OrderStatus.ready,
+        statusChangedAt: now.subtract(const Duration(minutes: 1)),
         items: const [
           OrderItem(
             productId: 'p-carnicero',
@@ -1028,7 +1266,8 @@ class AdminQueueCubit extends Cubit<AdminQueueState> {
         ],
         paymentMethod: AdminPaymentMethod.cash,
         paymentStatus: OrderPaymentStatus.pending,
-        total: 17000,
+        subtotal: 17000,
+        deliveryFee: 0,
         placedAt: now.subtract(const Duration(minutes: 18)),
         tableLabel: 'Mesa 7',
       ),
@@ -1039,6 +1278,7 @@ class AdminQueueCubit extends Cubit<AdminQueueState> {
         channel: AdminOrderChannel.online,
         serviceType: AdminServiceType.delivery,
         status: OrderStatus.done,
+        statusChangedAt: now.subtract(const Duration(minutes: 2)),
         items: const [
           OrderItem(
             productId: 'p-depredador',
@@ -1050,9 +1290,18 @@ class AdminQueueCubit extends Cubit<AdminQueueState> {
         ],
         paymentMethod: AdminPaymentMethod.transfer,
         paymentStatus: OrderPaymentStatus.paid,
-        total: 25000,
+        subtotal: 22000,
+        deliveryFee: 3000,
         placedAt: now.subtract(const Duration(hours: 3)),
         customerName: 'Carla Tres',
+        addressLabel: 'Casa',
+        landmark: 'Segunda casa después de la bomba',
+        neighborhood: 'Barrio El Prado',
+        hasLocationPin: true,
+        locationUrl: 'https://maps.app.goo.gl/s5RiFni6LsV4Ptmj9',
+        locationLat: 6.2567,
+        locationLng: -75.5988,
+        contactPhone: '3171234567',
       ),
     ];
   }
@@ -1081,7 +1330,8 @@ class AdminQueueCubit extends Cubit<AdminQueueState> {
         // failed al cancelar con cobro pendiente (§019); card y
         // detalle lo suprimen en terminal (deuda fantasma, §034).
         paymentStatus: OrderPaymentStatus.failed,
-        total: 28000,
+        subtotal: 28000,
+        deliveryFee: 0,
         placedAt: now.subtract(const Duration(hours: 5)),
         tableLabel: 'Mesa 2',
       ),
@@ -1103,9 +1353,14 @@ class AdminQueueCubit extends Cubit<AdminQueueState> {
         ],
         paymentMethod: AdminPaymentMethod.transfer,
         paymentStatus: OrderPaymentStatus.failed,
-        total: 25000,
+        subtotal: 21000,
+        deliveryFee: 4000,
         placedAt: now.subtract(const Duration(hours: 7)),
         customerName: 'Karla Once',
+        addressLabel: 'Casa',
+        landmark: 'Frente al colegio',
+        neighborhood: 'Barrio Versalles',
+        contactPhone: '3182345678',
         cancelReason: 'El cliente no contestó al confirmar',
       ),
       // Cancelado YA COBRADO — caso borde: la plata entró y hay
@@ -1126,7 +1381,8 @@ class AdminQueueCubit extends Cubit<AdminQueueState> {
         ],
         paymentMethod: AdminPaymentMethod.cash,
         paymentStatus: OrderPaymentStatus.paid,
-        total: 32000,
+        subtotal: 32000,
+        deliveryFee: 0,
         placedAt: now.subtract(const Duration(hours: 6)),
         tableLabel: 'Mesa 8',
         cancelReason: 'El cliente pidió otro plato en su lugar',

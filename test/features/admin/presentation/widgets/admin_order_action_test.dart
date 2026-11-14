@@ -17,7 +17,8 @@ AdminOrder _order(
   items: const [],
   paymentMethod: method,
   paymentStatus: payment,
-  total: 10000,
+  subtotal: 10000,
+  deliveryFee: 0,
   placedAt: DateTime(2024, 1, 1),
 );
 

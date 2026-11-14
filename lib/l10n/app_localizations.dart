@@ -2350,6 +2350,48 @@ abstract class AppLocalizations {
   /// **'Pago'**
   String get adminOrderDetailPaymentSection;
 
+  /// Título de la sección de entrega del detalle admin — dirección/referencia/barrio/pin/teléfono en domicilio o línea de recogida en el local; no renderiza en mesa (§037)
+  ///
+  /// In es, this message translates to:
+  /// **'Entrega'**
+  String get adminOrderDetailDeliverySection;
+
+  /// Línea única de la sección Entrega del detalle admin para pedidos pickup — vista del dueño (§037)
+  ///
+  /// In es, this message translates to:
+  /// **'Lo recogen en el local'**
+  String get adminOrderPickupAtStore;
+
+  /// Toast de éxito al copiar el celular de contacto del pedido al portapapeles desde la sección Entrega del detalle admin (§037)
+  ///
+  /// In es, this message translates to:
+  /// **'Teléfono copiado'**
+  String get adminOrderPhoneCopied;
+
+  /// Etiqueta de accesibilidad (Semantics) de la fila de teléfono de contacto copiable en la sección Entrega del detalle admin (§037)
+  ///
+  /// In es, this message translates to:
+  /// **'Copiar teléfono'**
+  String get adminOrderCopyPhone;
+
+  /// Etiqueta de accesibilidad (Semantics) de la fila del pin de ubicación del cliente — tocarla abre Google Maps con el punto del domicilio (§037)
+  ///
+  /// In es, this message translates to:
+  /// **'Abrir ubicación en Maps'**
+  String get adminOrderOpenPin;
+
+  /// Tooltip del ícono copiar junto al pin de ubicación del cliente — copia el enlace de Maps con las coordenadas (§037)
+  ///
+  /// In es, this message translates to:
+  /// **'Copiar ubicación'**
+  String get adminOrderCopyPin;
+
+  /// Toast de éxito al copiar el enlace de Maps del pin del cliente al portapapeles desde la sección Entrega del detalle admin (§037)
+  ///
+  /// In es, this message translates to:
+  /// **'Ubicación copiada'**
+  String get adminOrderPinCopied;
+
   /// Cuerpo del diálogo de confirmación de cancelación del detalle admin (§035)
   ///
   /// In es, this message translates to:

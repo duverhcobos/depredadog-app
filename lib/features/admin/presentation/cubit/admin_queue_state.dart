@@ -59,12 +59,18 @@ class AdminQueueState extends Equatable {
     OrderStatus.done,
   ];
 
-  /// Pedidos del carril en FIFO de cocina (más viejo arriba — el
-  /// que más espera se atiende primero).
+  /// Pedidos del carril en cola POR CARRIL (§037 — decisión del
+  /// dueño): el orden es cuándo entró a ESTE carril (statusChangedAt;
+  /// el nacido en el estado usa placedAt) — el recién movido cae al
+  /// fondo de la cola, no se cuela por antigüedad de su pedido.
   List<AdminOrder> laneOrders(OrderStatus status) => [
     for (final o in active)
       if (o.status == status) o,
-  ]..sort((a, b) => a.placedAt.compareTo(b.placedAt));
+  ]..sort(
+      (a, b) => (a.statusChangedAt ?? a.placedAt).compareTo(
+        b.statusChangedAt ?? b.placedAt,
+      ),
+    );
 
   /// Entregados esperando cierre — alimenta el contador del botón.
   int get deliveredCount =>

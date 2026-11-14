@@ -50,6 +50,49 @@ void main() {
     return calls;
   }
 
+  /// Intercepta Clipboard.setData (SystemChannels.platform) — mismo
+  /// patrón de los tests de perfil (loyalty card / store).
+  List<String?> stubClipboard(WidgetTester tester) {
+    final copied = <String?>[];
+    tester.binding.defaultBinaryMessenger.setMockMethodCallHandler(
+      SystemChannels.platform,
+      (call) async {
+        if (call.method == 'Clipboard.setData') {
+          copied.add((call.arguments as Map)['text'] as String?);
+        }
+        return null;
+      },
+    );
+    addTearDown(
+      () => tester.binding.defaultBinaryMessenger.setMockMethodCallHandler(
+        SystemChannels.platform,
+        null,
+      ),
+    );
+    return copied;
+  }
+
+  /// Intercepta url_launcher (plugins.flutter.io/url_launcher) —
+  /// el tap del pin pide abrir Maps; el stub confirma el launch
+  /// sin intentar resolver el intent del SO.
+  List<MethodCall> stubUrlLauncher(WidgetTester tester) {
+    const channel = MethodChannel('plugins.flutter.io/url_launcher');
+    final calls = <MethodCall>[];
+    tester.binding.defaultBinaryMessenger.setMockMethodCallHandler(channel, (
+      call,
+    ) async {
+      calls.add(call);
+      return true;
+    });
+    addTearDown(
+      () => tester.binding.defaultBinaryMessenger.setMockMethodCallHandler(
+        channel,
+        null,
+      ),
+    );
+    return calls;
+  }
+
   /// Router de la rama admin — réplica de app_router (la hija :id
   /// con su redirect de extra y el BlocProvider.value del cubit
   /// compartido), mismo patrón que la réplica de branches del test
@@ -193,11 +236,13 @@ void main() {
       expect(find.text(item), findsOneWidget);
     }
     await tester.scrollUntilVisible(
-      find.text('\$118.000'),
+      find.text(r'$118.000').last,
       200,
       scrollable: find.byType(Scrollable).first,
     );
-    expect(find.text('\$118.000'), findsOneWidget);
+    // Solo el Total — la mesa no paga domicilio y el Subtotal se
+    // deduplica (§037: sin fila Domicilio no hay nada que separar).
+    expect(find.text(r'$118.000'), findsOneWidget);
   });
 
   testWidgets('ready + pago pendiente: "Entregado" DESHABILITADO con '
@@ -256,6 +301,9 @@ void main() {
     await openDetail(tester, router, 'adm-1');
 
     expect(find.widgetWithText(FilledButton, 'Confirmar'), findsOneWidget);
+    // La sección Pago quedó bajo el fold — las secciones nuevas del
+    // §037 (Observación + Entrega) la empujaron fuera del lazy build.
+    await scrollToTappable(tester, find.text('Registrar pago'));
     expect(find.text('Registrar pago'), findsOneWidget);
   });
 
@@ -312,6 +360,21 @@ void main() {
     // Valeria — received + online pickup + Nequi failed.
     await openDetail(tester, router, 'adm-31');
 
+    // La sección Entrega (+teléfono de la recogida) empujó la sección
+    // Pago bajo el fold del lazy build — primero el método…
+    await tester.scrollUntilVisible(
+      find.text('Nequi'),
+      200,
+      scrollable: find.byType(Scrollable).first,
+    );
+    // …se lee Nequi — no "Transf.".
+    expect(find.text('Nequi'), findsWidgets);
+    // …y luego el aviso (scrollear más abajo desmonta el de arriba).
+    await tester.scrollUntilVisible(
+      find.text('Nequi rechazó el pago — cancela el pedido'),
+      200,
+      scrollable: find.byType(Scrollable).first,
+    );
     expect(
       find.text('Nequi rechazó el pago — cancela el pedido'),
       findsOneWidget,
@@ -319,8 +382,6 @@ void main() {
     expect(find.text('Confirmar'), findsNothing);
     expect(find.text('Registrar pago'), findsNothing);
     expect(find.text('Cancelar pedido'), findsOneWidget);
-    // Y el método se lee Nequi — no "Transf.".
-    expect(find.text('Nequi'), findsWidgets);
   });
 
   testWidgets('detalle Nequi PAGADO: flujo normal post-webhook — '
@@ -449,5 +510,204 @@ void main() {
     expect(find.byType(AdminOrderDetailScreen), findsNothing);
     expect(find.byType(AdminQueueScreen), findsOneWidget);
     expect(router.state.matchedLocation, AuthGuard.adminRoute);
+  });
+
+  group('detalle enriquecido (§037 — entrega, nota, armado y '
+      'desglose)', () {
+    testWidgets('domicilio: sección Entrega con etiqueta + referencia '
+        '+ barrio + pin + celular, y el tap copia al portapapeles', (
+      tester,
+    ) async {
+      final calls = stubToast(tester);
+      final copied = stubClipboard(tester);
+      final launches = stubUrlLauncher(tester);
+      final router = buildAdminRouter();
+      await pumpAdminApp(tester, router: router);
+      await loadQueue(tester);
+      // adm-1 — online delivery transfer pendiente con todo el bloque
+      // de entrega sembrado (Casa / referencia / barrio / pin / 300…).
+      await openDetail(tester, router, 'adm-1');
+
+      await tester.scrollUntilVisible(
+        find.text('Recibe: 300 123 4567'),
+        200,
+        scrollable: find.byType(Scrollable).first,
+      );
+      await tester.pumpAndSettle();
+      expect(find.text('Entrega'), findsOneWidget);
+      expect(find.text('Casa'), findsOneWidget);
+      expect(
+        find.text('Portón negro frente a la cancha'),
+        findsOneWidget,
+      );
+      expect(find.text('Barrio La Esperanza'), findsOneWidget);
+      expect(find.text('Con ubicación de Google'), findsOneWidget);
+      expect(find.text('Recibe: 300 123 4567'), findsOneWidget);
+
+      // Tap en la fila del celular → portapapeles + toast (§037 —
+      // la zona no siempre tiene dirección formal, el teléfono es
+      // el plan B para sacar el domicilio).
+      await tester.tap(find.text('Recibe: 300 123 4567'));
+      await tester.pumpAndSettle();
+      expect(copied, ['3001234567']);
+      expect(
+        calls.any((c) => c.arguments['msg'] == 'Teléfono copiado'),
+        isTrue,
+      );
+
+      // Tap en la fila del pin → abre Maps con el punto del cliente
+      // (el dueño navega al domicilio, §037); el ícono copia el
+      // enlace para compartirlo por WhatsApp si hace falta.
+      const mapsLink = 'https://maps.app.goo.gl/s5RiFni6LsV4Ptmj9';
+      await tester.scrollUntilVisible(
+        find.text('Con ubicación de Google'),
+        -200,
+        scrollable: find.byType(Scrollable).first,
+      );
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Con ubicación de Google'));
+      await tester.pumpAndSettle();
+      expect(
+        launches.any((c) => c.arguments['url'] == mapsLink),
+        isTrue,
+      );
+      await tester.tap(find.byTooltip('Copiar ubicación'));
+      await tester.pumpAndSettle();
+      expect(copied, contains(mapsLink));
+      expect(
+        calls.any((c) => c.arguments['msg'] == 'Ubicación copiada'),
+        isTrue,
+      );
+
+      await tester.pump(const Duration(seconds: 2));
+    });
+
+    testWidgets('pickup: la sección dice "Lo recogen en el local" y '
+        'la nota del cliente viaja arriba de los ítems', (tester) async {
+      final router = buildAdminRouter();
+      await pumpAdminApp(tester, router: router);
+      await loadQueue(tester);
+      // adm-21 — online pickup Nequi pagado con nota "La recoge mi
+      // hermano".
+      await openDetail(tester, router, 'adm-21');
+
+      // Observación justo bajo "Pedido" — instrucción de cocina, va
+      // antes que los ítems (decisión §037).
+      expect(find.text('Observación'), findsOneWidget);
+      expect(find.text('La recoge mi hermano'), findsOneWidget);
+
+      await tester.scrollUntilVisible(
+        find.text('Lo recogen en el local'),
+        200,
+        scrollable: find.byType(Scrollable).first,
+      );
+      await tester.pumpAndSettle();
+      expect(find.text('Entrega'), findsOneWidget);
+      expect(find.text('Lo recogen en el local'), findsOneWidget);
+      // La recogida SÍ muestra el celular del cliente — si nadie
+      // viene por el pedido, el dueño tiene a quién llamar (§037).
+      expect(find.text('Recibe: 320 456 7890'), findsOneWidget);
+    });
+
+    testWidgets('dineIn: sin sección Entrega ni Observación — la mesa '
+        'ya sale en el header', (tester) async {
+      final router = buildAdminRouter();
+      await pumpAdminApp(tester, router: router);
+      await loadQueue(tester);
+      // adm-2 — Mesa 3, dineIn sin nota.
+      await openDetail(tester, router, 'adm-2');
+
+      expect(find.text('En el local · Mesa 3'), findsOneWidget);
+      // Recorre el detalle completo (el ListView construye perezoso).
+      await tester.scrollUntilVisible(
+        find.text('Pago'),
+        200,
+        scrollable: find.byType(Scrollable).first,
+      );
+      await tester.pumpAndSettle();
+      expect(find.text('Entrega'), findsNothing);
+      expect(find.text('Lo recogen en el local'), findsNothing);
+      expect(find.text('Observación'), findsNothing);
+      expect(find.text('Domicilio'), findsNothing);
+    });
+
+    testWidgets('ítem con modificadores nace DESPLEGADO — "Cebolla" '
+        'en quitados y el extra con su +\$2.500 sin tocar nada; el '
+        'ítem con solo incluidos espera el chip "Detalle"', (
+      tester,
+    ) async {
+      final router = buildAdminRouter();
+      await pumpAdminApp(tester, router: router);
+      await loadQueue(tester);
+      await openDetail(tester, router, 'adm-1');
+
+      // Auto-expandido SIN tap — "sin cebolla" es instrucción de
+      // cocina y no puede depender de que el dueño toque (§037).
+      await tester.scrollUntilVisible(
+        find.text('Cebolla'),
+        200,
+        scrollable: find.byType(Scrollable).first,
+      );
+      await tester.pumpAndSettle();
+      expect(find.text('Se le quitó'), findsOneWidget);
+      expect(find.text('Cebolla'), findsOneWidget);
+      expect(
+        find.text(r'Queso cheddar +$2.500', findRichText: true),
+        findsOneWidget,
+      );
+      expect(find.text('Piña'), findsOneWidget);
+      // El Depredador también muestra su snapshot de incluidos.
+      expect(find.text('Ingredientes'), findsOneWidget);
+      expect(find.text('Pan artesanal'), findsOneWidget);
+
+      // Las papas solo traen incluidos → nacen colapsadas y el chip
+      // las abre (el perro estándar con snapshot espera el toque).
+      expect(find.text('Papas criollas'), findsNothing);
+      await scrollToTappable(tester, find.text('Detalle').last);
+      await tester.tap(find.text('Detalle').last);
+      await tester.pumpAndSettle();
+      expect(find.text('Papas criollas'), findsOneWidget);
+    });
+
+    testWidgets('el perro estándar NO gasta chip — sin modificadores '
+        'ni incluidos no hay nada que desplegar', (tester) async {
+      final router = buildAdminRouter();
+      await pumpAdminApp(tester, router: router);
+      await loadQueue(tester);
+      // adm-2 — Mesa 3: un solo El Cachorro pelado.
+      await openDetail(tester, router, 'adm-2');
+
+      await tester.scrollUntilVisible(
+        find.text('1× El Cachorro'),
+        200,
+        scrollable: find.byType(Scrollable).first,
+      );
+      await tester.pumpAndSettle();
+      expect(find.text('1× El Cachorro'), findsOneWidget);
+      expect(find.text('Detalle'), findsNothing);
+    });
+
+    testWidgets('desglose del cobro: Subtotal + Domicilio + Total '
+        'separados — el fee se ve en su fila (§037)', (tester) async {
+      final router = buildAdminRouter();
+      await pumpAdminApp(tester, router: router);
+      await loadQueue(tester);
+      await openDetail(tester, router, 'adm-1');
+
+      await tester.scrollUntilVisible(
+        find.text('Subtotal'),
+        200,
+        scrollable: find.byType(Scrollable).first,
+      );
+      await tester.pumpAndSettle();
+      expect(find.text('Subtotal'), findsOneWidget);
+      // El chip de servicio del header también dice "Domicilio" —
+      // solo se exige que la fila exista, no su conteo.
+      expect(find.text('Domicilio'), findsWidgets);
+      expect(find.text(r'$56.000'), findsOneWidget);
+      expect(find.text(r'$5.000'), findsOneWidget);
+      expect(find.text('Total'), findsOneWidget);
+      expect(find.text(r'$61.000'), findsOneWidget);
+    });
   });
 }

@@ -1291,6 +1291,34 @@
   "@adminOrderDetailPaymentSection": {
     "description": "Título de la sección de pago del detalle admin — método + estado + botón 'Registrar pago' cuando el pago está pendiente (§035)"
   },
+  "adminOrderDetailDeliverySection": "Entrega",
+  "@adminOrderDetailDeliverySection": {
+    "description": "Título de la sección de entrega del detalle admin — dirección/referencia/barrio/pin/teléfono en domicilio o línea de recogida en el local; no renderiza en mesa (§037)"
+  },
+  "adminOrderPickupAtStore": "Lo recogen en el local",
+  "@adminOrderPickupAtStore": {
+    "description": "Línea única de la sección Entrega del detalle admin para pedidos pickup — vista del dueño (§037)"
+  },
+  "adminOrderPhoneCopied": "Teléfono copiado",
+  "@adminOrderPhoneCopied": {
+    "description": "Toast de éxito al copiar el celular de contacto del pedido al portapapeles desde la sección Entrega del detalle admin (§037)"
+  },
+  "adminOrderCopyPhone": "Copiar teléfono",
+  "@adminOrderCopyPhone": {
+    "description": "Etiqueta de accesibilidad (Semantics) de la fila de teléfono de contacto copiable en la sección Entrega del detalle admin (§037)"
+  },
+  "adminOrderOpenPin": "Abrir ubicación en Maps",
+  "@adminOrderOpenPin": {
+    "description": "Etiqueta de accesibilidad (Semantics) de la fila del pin de ubicación del cliente — tocarla abre Google Maps con el punto del domicilio (§037)"
+  },
+  "adminOrderCopyPin": "Copiar ubicación",
+  "@adminOrderCopyPin": {
+    "description": "Tooltip del ícono copiar junto al pin de ubicación del cliente — copia el enlace de Maps con las coordenadas (§037)"
+  },
+  "adminOrderPinCopied": "Ubicación copiada",
+  "@adminOrderPinCopied": {
+    "description": "Toast de éxito al copiar el enlace de Maps del pin del cliente al portapapeles desde la sección Entrega del detalle admin (§037)"
+  },
   "adminOrderCancelBody": "El pedido sale de la cola y queda en el historial como cancelado.",
   "@adminOrderCancelBody": {
     "description": "Cuerpo del diálogo de confirmación de cancelación del detalle admin (§035)"

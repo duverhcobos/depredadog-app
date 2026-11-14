@@ -1272,6 +1272,27 @@ class AppLocalizationsEs extends AppLocalizations {
   String get adminOrderDetailPaymentSection => 'Pago';
 
   @override
+  String get adminOrderDetailDeliverySection => 'Entrega';
+
+  @override
+  String get adminOrderPickupAtStore => 'Lo recogen en el local';
+
+  @override
+  String get adminOrderPhoneCopied => 'Teléfono copiado';
+
+  @override
+  String get adminOrderCopyPhone => 'Copiar teléfono';
+
+  @override
+  String get adminOrderOpenPin => 'Abrir ubicación en Maps';
+
+  @override
+  String get adminOrderCopyPin => 'Copiar ubicación';
+
+  @override
+  String get adminOrderPinCopied => 'Ubicación copiada';
+
+  @override
   String get adminOrderCancelBody =>
       'El pedido sale de la cola y queda en el historial como cancelado.';
 

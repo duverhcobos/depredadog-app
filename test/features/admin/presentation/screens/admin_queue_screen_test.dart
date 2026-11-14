@@ -176,7 +176,7 @@ void main() {
     expect(find.text('Mario Doce'), findsOneWidget);
     expect(find.text('Nora Trece'), findsOneWidget);
     expect(find.text('2× El Depredador, 1× Manada de papas'), findsOneWidget);
-    expect(find.text('\$56.000'), findsOneWidget);
+    expect(find.text('\$61.000'), findsOneWidget);
     expect(find.text('hace 12 min'), findsOneWidget);
     // El chip de la card es el de SERVICIO (decisión del dueño):
     // El chip de la card es el SERVICIO: Pendiente solo muestra

@@ -386,12 +386,17 @@ class _Totals extends StatelessWidget {
       padding: const EdgeInsets.fromLTRB(14, 0, 14, 12),
       child: Column(
         children: [
-          _row(
-            text,
-            colors,
-            l10n.orderSummarySubtotal,
-            formatCop(order.subtotal),
-          ),
+          // Subtotal solo cuando el desglose separa algo — en pickup
+          // (sin fila Domicilio) Subtotal==Total duplica la cifra
+          // (regla "no duplicar números" §020 — igual que el _Totals
+          // admin §037).
+          if (order.serviceType == OrderServiceType.delivery)
+            _row(
+              text,
+              colors,
+              l10n.orderSummarySubtotal,
+              formatCop(order.subtotal),
+            ),
           if (order.serviceType == OrderServiceType.delivery)
             _row(
               text,

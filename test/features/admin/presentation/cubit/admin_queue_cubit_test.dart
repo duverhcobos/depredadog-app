@@ -15,7 +15,8 @@ AdminOrder _order(String id, OrderStatus status, DateTime placedAt) =>
       items: const [],
       paymentMethod: AdminPaymentMethod.cash,
       paymentStatus: OrderPaymentStatus.paid,
-      total: 10000,
+      subtotal: 10000,
+      deliveryFee: 0,
       placedAt: placedAt,
     );
 
