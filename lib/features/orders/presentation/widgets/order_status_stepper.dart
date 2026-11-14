@@ -17,12 +17,13 @@ class OrderStatusStepper extends StatelessWidget {
 
   final CustomerOrder order;
 
-  /// Índice del paso actual (0-3); done = último completo.
+  /// Índice del paso actual (0-3); ready/done = último tramo (la
+  /// cocina ya terminó — falta la entrega, §036).
   int get _step => switch (order.status) {
     OrderStatus.received => 0,
     OrderStatus.confirmed => 1,
     OrderStatus.preparing => 2,
-    OrderStatus.done || OrderStatus.cancelled => 3,
+    OrderStatus.ready || OrderStatus.done || OrderStatus.cancelled => 3,
   };
 
   @override
@@ -33,6 +34,12 @@ class OrderStatusStepper extends StatelessWidget {
       OrderStatus.received => l10n.orderStepReceived,
       OrderStatus.confirmed => l10n.orderStepConfirmed,
       OrderStatus.preparing => l10n.orderStepPreparing,
+      // ready (§036 — el cliente aún no lo recibe, default
+      // defensivo): pickup "Listo", delivery "Va en camino".
+      OrderStatus.ready =>
+        order.serviceType == OrderServiceType.pickup
+            ? l10n.orderStepReady
+            : l10n.adminActionOnTheWay,
       OrderStatus.done =>
         order.serviceType == OrderServiceType.pickup
             ? l10n.orderStepReady

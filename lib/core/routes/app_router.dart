@@ -1,7 +1,11 @@
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../features/admin/domain/entities/admin_order.dart';
 import '../../features/admin/presentation/cubit/admin_queue_cubit.dart';
+import '../../features/admin/presentation/screens/admin_day_close_screen.dart';
+import '../../features/admin/presentation/screens/admin_history_screen.dart';
+import '../../features/admin/presentation/screens/admin_order_detail_screen.dart';
 import '../../features/admin/presentation/screens/admin_queue_screen.dart';
 import '../../features/auth/presentation/screens/forgot_password_screen.dart';
 import '../../features/auth/presentation/screens/login_screen.dart';
@@ -334,6 +338,53 @@ class AppRouter {
                     const AdminQueueScreen(),
                   );
                 },
+                routes: [
+                  // ORDEN IMPORTA: las rutas literales van ANTES de
+                  // ':id' o el segmento las traga como parámetro.
+                  // Cierre de caja (§036) — slideUp como el detalle,
+                  // sobre el MISMO AdminQueueCubit singleton.
+                  GoRoute(
+                    path: 'day-close',
+                    pageBuilder: (context, state) => CustomTransitions.slideUp(
+                      state,
+                      BlocProvider.value(
+                        value: locator<AdminQueueCubit>(),
+                        child: const AdminDayCloseScreen(),
+                      ),
+                    ),
+                  ),
+                  // Historial provisional (§036) — lista plana del
+                  // bucket history del mismo cubit.
+                  GoRoute(
+                    path: 'history',
+                    pageBuilder: (context, state) => CustomTransitions.slideUp(
+                      state,
+                      BlocProvider.value(
+                        value: locator<AdminQueueCubit>(),
+                        child: const AdminHistoryScreen(),
+                      ),
+                    ),
+                  ),
+                  // Detalle del pedido (§035 — mismo patrón que la
+                  // hija /orders/:id): extra = AdminOrder; sin extra
+                  // válido (deep link, estado restaurado) → /admin.
+                  // Opera sobre el MISMO AdminQueueCubit singleton de
+                  // la cola — el back muestra la cola ya actualizada.
+                  GoRoute(
+                    path: ':id',
+                    redirect: (context, state) =>
+                        state.extra is AdminOrder ? null : AuthGuard.adminRoute,
+                    pageBuilder: (context, state) => CustomTransitions.slideUp(
+                      state,
+                      BlocProvider.value(
+                        value: locator<AdminQueueCubit>(),
+                        child: AdminOrderDetailScreen(
+                          order: state.extra! as AdminOrder,
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
               ),
             ],
           ),

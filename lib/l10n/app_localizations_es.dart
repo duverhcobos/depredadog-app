@@ -1148,16 +1148,19 @@ class AppLocalizationsEs extends AppLocalizations {
   String get adminQueueTitle => 'COCINA';
 
   @override
-  String get adminQueueFilterActive => 'Activos';
-
-  @override
-  String get adminQueueFilterHistory => 'Historial';
-
-  @override
   String get adminChannelOnline => 'Online';
 
   @override
   String get adminChannelInPerson => 'Presencial';
+
+  @override
+  String get adminServiceDelivery => 'Domicilio';
+
+  @override
+  String get adminServicePickup => 'Recogida';
+
+  @override
+  String get adminServiceDineIn => 'Mesa';
 
   @override
   String adminOrderAtTable(String table) {
@@ -1196,6 +1199,16 @@ class AppLocalizationsEs extends AppLocalizations {
   String get adminPaymentCash => 'Efectivo';
 
   @override
+  String get adminPaymentNequi => 'Nequi';
+
+  @override
+  String get adminAwaitingNequiHint => 'Esperando confirmación de Nequi…';
+
+  @override
+  String get adminNequiFailedHint =>
+      'Nequi rechazó el pago — cancela el pedido';
+
+  @override
   String get adminPaymentTransfer => 'Transf.';
 
   @override
@@ -1225,13 +1238,125 @@ class AppLocalizationsEs extends AppLocalizations {
   String get adminQueueLoadError => 'No pudimos cargar la cola';
 
   @override
-  String get adminNewOrder => 'Nueva orden';
+  String get adminBackToTop => 'Volver arriba';
 
   @override
-  String get adminOrderDetailSoon => 'El detalle llega en el próximo ciclo';
+  String get adminNewOrder => 'Nueva orden';
 
   @override
   String adminOrderItemsMore(int count) {
     return '+$count más';
   }
+
+  @override
+  String get adminActionConfirm => 'Confirmar';
+
+  @override
+  String get adminActionPaid => 'Registrar pago';
+
+  @override
+  String get adminDoneNeedsPayment => 'Registra el pago primero';
+
+  @override
+  String adminOrderShortId(String id) {
+    return '#$id';
+  }
+
+  @override
+  String get adminOrderDetailOrderSection => 'Pedido';
+
+  @override
+  String get adminOrderDetailItemsSection => 'Ítems';
+
+  @override
+  String get adminOrderDetailPaymentSection => 'Pago';
+
+  @override
+  String get adminOrderCancelBody =>
+      'El pedido sale de la cola y queda en el historial como cancelado.';
+
+  @override
+  String get adminOrderCancelReasonLabel => 'Motivo (opcional)';
+
+  @override
+  String get adminToastOrderConfirmed => 'Pedido confirmado';
+
+  @override
+  String get adminToastPaymentConfirmed => 'Pago confirmado';
+
+  @override
+  String get adminToastOrderDone => 'Pedido entregado';
+
+  @override
+  String get adminActionPrepare => 'Preparar';
+
+  @override
+  String get adminActionOnTheWay => 'Va en camino';
+
+  @override
+  String get adminActionServe => 'Servir';
+
+  @override
+  String get adminActionReadyPickup => 'Listo p/recoger';
+
+  @override
+  String get adminActionDeliver => 'Entregado';
+
+  @override
+  String get adminCloseDayShort => 'Caja';
+
+  @override
+  String get adminHistoryTitle => 'Historial';
+
+  @override
+  String get adminDayCloseTitle => 'Cierre de caja';
+
+  @override
+  String get adminDayCloseTotal => 'Vendido hoy';
+
+  @override
+  String get adminDayCloseConfirm => 'Confirmar cierre';
+
+  @override
+  String get adminDayCloseDone => 'Listo';
+
+  @override
+  String adminDayCloseOrders(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count pedidos entregados',
+      one: '1 pedido entregado',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String adminDayCloseCancelled(int count, String amount) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count cancelados',
+      one: '1 cancelado',
+    );
+    return '$_temp0 · $amount';
+  }
+
+  @override
+  String get adminDayCloseEmpty =>
+      'Cierre del día — sin pedidos entregados. El registro queda como bitácora.';
+
+  @override
+  String get adminToastOrderPreparing => 'Pedido a la plancha';
+
+  @override
+  String get adminToastOrderReady => 'Pedido listo';
+
+  @override
+  String adminToastDayClosed(String total) {
+    return 'Día cerrado — $total';
+  }
+
+  @override
+  String get adminLaneEmpty => 'Sin pedidos';
 }

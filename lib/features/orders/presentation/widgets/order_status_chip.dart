@@ -37,6 +37,15 @@ class OrderStatusChip extends StatelessWidget {
         colors.primary.withValues(alpha: 0.22 * bgFade),
         colors.primary.withValues(alpha: fgFade),
       ),
+      // ready (§036): la cocina ya terminó — pickup "Listo",
+      // delivery "Va en camino"; misma evidencia tertiary del done.
+      OrderStatus.ready => (
+        order.serviceType == OrderServiceType.pickup
+            ? l10n.orderStatusReady
+            : l10n.adminActionOnTheWay,
+        colors.tertiary.withValues(alpha: 0.18 * bgFade),
+        colors.tertiary.withValues(alpha: fgFade),
+      ),
       OrderStatus.done => (
         order.serviceType == OrderServiceType.pickup
             ? l10n.orderStatusReady

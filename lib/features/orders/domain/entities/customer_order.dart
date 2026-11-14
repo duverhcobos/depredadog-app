@@ -3,11 +3,14 @@ import 'package:equatable/equatable.dart';
 import '../../../cart/domain/entities/cart_modifier.dart';
 
 /// Estados de un pedido (espejo del enum `order_status` del backend,
-/// propuesta 013): pending→received, confirmed→confirmed,
-/// preparing→preparing, done→done, cancelled→cancelled.
-/// El label del paso final varía por servicio: "Listo" en pickup,
-/// "Entregado" en delivery (decisión del usuario — §023).
-enum OrderStatus { received, confirmed, preparing, done, cancelled }
+/// propuesta 013 + `ready` del §022): pending→received,
+/// confirmed→confirmed, preparing→preparing, ready→ready,
+/// done→done, cancelled→cancelled. `ready` es el paso "listo para
+/// entrega / en camino / por servir" — la app lo etiqueta por canal;
+/// `done` = entregado. El label del paso final varía por servicio:
+/// "Listo" en pickup, "Entregado" en delivery (decisión del usuario
+/// — §023).
+enum OrderStatus { received, confirmed, preparing, ready, done, cancelled }
 
 /// Cómo se entrega (espejo `order_service_type`; `dine_in` no aplica
 /// a pedidos del cliente en la app — lo toma el dueño presencial).

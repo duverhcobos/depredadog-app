@@ -31,6 +31,30 @@ pasada.
 - **Gate**: el usuario aprueba lo que ve en el emulador **antes** de pasar a
   integración. No se construye domain/data hasta ese visto bueno.
 
+## Orden entre repos — la visual manda el contrato
+
+Cuando una feature de pantalla necesita **endpoints de backend que aún no
+existen** (`../pcalientes_backend`), el orden es:
+
+```
+1. App: presentación con mocks → usuario aprueba lo que ve
+2. Backend: propuesta + implementación de los endpoints que la UI
+   aprobada necesita
+3. App: integración endpoint por endpoint (fase 2 normal)
+```
+
+**Primero la parte visual y después el backend** — la pantalla aprobada es
+la que define el contrato (qué campos, qué estados, qué acciones), no al
+revés. No se propone ni construye un endpoint nuevo "a ciegas" cuya única
+razón de ser es servir una UI todavía no aprobada.
+
+- Si el endpoint **ya existe** en el backend, se salta directo a fase 2.
+- El backend sigue su propio workflow (`propuestas/`, encuesta,
+  implementador → revisor) — simplemente arranca **después** del OK visual.
+- Esto aplica a features de UI; cambios de backend independientes de la
+  app (infra, seguridad, migraciones internas) no esperan ningún gate
+  visual.
+
 ## Fase 2 — Integración por endpoint
 
 - Se integran `domain/` + `data/` **un endpoint a la vez** — nunca todos juntos:

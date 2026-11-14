@@ -35,6 +35,7 @@ class CustomerOrderModel extends CustomerOrder {
         'pending' => OrderStatus.received,
         'confirmed' => OrderStatus.confirmed,
         'preparing' => OrderStatus.preparing,
+        'ready' => OrderStatus.ready,
         'done' => OrderStatus.done,
         'cancelled' => OrderStatus.cancelled,
         // Un status nuevo del backend es un pedido VIVO, no un

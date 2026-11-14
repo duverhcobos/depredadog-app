@@ -8,23 +8,33 @@ import '../../../orders/domain/entities/customer_order.dart';
 enum AdminOrderChannel { online, presencial }
 
 /// Método de pago en la vista del dueño (espejo `payment_method`):
-/// cash = efectivo; transfer = transferencia (Nequi). `gateway` del
-/// backend se mapea a transfer en la integración — la app MVP no
-/// cobra por pasarela directa.
-enum AdminPaymentMethod { cash, transfer }
+/// cash = efectivo; transfer = transferencia manual (el dueño la
+/// verifica en su Nequi y la registra con "Registrar pago");
+/// nequi = cobro DENTRO de la app (Nequi push/pasarela) — el
+/// webhook del backend es quien confirma: mientras no llegue,
+/// ni "Registrar pago" ni "Confirmar" existen (decisión §036 —
+/// el cobro automático no se adelanta a mano).
+enum AdminPaymentMethod { cash, transfer, nequi }
+
+/// Tipo de servicio del pedido (espejo `order_service_type` —
+/// incluye dine_in que el enum del cliente no tiene porque el
+/// cliente nunca pide a mesa; solo lo crea el dueño). Define el
+/// label del paso `ready` en la matriz de acciones.
+enum AdminServiceType { pickup, delivery, dineIn }
 
 /// Pedido en la cola del local (contrato app ↔ AdminOrderResponseDto
 /// del backend §019, solo presentación por ahora — los datos viven en
 /// mocks del cubit). Es la OrderResponse + lo que la vista cliente
 /// oculta a propósito: `channel`, `tableLabel` y `customerName`.
 ///
-/// SOLID (SRP): solo los campos que la card de la cola usa hoy —
-/// orderNumber, contactPhone, deliveryAddress, discount, notes y
-/// cancelReason llegan con el detalle del ciclo 2.
+/// SOLID (SRP): solo los campos que la cola y el detalle usan hoy —
+/// orderNumber, contactPhone, deliveryAddress, discount y notes
+/// llegan cuando el detalle se integre.
 class AdminOrder extends Equatable {
   const AdminOrder({
     required this.id,
     required this.channel,
+    required this.serviceType,
     required this.status,
     required this.items,
     required this.paymentMethod,
@@ -33,10 +43,16 @@ class AdminOrder extends Equatable {
     required this.placedAt,
     this.tableLabel,
     this.customerName,
+    this.cancelReason,
   });
 
   final String id;
   final AdminOrderChannel channel;
+
+  /// Servicio (espejo `service_type` del backend §022) — define la
+  /// etiqueta del paso `ready`: delivery "Va en camino", dineIn
+  /// "Servir", pickup "Listo p/recoger".
+  final AdminServiceType serviceType;
 
   /// Estado vivo del pedido (mismo enum del cliente — espejo
   /// `order_status`): received = pending del backend, que el dueño
@@ -63,15 +79,51 @@ class AdminOrder extends Equatable {
   /// de mostrador no tiene cuenta detrás).
   final String? customerName;
 
-  /// Terminal = done o cancelled — cae al bucket history del
-  /// listado admin (regla del use-case del backend).
+  /// Motivo de la cancelación — el PATCH status del backend ya lo
+  /// acepta (§019); null cuando no se canceló o se canceló sin nota.
+  final String? cancelReason;
+
+  /// Terminal = done o cancelled — sin más pasos de avance; el
+  /// done sigue vivo en la cola (carril Entregado) hasta el cierre
+  /// de caja, solo el cancelled cruza al historial de una (§036).
   bool get isTerminal =>
       status == OrderStatus.done || status == OrderStatus.cancelled;
+
+  /// Cobro Nequi en verificación (§036): el pedido pagó por la app
+  /// pero el webhook aún no reporta paid — pending = esperando,
+  /// failed = el webhook ya dijo que no (solo queda cancelar). En
+  /// ambos casos NO hay acción de avance ni cobro manual: nadie
+  /// adelanta lo que solo el webhook puede confirmar.
+  bool get awaitsWebhook =>
+      paymentMethod == AdminPaymentMethod.nequi &&
+      paymentStatus != OrderPaymentStatus.paid;
+
+  /// Mutación inmutable para las operaciones mock del cubit (§035 —
+  /// advance/markPaid/cancel reconstruyen la entidad).
+  AdminOrder copyWith({
+    OrderStatus? status,
+    OrderPaymentStatus? paymentStatus,
+    String? cancelReason,
+  }) => AdminOrder(
+    id: id,
+    channel: channel,
+    serviceType: serviceType,
+    status: status ?? this.status,
+    items: items,
+    paymentMethod: paymentMethod,
+    paymentStatus: paymentStatus ?? this.paymentStatus,
+    total: total,
+    placedAt: placedAt,
+    tableLabel: tableLabel,
+    customerName: customerName,
+    cancelReason: cancelReason ?? this.cancelReason,
+  );
 
   @override
   List<Object?> get props => [
     id,
     channel,
+    serviceType,
     status,
     items,
     paymentMethod,
@@ -80,5 +132,6 @@ class AdminOrder extends Equatable {
     placedAt,
     tableLabel,
     customerName,
+    cancelReason,
   ];
 }

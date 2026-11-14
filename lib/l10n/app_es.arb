@@ -1134,21 +1134,25 @@
   "@adminQueueTitle": {
     "description": "Título naciente (scrolling_title) del tab admin — la cola del local (§034)"
   },
-  "adminQueueFilterActive": "Activos",
-  "@adminQueueFilterActive": {
-    "description": "Píldora del filtro segmentado de la cola admin — pedidos vivos (pending/confirmed/preparing)"
-  },
-  "adminQueueFilterHistory": "Historial",
-  "@adminQueueFilterHistory": {
-    "description": "Píldora del filtro segmentado de la cola admin — pedidos terminados/cancelados"
-  },
   "adminChannelOnline": "Online",
   "@adminChannelOnline": {
     "description": "Chip de canal del pedido admin — llegó por la app (channel=online del backend)"
   },
   "adminChannelInPerson": "Presencial",
   "@adminChannelInPerson": {
-    "description": "Chip de canal del pedido admin — tomado en el local por el dueño (channel=presencial)"
+    "description": "Etiqueta de canal del pedido admin — tomado en el local por el dueño (channel=presencial). La card la usa como susurro en la esquina; el detalle la usa en la píldora"
+  },
+  "adminServiceDelivery": "Domicilio",
+  "@adminServiceDelivery": {
+    "description": "Chip de servicio del pedido admin — hay que salir a repartir (serviceType=delivery). Es el dato operativo de la card"
+  },
+  "adminServicePickup": "Recogida",
+  "@adminServicePickup": {
+    "description": "Chip de servicio del pedido admin — el cliente pasa a recoger (serviceType=pickup, online o mostrador)"
+  },
+  "adminServiceDineIn": "Mesa",
+  "@adminServiceDineIn": {
+    "description": "Chip de servicio del pedido admin — se sirve en mesa (serviceType=dine_in; el número va en la fila cliente)"
   },
   "adminOrderAtTable": "En el local · {table}",
   "@adminOrderAtTable": {
@@ -1189,6 +1193,18 @@
   "@adminPaymentCash": {
     "description": "Método de pago del pedido admin — cash del backend"
   },
+  "adminPaymentNequi": "Nequi",
+  "@adminPaymentNequi": {
+    "description": "Método de pago Nequi dentro de la app (cobro por push/pasarela que confirma el webhook, §036)"
+  },
+  "adminAwaitingNequiHint": "Esperando confirmación de Nequi…",
+  "@adminAwaitingNequiHint": {
+    "description": "Rótulo NO interactivo en el slot de acción de la card/detalle admin — el pedido Nequi no tiene botones hasta que el webhook confirme (§036)"
+  },
+  "adminNequiFailedHint": "Nequi rechazó el pago — cancela el pedido",
+  "@adminNequiFailedHint": {
+    "description": "Rótulo NO interactivo del pedido Nequi fallido — el webhook ya reportó el rechazo, la única salida es cancelar (§036)"
+  },
   "adminPaymentTransfer": "Transf.",
   "@adminPaymentTransfer": {
     "description": "Método de pago del pedido admin — transfer del backend (Nequi/gateway)"
@@ -1225,13 +1241,13 @@
   "@adminQueueLoadError": {
     "description": "Estado de error de la cola admin — acompaña el botón Reintentar"
   },
+  "adminBackToTop": "Volver arriba",
+  "@adminBackToTop": {
+    "description": "Tooltip del FAB flecha que regresa el carril (y el header) al inicio tras mucho scroll — Cocina kanban (§036)"
+  },
   "adminNewOrder": "Nueva orden",
   "@adminNewOrder": {
     "description": "Label del FAB de la cola admin — orden presencial a un clic (§034, form en ciclo 3)"
-  },
-  "adminOrderDetailSoon": "El detalle llega en el próximo ciclo",
-  "@adminOrderDetailSoon": {
-    "description": "Toast al tocar una card de la cola admin — el detalle con acciones es el ciclo 2 (mock fase 1)"
   },
   "adminOrderItemsMore": "+{count} más",
   "@adminOrderItemsMore": {
@@ -1241,5 +1257,148 @@
         "type": "int"
       }
     }
+  },
+  "adminActionConfirm": "Confirmar",
+  "@adminActionConfirm": {
+    "description": "Botón de acción de la card/detalle admin para pedido pending — avanza a confirmed (PATCH status del backend, §035)"
+  },
+  "adminActionPaid": "Registrar pago",
+  "@adminActionPaid": {
+    "description": "Botón de cobro de la card/detalle admin — confirma el pago pendiente (POST confirm-payment del backend, §035)"
+  },
+  "adminDoneNeedsPayment": "Registra el pago primero",
+  "@adminDoneNeedsPayment": {
+    "description": "Pista bajo el botón siguiente paso deshabilitado del detalle admin — la puerta exige pago cobrado (invariante PaymentNotSettled del backend + puerta de recogida, §035/§036)"
+  },
+  "adminOrderShortId": "#{id}",
+  "@adminOrderShortId": {
+    "description": "Identificador corto del pedido en el header del detalle admin (§035) — id = cola del orderId (6 últimos caracteres o el id completo si es corto)",
+    "placeholders": {
+      "id": {
+        "type": "String"
+      }
+    }
+  },
+  "adminOrderDetailOrderSection": "Pedido",
+  "@adminOrderDetailOrderSection": {
+    "description": "Título de la sección header del detalle admin — chips canal+estado, cliente/mesa y frescura (§035)"
+  },
+  "adminOrderDetailItemsSection": "Ítems",
+  "@adminOrderDetailItemsSection": {
+    "description": "Título de la sección de ítems completos del detalle admin — una fila por ítem + total (§035)"
+  },
+  "adminOrderDetailPaymentSection": "Pago",
+  "@adminOrderDetailPaymentSection": {
+    "description": "Título de la sección de pago del detalle admin — método + estado + botón 'Registrar pago' cuando el pago está pendiente (§035)"
+  },
+  "adminOrderCancelBody": "El pedido sale de la cola y queda en el historial como cancelado.",
+  "@adminOrderCancelBody": {
+    "description": "Cuerpo del diálogo de confirmación de cancelación del detalle admin (§035)"
+  },
+  "adminOrderCancelReasonLabel": "Motivo (opcional)",
+  "@adminOrderCancelReasonLabel": {
+    "description": "Label del campo de motivo opcional del diálogo de cancelación admin — viaja como cancelReason del backend (§035)"
+  },
+  "adminToastOrderConfirmed": "Pedido confirmado",
+  "@adminToastOrderConfirmed": {
+    "description": "Toast de éxito tras avanzar un pedido pending a confirmed en la cola admin (§035)"
+  },
+  "adminToastPaymentConfirmed": "Pago confirmado",
+  "@adminToastPaymentConfirmed": {
+    "description": "Toast de éxito tras marcar el pago de un pedido admin como cobrado — 'me pagó' (§035)"
+  },
+  "adminToastOrderDone": "Pedido entregado",
+  "@adminToastOrderDone": {
+    "description": "Toast de éxito tras marcar un pedido admin como entregado — queda en el carril Entregado hasta el cierre de caja (§036)"
+  },
+  "adminActionPrepare": "Preparar",
+  "@adminActionPrepare": {
+    "description": "Botón de acción de la card/detalle admin para pedido confirmed — avanza a preparing, 'a la plancha' (§036)"
+  },
+  "adminActionOnTheWay": "Va en camino",
+  "@adminActionOnTheWay": {
+    "description": "Label del paso a ready para pedidos delivery — la acción de la card/detalle admin lo marca saliendo a domicilio (§036)"
+  },
+  "adminActionServe": "Servir",
+  "@adminActionServe": {
+    "description": "Label del paso a ready para pedidos dine_in — la acción de la card/detalle admin lo marca servido a la mesa (§036)"
+  },
+  "adminActionReadyPickup": "Listo p/recoger",
+  "@adminActionReadyPickup": {
+    "description": "Label del paso a ready para pedidos pickup — la acción de la card/detalle admin lo deja listo para que lo recojan (§036)"
+  },
+  "adminActionDeliver": "Entregado",
+  "@adminActionDeliver": {
+    "description": "Botón de acción de la card/detalle admin para pedido ready+pagado — marca done; queda en el carril Entregado hasta el cierre de caja (§036)"
+  },
+  "adminCloseDayShort": "Caja",
+  "@adminCloseDayShort": {
+    "description": "Label corto alterno del botón de cierre del header de Cocina (§036) — hoy el botón es ícono solo; clave reservada si el label vuelve"
+  },
+  "adminHistoryTitle": "Historial",
+  "@adminHistoryTitle": {
+    "description": "Título de la pantalla provisional de historial admin + tooltip del ícono 🕐 del header de Cocina (§036)"
+  },
+  "adminDayCloseTitle": "Cierre de caja",
+  "@adminDayCloseTitle": {
+    "description": "Título de la pantalla de cierre de caja del día admin (§036)"
+  },
+  "adminDayCloseTotal": "Vendido hoy",
+  "@adminDayCloseTotal": {
+    "description": "Label del hero del total vendido en el resumen del cierre de caja (§036)"
+  },
+  "adminDayCloseConfirm": "Confirmar cierre",
+  "@adminDayCloseConfirm": {
+    "description": "CTA que ejecuta el cierre de caja tras el preview del resumen (§036)"
+  },
+  "adminDayCloseDone": "Listo",
+  "@adminDayCloseDone": {
+    "description": "Botón que cierra la pantalla de resultado del cierre de caja y vuelve a Cocina (§036)"
+  },
+  "adminDayCloseOrders": "{count, plural, =1{1 pedido entregado} other{{count} pedidos entregados}}",
+  "@adminDayCloseOrders": {
+    "description": "Fila del resumen del cierre de caja con la cantidad de pedidos entregados que se archivan (§036)",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "adminDayCloseCancelled": "{count, plural, =1{1 cancelado} other{{count} cancelados}} · {amount}",
+  "@adminDayCloseCancelled": {
+    "description": "Fila de contexto del resumen del cierre de caja — cancelados del periodo con su monto; no suma al total (§036)",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      },
+      "amount": {
+        "type": "String"
+      }
+    }
+  },
+  "adminDayCloseEmpty": "Cierre del día — sin pedidos entregados. El registro queda como bitácora.",
+  "@adminDayCloseEmpty": {
+    "description": "Nota del resumen del cierre de caja cuando no hubo pedidos entregados — el cierre vacío está permitido (§036)"
+  },
+  "adminToastOrderPreparing": "Pedido a la plancha",
+  "@adminToastOrderPreparing": {
+    "description": "Toast de éxito tras avanzar un pedido admin de confirmed a preparing (§036)"
+  },
+  "adminToastOrderReady": "Pedido listo",
+  "@adminToastOrderReady": {
+    "description": "Toast de éxito tras avanzar un pedido admin de preparing a ready — listo / en camino / servido según el canal (§036)"
+  },
+  "adminToastDayClosed": "Día cerrado — {total}",
+  "@adminToastDayClosed": {
+    "description": "Toast de éxito tras confirmar el cierre de caja del día — total = total vendido formateado (§036)",
+    "placeholders": {
+      "total": {
+        "type": "String"
+      }
+    }
+  },
+  "adminLaneEmpty": "Sin pedidos",
+  "@adminLaneEmpty": {
+    "description": "Vacío compacto de un carril del kanban de Cocina sin pedidos — el carril existe aunque esté vacío (§036)"
   }
 }

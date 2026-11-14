@@ -2152,29 +2152,35 @@ abstract class AppLocalizations {
   /// **'COCINA'**
   String get adminQueueTitle;
 
-  /// Píldora del filtro segmentado de la cola admin — pedidos vivos (pending/confirmed/preparing)
-  ///
-  /// In es, this message translates to:
-  /// **'Activos'**
-  String get adminQueueFilterActive;
-
-  /// Píldora del filtro segmentado de la cola admin — pedidos terminados/cancelados
-  ///
-  /// In es, this message translates to:
-  /// **'Historial'**
-  String get adminQueueFilterHistory;
-
   /// Chip de canal del pedido admin — llegó por la app (channel=online del backend)
   ///
   /// In es, this message translates to:
   /// **'Online'**
   String get adminChannelOnline;
 
-  /// Chip de canal del pedido admin — tomado en el local por el dueño (channel=presencial)
+  /// Etiqueta de canal del pedido admin — tomado en el local por el dueño (channel=presencial). La card la usa como susurro en la esquina; el detalle la usa en la píldora
   ///
   /// In es, this message translates to:
   /// **'Presencial'**
   String get adminChannelInPerson;
+
+  /// Chip de servicio del pedido admin — hay que salir a repartir (serviceType=delivery). Es el dato operativo de la card
+  ///
+  /// In es, this message translates to:
+  /// **'Domicilio'**
+  String get adminServiceDelivery;
+
+  /// Chip de servicio del pedido admin — el cliente pasa a recoger (serviceType=pickup, online o mostrador)
+  ///
+  /// In es, this message translates to:
+  /// **'Recogida'**
+  String get adminServicePickup;
+
+  /// Chip de servicio del pedido admin — se sirve en mesa (serviceType=dine_in; el número va en la fila cliente)
+  ///
+  /// In es, this message translates to:
+  /// **'Mesa'**
+  String get adminServiceDineIn;
 
   /// Cliente del pedido admin presencial con mesa — table = tableLabel del backend ('Mesa 3')
   ///
@@ -2211,6 +2217,24 @@ abstract class AppLocalizations {
   /// In es, this message translates to:
   /// **'Efectivo'**
   String get adminPaymentCash;
+
+  /// Método de pago Nequi dentro de la app (cobro por push/pasarela que confirma el webhook, §036)
+  ///
+  /// In es, this message translates to:
+  /// **'Nequi'**
+  String get adminPaymentNequi;
+
+  /// Rótulo NO interactivo en el slot de acción de la card/detalle admin — el pedido Nequi no tiene botones hasta que el webhook confirme (§036)
+  ///
+  /// In es, this message translates to:
+  /// **'Esperando confirmación de Nequi…'**
+  String get adminAwaitingNequiHint;
+
+  /// Rótulo NO interactivo del pedido Nequi fallido — el webhook ya reportó el rechazo, la única salida es cancelar (§036)
+  ///
+  /// In es, this message translates to:
+  /// **'Nequi rechazó el pago — cancela el pedido'**
+  String get adminNequiFailedHint;
 
   /// Método de pago del pedido admin — transfer del backend (Nequi/gateway)
   ///
@@ -2266,23 +2290,203 @@ abstract class AppLocalizations {
   /// **'No pudimos cargar la cola'**
   String get adminQueueLoadError;
 
+  /// Tooltip del FAB flecha que regresa el carril (y el header) al inicio tras mucho scroll — Cocina kanban (§036)
+  ///
+  /// In es, this message translates to:
+  /// **'Volver arriba'**
+  String get adminBackToTop;
+
   /// Label del FAB de la cola admin — orden presencial a un clic (§034, form en ciclo 3)
   ///
   /// In es, this message translates to:
   /// **'Nueva orden'**
   String get adminNewOrder;
 
-  /// Toast al tocar una card de la cola admin — el detalle con acciones es el ciclo 2 (mock fase 1)
-  ///
-  /// In es, this message translates to:
-  /// **'El detalle llega en el próximo ciclo'**
-  String get adminOrderDetailSoon;
-
   /// Sufijo del resumen de ítems de la card admin cuando no caben todos en 2 líneas — recorte honesto: el dueño sabe cuántos faltan sin abrir el detalle (decisión §034)
   ///
   /// In es, this message translates to:
   /// **'+{count} más'**
   String adminOrderItemsMore(int count);
+
+  /// Botón de acción de la card/detalle admin para pedido pending — avanza a confirmed (PATCH status del backend, §035)
+  ///
+  /// In es, this message translates to:
+  /// **'Confirmar'**
+  String get adminActionConfirm;
+
+  /// Botón de cobro de la card/detalle admin — confirma el pago pendiente (POST confirm-payment del backend, §035)
+  ///
+  /// In es, this message translates to:
+  /// **'Registrar pago'**
+  String get adminActionPaid;
+
+  /// Pista bajo el botón siguiente paso deshabilitado del detalle admin — la puerta exige pago cobrado (invariante PaymentNotSettled del backend + puerta de recogida, §035/§036)
+  ///
+  /// In es, this message translates to:
+  /// **'Registra el pago primero'**
+  String get adminDoneNeedsPayment;
+
+  /// Identificador corto del pedido en el header del detalle admin (§035) — id = cola del orderId (6 últimos caracteres o el id completo si es corto)
+  ///
+  /// In es, this message translates to:
+  /// **'#{id}'**
+  String adminOrderShortId(String id);
+
+  /// Título de la sección header del detalle admin — chips canal+estado, cliente/mesa y frescura (§035)
+  ///
+  /// In es, this message translates to:
+  /// **'Pedido'**
+  String get adminOrderDetailOrderSection;
+
+  /// Título de la sección de ítems completos del detalle admin — una fila por ítem + total (§035)
+  ///
+  /// In es, this message translates to:
+  /// **'Ítems'**
+  String get adminOrderDetailItemsSection;
+
+  /// Título de la sección de pago del detalle admin — método + estado + botón 'Registrar pago' cuando el pago está pendiente (§035)
+  ///
+  /// In es, this message translates to:
+  /// **'Pago'**
+  String get adminOrderDetailPaymentSection;
+
+  /// Cuerpo del diálogo de confirmación de cancelación del detalle admin (§035)
+  ///
+  /// In es, this message translates to:
+  /// **'El pedido sale de la cola y queda en el historial como cancelado.'**
+  String get adminOrderCancelBody;
+
+  /// Label del campo de motivo opcional del diálogo de cancelación admin — viaja como cancelReason del backend (§035)
+  ///
+  /// In es, this message translates to:
+  /// **'Motivo (opcional)'**
+  String get adminOrderCancelReasonLabel;
+
+  /// Toast de éxito tras avanzar un pedido pending a confirmed en la cola admin (§035)
+  ///
+  /// In es, this message translates to:
+  /// **'Pedido confirmado'**
+  String get adminToastOrderConfirmed;
+
+  /// Toast de éxito tras marcar el pago de un pedido admin como cobrado — 'me pagó' (§035)
+  ///
+  /// In es, this message translates to:
+  /// **'Pago confirmado'**
+  String get adminToastPaymentConfirmed;
+
+  /// Toast de éxito tras marcar un pedido admin como entregado — queda en el carril Entregado hasta el cierre de caja (§036)
+  ///
+  /// In es, this message translates to:
+  /// **'Pedido entregado'**
+  String get adminToastOrderDone;
+
+  /// Botón de acción de la card/detalle admin para pedido confirmed — avanza a preparing, 'a la plancha' (§036)
+  ///
+  /// In es, this message translates to:
+  /// **'Preparar'**
+  String get adminActionPrepare;
+
+  /// Label del paso a ready para pedidos delivery — la acción de la card/detalle admin lo marca saliendo a domicilio (§036)
+  ///
+  /// In es, this message translates to:
+  /// **'Va en camino'**
+  String get adminActionOnTheWay;
+
+  /// Label del paso a ready para pedidos dine_in — la acción de la card/detalle admin lo marca servido a la mesa (§036)
+  ///
+  /// In es, this message translates to:
+  /// **'Servir'**
+  String get adminActionServe;
+
+  /// Label del paso a ready para pedidos pickup — la acción de la card/detalle admin lo deja listo para que lo recojan (§036)
+  ///
+  /// In es, this message translates to:
+  /// **'Listo p/recoger'**
+  String get adminActionReadyPickup;
+
+  /// Botón de acción de la card/detalle admin para pedido ready+pagado — marca done; queda en el carril Entregado hasta el cierre de caja (§036)
+  ///
+  /// In es, this message translates to:
+  /// **'Entregado'**
+  String get adminActionDeliver;
+
+  /// Label corto alterno del botón de cierre del header de Cocina (§036) — hoy el botón es ícono solo; clave reservada si el label vuelve
+  ///
+  /// In es, this message translates to:
+  /// **'Caja'**
+  String get adminCloseDayShort;
+
+  /// Título de la pantalla provisional de historial admin + tooltip del ícono 🕐 del header de Cocina (§036)
+  ///
+  /// In es, this message translates to:
+  /// **'Historial'**
+  String get adminHistoryTitle;
+
+  /// Título de la pantalla de cierre de caja del día admin (§036)
+  ///
+  /// In es, this message translates to:
+  /// **'Cierre de caja'**
+  String get adminDayCloseTitle;
+
+  /// Label del hero del total vendido en el resumen del cierre de caja (§036)
+  ///
+  /// In es, this message translates to:
+  /// **'Vendido hoy'**
+  String get adminDayCloseTotal;
+
+  /// CTA que ejecuta el cierre de caja tras el preview del resumen (§036)
+  ///
+  /// In es, this message translates to:
+  /// **'Confirmar cierre'**
+  String get adminDayCloseConfirm;
+
+  /// Botón que cierra la pantalla de resultado del cierre de caja y vuelve a Cocina (§036)
+  ///
+  /// In es, this message translates to:
+  /// **'Listo'**
+  String get adminDayCloseDone;
+
+  /// Fila del resumen del cierre de caja con la cantidad de pedidos entregados que se archivan (§036)
+  ///
+  /// In es, this message translates to:
+  /// **'{count, plural, =1{1 pedido entregado} other{{count} pedidos entregados}}'**
+  String adminDayCloseOrders(int count);
+
+  /// Fila de contexto del resumen del cierre de caja — cancelados del periodo con su monto; no suma al total (§036)
+  ///
+  /// In es, this message translates to:
+  /// **'{count, plural, =1{1 cancelado} other{{count} cancelados}} · {amount}'**
+  String adminDayCloseCancelled(int count, String amount);
+
+  /// Nota del resumen del cierre de caja cuando no hubo pedidos entregados — el cierre vacío está permitido (§036)
+  ///
+  /// In es, this message translates to:
+  /// **'Cierre del día — sin pedidos entregados. El registro queda como bitácora.'**
+  String get adminDayCloseEmpty;
+
+  /// Toast de éxito tras avanzar un pedido admin de confirmed a preparing (§036)
+  ///
+  /// In es, this message translates to:
+  /// **'Pedido a la plancha'**
+  String get adminToastOrderPreparing;
+
+  /// Toast de éxito tras avanzar un pedido admin de preparing a ready — listo / en camino / servido según el canal (§036)
+  ///
+  /// In es, this message translates to:
+  /// **'Pedido listo'**
+  String get adminToastOrderReady;
+
+  /// Toast de éxito tras confirmar el cierre de caja del día — total = total vendido formateado (§036)
+  ///
+  /// In es, this message translates to:
+  /// **'Día cerrado — {total}'**
+  String adminToastDayClosed(String total);
+
+  /// Vacío compacto de un carril del kanban de Cocina sin pedidos — el carril existe aunque esté vacío (§036)
+  ///
+  /// In es, this message translates to:
+  /// **'Sin pedidos'**
+  String get adminLaneEmpty;
 }
 
 class _AppLocalizationsDelegate

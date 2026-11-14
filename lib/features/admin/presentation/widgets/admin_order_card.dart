@@ -1,8 +1,7 @@
-import 'dart:async';
-
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
 
-import '../../../../core/widgets/app_toast.dart';
+import '../../../../core/routes/auth_guard.dart';
 import '../../../../l10n/app_localizations.dart';
 import '../../../home/presentation/utils/catalog_assets.dart';
 import '../../../home/presentation/utils/format_cop.dart';
@@ -10,20 +9,41 @@ import '../../../home/presentation/widgets/product_image.dart';
 import '../../../home/presentation/widgets/signature_strip.dart';
 import '../../../orders/domain/entities/customer_order.dart';
 import '../../domain/entities/admin_order.dart';
-import '../utils/format_elapsed.dart';
+import 'admin_elapsed_text.dart';
+import 'admin_order_action.dart';
 import 'admin_order_chips.dart';
 
 /// Card straddle del pedido en la cola del local (§034 — mismo gesto
 /// firma de la familia orders: la imagen del primer ítem flota a
 /// caballo del borde izquierdo). Contenido del AdminOrderResponseDto:
-/// chip de canal + chip de estado, cliente (nombre o "En el local ·
-/// Mesa N"), tiempo transcurrido, resumen de ítems, método de pago +
-/// chip de pago y total. Tap → toast del detalle (ciclo 2 — acá no
-/// hay acciones todavía, mock de fase 1).
+/// chip de servicio + etiqueta de canal en la esquina (+ chip de
+/// estado solo fuera de carril — showStatusChip, §036), cliente
+/// (nombre o "En el local · Mesa N"), tiempo transcurrido, resumen
+/// de ítems, método de pago + chip de pago y total. §035 — fila inferior con el botón de la
+/// siguiente acción real (matriz estado×pago, solo en pedidos vivos);
+/// tap de la card → detalle /admin/:id (el botón no propaga: es hijo
+/// del InkWell con su propio gesto). El terminal queda de solo
+/// lectura — sin botón en el historial.
 class AdminOrderCard extends StatelessWidget {
-  const AdminOrderCard({required this.order, super.key});
+  const AdminOrderCard({
+    required this.order,
+    this.busy = false,
+    this.showStatusChip = false,
+    super.key,
+  });
 
   final AdminOrder order;
+
+  /// Operación mock en vuelo sobre ESTE pedido — spinner inline del
+  /// botón (state.busyOrderIds del cubit; la pantalla lo resuelve).
+  final bool busy;
+
+  /// Muestra el chip de estado arriba a la derecha. OFF en los
+  /// carriles del kanban (decisión del dueño §036): si la card ya
+  /// vive en "Pendiente", repetir "Pendiente" en cada card es
+  /// ruido — el carril ES el estado. ON en el historial y en
+  /// cualquier lista plana sin contexto de carril.
+  final bool showStatusChip;
 
   /// Alto del recuadro flotante — 80px, el mismo de active_order_card
   /// y cart_item_tile (consistencia de la familia straddle).
@@ -31,7 +51,6 @@ class AdminOrderCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final l10n = AppLocalizations.of(context)!;
     final colors = Theme.of(context).colorScheme;
     final text = Theme.of(context).textTheme;
     return Padding(
@@ -55,8 +74,10 @@ class AdminOrderCard extends StatelessWidget {
                     borderRadius: BorderRadius.circular(14),
                   ),
                   child: InkWell(
-                    onTap: () =>
-                        AppToast.info(context, l10n.adminOrderDetailSoon),
+                    onTap: () => context.push(
+                      '${AuthGuard.adminRoute}/${order.id}',
+                      extra: order,
+                    ),
                     child: Padding(
                       // Texto anclado al marco: borde derecho del
                       // recuadro + gap (regla de la familia).
@@ -71,9 +92,25 @@ class AdminOrderCard extends StatelessWidget {
                         children: [
                           Row(
                             children: [
-                              AdminChannelChip(channel: order.channel),
-                              const Spacer(),
-                              AdminOrderStatusChip(status: order.status),
+                              AdminServiceChip(
+                                serviceType: order.serviceType,
+                              ),
+                              // Canal en la esquina — susurro sin
+                              // píldora (§036, decisión del dueño);
+                              // cede en angosto (elipsiza, no
+                              // revienta la fila).
+                              Expanded(
+                                child: Align(
+                                  alignment: Alignment.centerRight,
+                                  child: AdminChannelTag(
+                                    channel: order.channel,
+                                  ),
+                                ),
+                              ),
+                              if (showStatusChip) ...[
+                                const SizedBox(width: 8),
+                                AdminOrderStatusChip(status: order.status),
+                              ],
                             ],
                           ),
                           const SizedBox(height: 10),
@@ -87,13 +124,36 @@ class AdminOrderCard extends StatelessWidget {
                               const SizedBox(width: 8),
                               Text(
                                 formatCop(order.total),
+                                // Cancelado = plata que no entró —
+                                // el mostaza w800 lo gritaba como
+                                // caja viva (revisor-estetico §035).
                                 style: text.titleSmall?.copyWith(
-                                  color: colors.primary,
-                                  fontWeight: FontWeight.w800,
+                                  color: order.status == OrderStatus.cancelled
+                                      ? colors.onSurface.withValues(alpha: 0.5)
+                                      : colors.primary,
+                                  fontWeight:
+                                      order.status == OrderStatus.cancelled
+                                      ? FontWeight.w600
+                                      : FontWeight.w800,
                                 ),
                               ),
                             ],
                           ),
+                          // La acción es el punto de la pantalla —
+                          // un toque avanza sin abrir nada; solo en
+                          // pedidos vivos (el historial es lectura).
+                          // Nequi sin confirmar: rótulo de espera en
+                          // el mismo slot — el webhook manda, no el
+                          // dueño (§036).
+                          if (!order.isTerminal) ...[
+                            const SizedBox(height: 10),
+                            order.awaitsWebhook
+                                ? AdminOrderAwaitingHint(order: order)
+                                : AdminOrderActionButton(
+                                    order: order,
+                                    busy: busy,
+                                  ),
+                          ],
                         ],
                       ),
                     ),
@@ -237,63 +297,16 @@ class _CustomerLine extends StatelessWidget {
           ),
         ),
         const SizedBox(width: 8),
-        _ElapsedText(placedAt: order.placedAt, muted: muted),
+        AdminElapsedText(
+          placedAt: order.placedAt,
+          style: text.labelSmall?.copyWith(color: muted),
+        ),
       ],
     );
   }
 }
 
-/// "Hace N min" que se re-computa solo — esta pantalla vive ABIERTA
-/// todo el día en el local: sin tick propio la frescura se congela y
-/// el dato de operación miente en silencio (revisor-ui §034). Timer
-/// de 60s pausado cuando el árbol no está visible (TickerMode: el
-/// IndexedStack del shell deja los demás tabs deshabilitados).
-class _ElapsedText extends StatefulWidget {
-  const _ElapsedText({required this.placedAt, required this.muted});
-
-  final DateTime placedAt;
-  final Color muted;
-
-  @override
-  State<_ElapsedText> createState() => _ElapsedTextState();
-}
-
-class _ElapsedTextState extends State<_ElapsedText> {
-  Timer? _timer;
-
-  @override
-  void didChangeDependencies() {
-    super.didChangeDependencies();
-    final enabled = TickerMode.valuesOf(context).enabled;
-    if (enabled && _timer == null) {
-      _timer = Timer.periodic(
-        const Duration(minutes: 1),
-        (_) => setState(() {}),
-      );
-    } else if (!enabled) {
-      _timer?.cancel();
-      _timer = null;
-    }
-  }
-
-  @override
-  void dispose() {
-    _timer?.cancel();
-    super.dispose();
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final l10n = AppLocalizations.of(context)!;
-    return Text(
-      formatElapsed(widget.placedAt, l10n),
-      style: Theme.of(context).textTheme.labelSmall
-          ?.copyWith(color: widget.muted),
-    );
-  }
-}
-
-/// Fila de pago: método (Efectivo/Transferencia) + chip del estado
+/// Fila de pago: método (Efectivo/Transf./Nequi) + chip del estado
 /// del pago — en la cola el "¿me pagó?" es dato de primer nivel.
 class _PaymentLine extends StatelessWidget {
   const _PaymentLine({required this.order});
@@ -306,21 +319,30 @@ class _PaymentLine extends StatelessWidget {
     final colors = Theme.of(context).colorScheme;
     final text = Theme.of(context).textTheme;
     final muted = colors.onSurface.withValues(alpha: 0.6);
-    final cash = order.paymentMethod == AdminPaymentMethod.cash;
+    // sync_alt = transferencia manual, wallet = Nequi dentro de la
+    // app — smartphone ya significa el canal Online en la fila de
+    // chips (revisor-ui, doble significado del glifo en la card).
+    final (icon, methodLabel) = switch (order.paymentMethod) {
+      AdminPaymentMethod.cash => (
+        Icons.payments_rounded,
+        l10n.adminPaymentCash,
+      ),
+      AdminPaymentMethod.transfer => (
+        Icons.sync_alt_rounded,
+        l10n.adminPaymentTransfer,
+      ),
+      AdminPaymentMethod.nequi => (
+        Icons.account_balance_wallet_rounded,
+        l10n.adminPaymentNequi,
+      ),
+    };
     return Row(
       children: [
-        Icon(
-          // sync_alt para transferencia — smartphone ya significa el
-          // canal Online en la fila de chips (revisor-ui, doble
-          // significado del glifo en la misma card).
-          cash ? Icons.payments_rounded : Icons.sync_alt_rounded,
-          size: 13,
-          color: muted,
-        ),
+        Icon(icon, size: 13, color: muted),
         const SizedBox(width: 4),
         Flexible(
           child: Text(
-            cash ? l10n.adminPaymentCash : l10n.adminPaymentTransfer,
+            methodLabel,
             style: text.bodySmall?.copyWith(color: muted),
             maxLines: 1,
             overflow: TextOverflow.ellipsis,
