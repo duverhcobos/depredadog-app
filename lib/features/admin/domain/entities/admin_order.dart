@@ -23,8 +23,8 @@ enum AdminPaymentMethod { cash, transfer, nequi }
 enum AdminServiceType { pickup, delivery, dineIn }
 
 /// Pedido en la cola del local (contrato app ↔ AdminOrderResponseDto
-/// del backend §019, solo presentación por ahora — los datos viven en
-/// mocks del cubit). Es la OrderResponse + lo que la vista cliente
+/// del backend §019 — real desde §038; modifiers completos solo en
+/// el :id, §039). Es la OrderResponse + lo que la vista cliente
 /// oculta a propósito: `channel`, `tableLabel` y `customerName`.
 ///
 /// SOLID (SRP): solo los campos que la cola y el detalle usan hoy.
@@ -53,6 +53,7 @@ class AdminOrder extends Equatable {
     this.locationLng,
     this.locationUrl,
     this.statusChangedAt,
+    this.orderNumber,
   });
 
   final String id;
@@ -129,6 +130,19 @@ class AdminOrder extends Equatable {
   /// nació en el estado actual (entró al carril en placedAt).
   final DateTime? statusChangedAt;
 
+  /// Correlativo humano del pedido (campo `orderNumber` del DTO — el
+  /// identificador corto que el dueño usa para hablar del pedido).
+  /// Null en mocks/viejos sin el campo.
+  final int? orderNumber;
+
+  /// Tag corto del header ("#adm-N" — formato aprobado §037): con
+  /// correlativo real muestra 'adm-N'; sin él cae a la cola del id
+  /// (UUID recortado a 6 caracteres; un id mock corto se muestra
+  /// completo). Reemplaza al static shortId del header.
+  String get shortTag => orderNumber != null
+      ? 'adm-$orderNumber'
+      : (id.length <= 6 ? id : id.substring(id.length - 6));
+
   /// Terminal = done o cancelled — sin más pasos de avance; el
   /// done sigue vivo en la cola (carril Entregado) hasta el cierre
   /// de caja, solo el cancelled cruza al historial de una (§036).
@@ -150,6 +164,7 @@ class AdminOrder extends Equatable {
     OrderStatus? status,
     OrderPaymentStatus? paymentStatus,
     String? cancelReason,
+    List<OrderItem>? items,
   }) => AdminOrder(
     id: id,
     channel: channel,
@@ -158,7 +173,7 @@ class AdminOrder extends Equatable {
     statusChangedAt: status != null && status != this.status
         ? DateTime.now()
         : statusChangedAt,
-    items: items,
+    items: items ?? this.items,
     paymentMethod: paymentMethod,
     paymentStatus: paymentStatus ?? this.paymentStatus,
     subtotal: subtotal,
@@ -176,6 +191,7 @@ class AdminOrder extends Equatable {
     locationLat: locationLat,
     locationLng: locationLng,
     locationUrl: locationUrl,
+    orderNumber: orderNumber,
   );
 
   @override
@@ -203,5 +219,6 @@ class AdminOrder extends Equatable {
     locationLng,
     locationUrl,
     statusChangedAt,
+    orderNumber,
   ];
 }

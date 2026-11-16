@@ -1,10 +1,18 @@
 import 'package:bloc_test/bloc_test.dart';
+import 'package:dartz/dartz.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:mocktail/mocktail.dart';
 import 'package:depredadog_app/features/admin/domain/entities/admin_day_close.dart';
 import 'package:depredadog_app/features/admin/domain/entities/admin_order.dart';
+import 'package:depredadog_app/features/admin/domain/failures/admin_failure.dart';
+import 'package:depredadog_app/features/admin/domain/repositories/i_admin_repository.dart';
+import 'package:depredadog_app/features/admin/domain/use_cases/load_admin_queue_use_case.dart';
 import 'package:depredadog_app/features/admin/presentation/cubit/admin_queue_cubit.dart';
 import 'package:depredadog_app/features/admin/presentation/cubit/admin_queue_state.dart';
+import 'package:depredadog_app/features/cart/domain/entities/cart_modifier.dart';
 import 'package:depredadog_app/features/orders/domain/entities/customer_order.dart';
+
+import '../../fixtures/admin_order_fixtures.dart';
 
 AdminOrder _order(String id, OrderStatus status, DateTime placedAt) =>
     AdminOrder(
@@ -21,10 +29,10 @@ AdminOrder _order(String id, OrderStatus status, DateTime placedAt) =>
     );
 
 void main() {
-  group('AdminQueueCubit (§036 — mocks de fase 1, kanban)', () {
+  group('AdminQueueCubit (§038 — cola real via LoadAdminQueueUseCase)', () {
     test('estado inicial: cargando, bandejas vacías, sin preview de '
         'cierre ni busy', () {
-      final cubit = AdminQueueCubit();
+      final cubit = buildAdminQueueCubit();
       addTearDown(cubit.close);
 
       expect(cubit.state.dataLoading, isTrue);
@@ -37,26 +45,98 @@ void main() {
     });
 
     blocTest<AdminQueueCubit, AdminQueueState>(
-      'load(): emite cargando → cola mock completa (30 activos + 3 '
-      'historial — todas las variantes de la puerta de pago)',
-      build: AdminQueueCubit.new,
+      'load(): emite cargando → activos → historial (30 activos + 3 '
+      'de fixtures — todas las variantes de la puerta de pago)',
+      build: buildAdminQueueCubit,
       act: (cubit) => cubit.load(),
-      // El mock simula 400ms de latencia (convención §023).
-      wait: const Duration(milliseconds: 500),
       expect: () => [
         isA<AdminQueueState>()
             .having((s) => s.dataLoading, 'dataLoading', isTrue)
             .having((s) => s.failed, 'failed', isFalse),
         isA<AdminQueueState>()
             .having((s) => s.active.length, 'active', 30)
-            .having((s) => s.history.length, 'history', 3)
-            .having((s) => s.dataLoading, 'dataLoading', isFalse),
+            .having((s) => s.dataLoading, 'dataLoading', isFalse)
+            .having((s) => s.failed, 'failed', isFalse),
+        isA<AdminQueueState>()
+            .having((s) => s.history.length, 'history', 3),
       ],
     );
 
-    test('los mocks cubren los 5 carriles + los 3 serviceType — el '
+    test('load(): falla del bucket activo SIN datos previos → '
+        'failed:true (vista de error completa)', () async {
+      final cubit = buildAdminQueueCubit(
+        activeFailure: const AdminOfflineFailure(),
+        historyFailure: const AdminOfflineFailure(),
+      );
+      addTearDown(cubit.close);
+      await cubit.load();
+
+      expect(cubit.state.failed, isTrue);
+      expect(cubit.state.dataLoading, isFalse);
+      expect(cubit.state.active, isEmpty);
+      expect(cubit.state.history, isEmpty);
+    });
+
+    test('load(): falla activa en refresh → failed:true CONSERVANDO '
+        'la cola pintada (banner sobre datos stale)', () async {
+      // Primer load sano, luego el servidor cae — pull-to-refresh.
+      final useCase = FakeLoadAdminQueueUseCase();
+      when(useCase.call).thenAnswer(
+        (_) async => AdminQueueData(
+          active: Right(adminActiveFixtures()),
+          history: Right(
+            AdminHistoryPage(
+              items: adminHistoryFixtures(),
+              total: adminHistoryFixtures().length,
+            ),
+          ),
+        ),
+      );
+      final detail = FakeGetAdminOrderDetailUseCase();
+      when(
+        () => detail.call(any()),
+      ).thenAnswer((_) async => const Left(AdminServerFailure('stub')));
+      final cubit = AdminQueueCubit(
+        loadQueue: useCase,
+        getOrderDetail: detail,
+      );
+      addTearDown(cubit.close);
+      await cubit.load();
+      expect(cubit.state.active, hasLength(30));
+
+      when(useCase.call).thenAnswer(
+        (_) async => const AdminQueueData(
+          active: Left(AdminServerFailure('boom')),
+          history: Left(AdminServerFailure('boom')),
+        ),
+      );
+      await cubit.load();
+
+      expect(cubit.state.failed, isTrue);
+      expect(cubit.state.dataLoading, isFalse);
+      // La bandeja NO se vació — el error viaja sobre los datos
+      // viejos (revisor-ui §034).
+      expect(cubit.state.active, hasLength(30));
+      expect(cubit.state.history, hasLength(3));
+    });
+
+    test('load(): falla SOLO el historial → la cola carga igual y '
+        'history conserva en silencio (sin superficie visual hoy)', () async {
+      final cubit = buildAdminQueueCubit(
+        historyFailure: const AdminServerFailure('boom'),
+      );
+      addTearDown(cubit.close);
+      await cubit.load();
+
+      expect(cubit.state.failed, isFalse);
+      expect(cubit.state.active, hasLength(30));
+      // El fold Left del historial no emite — conserva lo previo.
+      expect(cubit.state.history, isEmpty);
+    });
+
+    test('las fixtures cubren los 5 carriles + los 3 serviceType — el '
         'entregado vive en active esperando el cierre', () async {
-      final cubit = AdminQueueCubit();
+      final cubit = buildAdminQueueCubit();
       addTearDown(cubit.close);
       await cubit.load();
 
@@ -133,11 +213,184 @@ void main() {
     });
   });
 
-  group('AdminQueueCubit — operaciones §036 (mocks con latencia)', () {
-    // Cada operación lleva ~400ms de latencia simulada como load() —
-    // los awaits corren en tiempo real (convención del archivo).
+  group('AdminQueueCubit — refreshOrder §039 (GET /admin/orders/:id '
+      'al abrir el detalle)', () {
+    // El listado manda modifiers:[] a propósito — el :id trae la
+    // comanda completa + el estado más fresco; refreshOrder la
+    // inyecta en la bandeja donde vive la orden.
+    AdminOrder snapshot(String id) =>
+        _order(id, OrderStatus.received, DateTime(2024, 1, 1));
+
+    test('reemplaza la orden en `active` — la comanda completa con '
+        'modifiers + estado fresco sustituye el snapshot del listado',
+        () async {
+      final detail = FakeGetAdminOrderDetailUseCase();
+      // Cambió a confirmed server-side y trae el "sin cebolla" que
+      // el listado omite — ambas cosas llegan en el mismo GET.
+      final full = AdminOrder(
+        id: 'w1',
+        channel: AdminOrderChannel.online,
+        serviceType: AdminServiceType.delivery,
+        status: OrderStatus.confirmed,
+        items: const [
+          OrderItem(
+            productId: 'p-depredador',
+            productSlug: 'depredador',
+            name: 'El Depredador',
+            quantity: 1,
+            unitPrice: 25000,
+            modifiers: [
+              CartModifier(
+                optionId: 'ing-cebolla',
+                optionName: 'Cebolla',
+                action: CartModifierAction.removed,
+                priceDelta: 0,
+              ),
+            ],
+          ),
+        ],
+        paymentMethod: AdminPaymentMethod.cash,
+        paymentStatus: OrderPaymentStatus.paid,
+        subtotal: 25000,
+        deliveryFee: 0,
+        placedAt: DateTime(2024, 1, 1),
+      );
+      when(() => detail.call('w1')).thenAnswer((_) async => Right(full));
+      final cubit = buildAdminQueueCubit(
+        active: [snapshot('w1')],
+        history: const [],
+        getOrderDetail: detail,
+      );
+      addTearDown(cubit.close);
+      await cubit.load();
+
+      await cubit.refreshOrder('w1');
+
+      // La orden viva es la del servidor — instancia completa.
+      expect(cubit.state.orderById('w1'), same(full));
+      // Refresh de fondo: sin spinner ni busy (no es mutación).
+      expect(cubit.state.busyOrderIds, isEmpty);
+    });
+
+    test('reemplaza en `history` — el archivado también se refresca '
+        'en su propia bandeja', () async {
+      final detail = FakeGetAdminOrderDetailUseCase();
+      final full = _order('h1', OrderStatus.cancelled, DateTime(2024, 1, 1));
+      when(() => detail.call('h1')).thenAnswer((_) async => Right(full));
+      final cubit = buildAdminQueueCubit(
+        active: const [],
+        history: [snapshot('h1')],
+        getOrderDetail: detail,
+      );
+      addTearDown(cubit.close);
+      await cubit.load();
+
+      await cubit.refreshOrder('h1');
+
+      expect(cubit.state.orderById('h1'), same(full));
+      // Refresh reemplaza en su bandeja — no migra a active.
+      expect(cubit.state.active, isEmpty);
+    });
+
+    test('la orden NO está en ninguna bandeja → no-op (history solo '
+        'carga página 1 — el detalle sigue con el snapshot del extra)',
+        () async {
+      final detail = FakeGetAdminOrderDetailUseCase();
+      when(
+        () => detail.call('ghost'),
+      ).thenAnswer((_) async => Right(snapshot('ghost')));
+      final cubit = buildAdminQueueCubit(
+        active: [snapshot('w1')],
+        history: const [],
+        getOrderDetail: detail,
+      );
+      addTearDown(cubit.close);
+      await cubit.load();
+      final before = cubit.state;
+
+      await cubit.refreshOrder('ghost');
+
+      // Ni un emit — el state es literalmente el mismo.
+      expect(cubit.state, same(before));
+    });
+
+    test('falla SILENCIOSA — el detalle ya renderiza el snapshot del '
+        'extra: sin emit, sin toast, sin banner', () async {
+      final detail = FakeGetAdminOrderDetailUseCase();
+      when(
+        () => detail.call('w1'),
+      ).thenAnswer((_) async => const Left(AdminServerFailure('boom')));
+      final cubit = buildAdminQueueCubit(
+        active: [snapshot('w1')],
+        history: const [],
+        getOrderDetail: detail,
+      );
+      addTearDown(cubit.close);
+      await cubit.load();
+      final before = cubit.state;
+
+      await cubit.refreshOrder('w1');
+
+      expect(cubit.state, same(before));
+      expect(cubit.state.failed, isFalse);
+    });
+
+    test('un load() posterior NO pisa la orden hidratada — los ítems '
+        'con modifiers sobreviven al refresh de la cola (los ítems son '
+        'inmutables: el listado los manda vacíos, el detalle los trajo)',
+        () async {
+      final detail = FakeGetAdminOrderDetailUseCase();
+      final full = _order(
+        'w1',
+        OrderStatus.received,
+        DateTime(2024, 1, 1),
+      ).copyWith(
+        items: const [
+          OrderItem(
+            productId: 'p-depredador',
+            productSlug: 'depredador',
+            name: 'El Depredador',
+            quantity: 1,
+            unitPrice: 25000,
+            modifiers: [
+              CartModifier(
+                optionId: 'ing-cebolla',
+                optionName: 'Cebolla',
+                action: CartModifierAction.removed,
+                priceDelta: 0,
+              ),
+            ],
+          ),
+        ],
+      );
+      when(() => detail.call('w1')).thenAnswer((_) async => Right(full));
+      final cubit = buildAdminQueueCubit(
+        active: [snapshot('w1')],
+        history: const [],
+        getOrderDetail: detail,
+      );
+      addTearDown(cubit.close);
+      await cubit.load();
+      await cubit.refreshOrder('w1');
+
+      // Carrera real §039: la cola se re-carga (pull del dueño, re-entry
+      // del tab) DESPUÉS de que el detalle hidrató la orden — el
+      // snapshot del listado no debe borrar los modifiers.
+      await cubit.load();
+
+      final order = cubit.state.orderById('w1')!;
+      expect(order.items.single.modifiers, hasLength(1));
+      expect(order.items.single.modifiers.single.optionName, 'Cebolla');
+    });
+  });
+
+  group('AdminQueueCubit — operaciones §036 (PROVISIONAL: mutación '
+      'local instantánea §038)', () {
+    // Las operaciones siguen siendo simulación local sobre el estado
+    // — sin delay desde §038 (la latencia real la pondrá el HTTP en
+    // su ciclo de integración).
     Future<AdminQueueCubit> loaded() async {
-      final cubit = AdminQueueCubit();
+      final cubit = buildAdminQueueCubit();
       addTearDown(cubit.close);
       await cubit.load();
       return cubit;
@@ -146,7 +399,7 @@ void main() {
     test('advanceOrder: la matriz de 5 pasos received→confirmed→'
         'preparing→ready→done, cada paso un toque', () async {
       final order = _order('w1', OrderStatus.received, DateTime(2024, 1, 1));
-      final cubit = AdminQueueCubit(mockActive: [order], mockHistory: const []);
+      final cubit = buildAdminQueueCubit(active: [order], history: const []);
       addTearDown(cubit.close);
       await cubit.load();
 
@@ -227,10 +480,7 @@ void main() {
         OrderStatus.confirmed,
         DateTime(2024, 1, 1),
       ).copyWith(paymentStatus: OrderPaymentStatus.failed);
-      final cubit = AdminQueueCubit(
-        mockActive: [failed],
-        mockHistory: const [],
-      );
+      final cubit = buildAdminQueueCubit(active: [failed], history: const []);
       addTearDown(cubit.close);
       await cubit.load();
 
@@ -244,7 +494,7 @@ void main() {
     });
 
     test('advanceOrder: la recogida PRESENCIAL sin cobrar NO confirma '
-        '— la puerta de pago del §036 (mock = no-op, prod = 409)', () async {
+        '— la puerta de pago del §036 (local = no-op, prod = 409)', () async {
       final cubit = await loaded();
 
       // adm-33 = pickup presencial por teléfono, transfer pendiente:
@@ -335,23 +585,25 @@ void main() {
       expect(cubit.state.busyOrderIds, isEmpty);
     });
 
-    test('la mutación persiste en los mocks: un load() posterior no '
-        'resucita el pedido ya operado', () async {
+    test('PROVISIONAL (§038): la mutación es solo local — un load() '
+        'posterior vuelve a traer lo que el servidor reporta', () async {
       final cubit = await loaded();
 
-      await cubit.advanceOrder('adm-3'); // Beto → done.
+      await cubit.advanceOrder('adm-3'); // Beto → done (local).
       await cubit.load();
 
-      // Los mocks son el "servidor" — el pull re-lee lo operado.
-      expect(cubit.state.orderById('adm-3')!.status, OrderStatus.done);
-      expect(cubit.state.deliveredCount, 4);
+      // Sin PATCH real, el refresh devuelve la fixture intacta del
+      // "servidor" (use case stub) — la mutación local no persiste
+      // hasta su ciclo de integración.
+      expect(cubit.state.orderById('adm-3')!.status, OrderStatus.ready);
+      expect(cubit.state.deliveredCount, 3);
     });
   });
 
   group('AdminQueueCubit — cierre de caja §036', () {
     test('loadDayClosePreview: resumen del día — entregados, total, '
         'por método y cancelados como contexto', () async {
-      final cubit = AdminQueueCubit();
+      final cubit = buildAdminQueueCubit();
       addTearDown(cubit.close);
       await cubit.load();
 
@@ -384,13 +636,11 @@ void main() {
 
     test('closeDay: archiva los done al history, devuelve el resumen '
         'y el carril Entregado queda vacío de verdad', () async {
-      final cubit = AdminQueueCubit();
+      final cubit = buildAdminQueueCubit();
       addTearDown(cubit.close);
       await cubit.load();
 
-      final closing = cubit.closeDay();
-      expect(cubit.state.dayCloseBusy, isTrue);
-      final summary = await closing;
+      final summary = await cubit.closeDay();
 
       expect(summary!.orderCount, 3);
       expect(summary.totalAmount, 65000);
@@ -403,16 +653,18 @@ void main() {
       expect(cubit.state.active.any((o) => o.id == 'adm-16'), isFalse);
       expect(cubit.state.active.any((o) => o.id == 'adm-17'), isFalse);
       expect(cubit.state.history.first.id, 'adm-16');
-      // Un load posterior no resucita el entregado archivado.
+      // PROVISIONAL (§038): un load posterior vuelve a traer los
+      // done del "servidor" (fixture) — el archivo local del cierre
+      // no persiste hasta el ciclo de integración del day-close.
       await cubit.load();
-      expect(cubit.state.deliveredCount, 0);
+      expect(cubit.state.deliveredCount, 3);
     });
 
     test('closeDay: cierre vacío permitido — resumen en ceros con '
         'los cancelados como contexto', () async {
-      final cubit = AdminQueueCubit(
-        mockActive: [_order('a1', OrderStatus.preparing, DateTime(2024, 1, 1))],
-        mockHistory: const [],
+      final cubit = buildAdminQueueCubit(
+        active: [_order('a1', OrderStatus.preparing, DateTime(2024, 1, 1))],
+        history: const [],
       );
       addTearDown(cubit.close);
       await cubit.load();

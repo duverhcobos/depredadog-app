@@ -63,6 +63,19 @@ class _ItemLineState extends State<_ItemLine> {
   late bool _expanded = widget.item.modifiers.isNotEmpty;
 
   @override
+  void didUpdateWidget(covariant _ItemLine oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    // §039: los modifiers llegan DESPUÉS (GET /admin/orders/:id — el
+    // listado los manda vacíos pero sí trae includedNames, así que el
+    // ítem custom nace colapsado). Un ítem que los gana al hidratarse
+    // se auto-expande — la instrucción de cocina no pide un toque.
+    if (widget.item.modifiers.isNotEmpty &&
+        oldWidget.item.modifiers.isEmpty) {
+      _expanded = true;
+    }
+  }
+
+  @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
     final colors = Theme.of(context).colorScheme;

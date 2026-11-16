@@ -1,9 +1,14 @@
+import 'package:dartz/dartz.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:get_it/get_it.dart';
+import 'package:mocktail/mocktail.dart';
 import 'package:depredadog_app/core/theme/app_theme.dart';
+import 'package:depredadog_app/features/admin/domain/failures/admin_failure.dart';
+import 'package:depredadog_app/features/admin/domain/repositories/i_admin_repository.dart';
+import 'package:depredadog_app/features/admin/domain/use_cases/load_admin_queue_use_case.dart';
 import 'package:depredadog_app/features/admin/presentation/cubit/admin_queue_cubit.dart';
 import 'package:depredadog_app/features/admin/presentation/screens/admin_queue_screen.dart';
 import 'package:depredadog_app/features/admin/presentation/widgets/admin_lane_strip.dart';
@@ -11,10 +16,47 @@ import 'package:depredadog_app/features/admin/presentation/widgets/admin_order_c
 import 'package:depredadog_app/features/orders/domain/entities/customer_order.dart';
 import 'package:depredadog_app/l10n/app_localizations.dart';
 
-/// Cola que falla la primera carga — la fase mock no puede fallar de
-/// verdad, así que se emite el flag failed para ejercer la rama de
-/// error + reintento (la forma del estado ya es la de integración).
+import '../../fixtures/admin_order_fixtures.dart';
+
+/// Use case falso stub-eado con las fixtures — el mismo cableado de
+/// buildAdminQueueCubit para los subtipos locales del test (que no
+/// pueden reusar la factory porque extienden la clase).
+LoadAdminQueueUseCase _fixtureUseCase() {
+  final useCase = FakeLoadAdminQueueUseCase();
+  when(useCase.call).thenAnswer(
+    (_) async => AdminQueueData(
+      active: Right(adminActiveFixtures()),
+      history: Right(
+        AdminHistoryPage(
+          items: adminHistoryFixtures(),
+          total: adminHistoryFixtures().length,
+        ),
+      ),
+    ),
+  );
+  return useCase;
+}
+
+/// Use case falso del detalle (§039) — Left silencioso: los tests de
+/// la cola no ejercen el fetch que el detalle dispara al montar.
+FakeGetAdminOrderDetailUseCase _fixtureDetailUseCase() {
+  final detail = FakeGetAdminOrderDetailUseCase();
+  when(
+    () => detail.call(any()),
+  ).thenAnswer((_) async => const Left(AdminServerFailure('stub')));
+  return detail;
+}
+
+/// Cola que falla la primera carga — se emite el flag failed para
+/// ejercer la rama de error + reintento (el use case real también
+/// devuelve Left en este camino, §038).
 class _FailingQueueCubit extends AdminQueueCubit {
+  _FailingQueueCubit()
+    : super(
+        loadQueue: _fixtureUseCase(),
+        getOrderDetail: _fixtureDetailUseCase(),
+      );
+
   bool fail = true;
 
   @override
@@ -30,6 +72,12 @@ class _FailingQueueCubit extends AdminQueueCubit {
 /// Cola que cuenta sus loads — para verificar que el pull-to-refresh
 /// re-consulta (paridad Pedidos §027).
 class _CountingQueueCubit extends AdminQueueCubit {
+  _CountingQueueCubit()
+    : super(
+        loadQueue: _fixtureUseCase(),
+        getOrderDetail: _fixtureDetailUseCase(),
+      );
+
   int loads = 0;
 
   @override
@@ -44,6 +92,12 @@ class _CountingQueueCubit extends AdminQueueCubit {
 /// perder la cola visible por un fallo transitorio es peor que datos
 /// algo viejos + retry).
 class _StaleErrorQueueCubit extends AdminQueueCubit {
+  _StaleErrorQueueCubit()
+    : super(
+        loadQueue: _fixtureUseCase(),
+        getOrderDetail: _fixtureDetailUseCase(),
+      );
+
   @override
   Future<void> load() async {
     await super.load();
@@ -56,9 +110,9 @@ void main() {
   late AdminQueueCubit cubit;
 
   setUp(() {
-    // Cubit REAL con los mocks de fábrica (16 activos — todos los
+    // Cubit real con las fixtures de fábrica (30 activos — todos los
     // carriles con todos los casos + 3 cancelados en el historial).
-    cubit = AdminQueueCubit();
+    cubit = buildAdminQueueCubit();
     locator.registerSingleton<AdminQueueCubit>(cubit);
   });
 
@@ -115,10 +169,9 @@ void main() {
     );
   }
 
-  /// Lanza load() y lo deja terminar: el delay simulado de 400ms vive
-  /// en el fake-async del binding (un `await` desnudo colgaría el
-  /// test) — vence con un pump de 500ms. Seguro llamarlo antes o
-  /// después de pumpQueue.
+  /// Lanza load() y lo deja terminar: el stub del use case resuelve
+  /// en microtask (§038 — sin delay) — un pump lo vacía. Seguro
+  /// llamarlo antes o después de pumpQueue.
   Future<void> loadQueue(WidgetTester tester) async {
     final load = cubit.load();
     await tester.pump(const Duration(milliseconds: 500));
@@ -298,7 +351,7 @@ void main() {
       'carriles están vacíos', (tester) async {
     await cubit.close();
     await locator.reset();
-    cubit = AdminQueueCubit(mockActive: const [], mockHistory: const []);
+    cubit = buildAdminQueueCubit(active: const [], history: const []);
     locator.registerSingleton<AdminQueueCubit>(cubit);
 
     await pumpQueue(tester);
@@ -377,8 +430,8 @@ void main() {
     // Pull-down sobre el ListView del carril visible — la misma
     // distancia/velocidad del test de orders (§027).
     await tester.fling(find.byType(ListView).first, const Offset(0, 400), 1000);
-    // El load mock tiene 400ms de latencia simulada — pump fijo
-    // mientras el RefreshIndicator anima.
+    // Pump fijo mientras el RefreshIndicator anima (el load del stub
+    // es instantáneo — §038 sin delay).
     await tester.pump(const Duration(milliseconds: 500));
     await tester.pumpAndSettle();
 
@@ -494,10 +547,8 @@ void main() {
     // Ana Uno (received) es la primera card del carril Pendiente
     // (FIFO — la que más espera) → su "Confirmar" es el .first.
     await tester.tap(find.text('Confirmar').first);
-    // Spinner inline mientras el mock corre (~400ms).
-    await tester.pump(const Duration(milliseconds: 100));
-    expect(find.byType(CircularProgressIndicator), findsOneWidget);
-    await tester.pump(const Duration(milliseconds: 450));
+    // La operación es instantánea en esta fase (PROVISIONAL §038 —
+    // sin delay; la latencia real la pondrá el HTTP del PATCH).
     await tester.pumpAndSettle();
 
     // El carril Pendiente conserva sus cards — el kanban no se

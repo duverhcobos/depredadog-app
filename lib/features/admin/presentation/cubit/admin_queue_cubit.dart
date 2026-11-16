@@ -1,36 +1,32 @@
 import 'package:flutter_bloc/flutter_bloc.dart';
 
-import '../../../cart/domain/entities/cart_modifier.dart';
 import '../../../orders/domain/entities/customer_order.dart';
 import '../../domain/entities/admin_day_close.dart';
 import '../../domain/entities/admin_order.dart';
+import '../../domain/use_cases/get_admin_order_detail_use_case.dart';
+import '../../domain/use_cases/load_admin_queue_use_case.dart';
 import 'admin_queue_state.dart';
 
-/// SOLID (SRP): único dueño del estado del tab Cocina (§034 — solo
-/// presentación, patrón §026/§030: contrato real, datos ficticios).
+/// SOLID (SRP): único dueño del estado del tab Cocina (§034 — GET
+/// /admin/orders del backend §019/022; la cola sale de mocks §038).
 /// SINGLETON como OrdersCubit: lo resuelven el pageBuilder de /admin
-/// (load por visita) y la pantalla por BlocProvider.value. En
-/// integración `load()` = GET /admin/orders?bucket=active|history —
-/// la forma del estado ya es la del listado real.
+/// (load por visita) y la pantalla por BlocProvider.value. `load()` =
+/// GET /admin/orders?bucket=active|history — la forma del estado ya
+/// es la del listado real.
 class AdminQueueCubit extends Cubit<AdminQueueState> {
-  AdminQueueCubit({List<AdminOrder>? mockActive, List<AdminOrder>? mockHistory})
-    // List.of: las inyecciones de test pueden ser const — los mocks
-    // se mutan como "servidor" en cada operación (§035).
-    : _mockActive = mockActive != null ? List.of(mockActive) : _defaultActive(),
-      _mockHistory = mockHistory != null
-          ? List.of(mockHistory)
-          : _defaultHistory(),
-      super(const AdminQueueState());
+  AdminQueueCubit({required this._loadQueue, required this._getOrderDetail})
+    : super(const AdminQueueState());
 
-  final List<AdminOrder> _mockActive;
-  final List<AdminOrder> _mockHistory;
+  final LoadAdminQueueUseCase _loadQueue;
+  final GetAdminOrderDetailUseCase _getOrderDetail;
 
   /// Guardia de reentry — load corre por visita al tab, por pull-
   /// to-refresh y por reintento; un loading paralelo no compite.
   bool _loading = false;
 
   /// Carga inicial / pull-to-refresh / reload al entrar al tab —
-  /// 400ms de latencia simulada (misma convención del mock §023).
+  /// GET /admin/orders (bucket active + history página 1, en
+  /// paralelo §038).
   /// dataLoading solo existe sin datos previos: en refresh el
   /// contenido queda pintado (el pull no desmonta el árbol).
   Future<void> load() async {
@@ -38,23 +34,76 @@ class AdminQueueCubit extends Cubit<AdminQueueState> {
     _loading = true;
     try {
       emit(state.copyWith(dataLoading: state.isEmpty, failed: false));
-      await Future<void>.delayed(const Duration(milliseconds: 400));
+      final result = await _loadQueue();
       if (isClosed) return;
-      emit(
-        state.copyWith(
-          active: _mockActive,
-          history: _mockHistory,
-          dataLoading: false,
+      result.active.fold(
+        // La cola NO se vacía en un refresh fallido — el banner de error
+        // viaja sobre los datos viejos (kanban: perder la bandeja ante un
+        // fallo de red es peor que mostrar datos stale + aviso). Sin datos
+        // previos el mismo flag muestra la vista de error completa.
+        (_) => emit(state.copyWith(dataLoading: false, failed: true)),
+        (orders) => emit(
+          state.copyWith(
+            active: _preserveHydratedItems(orders),
+            dataLoading: false,
+            failed: false,
+          ),
         ),
+      );
+      result.history.fold(
+        // Historial provisional (pantalla del ícono) — su falla no tiene
+        // superficie visual hoy; conserva los datos previos en silencio.
+        (_) {},
+        (page) => emit(state.copyWith(history: _preserveHydratedItems(page.items))),
       );
     } finally {
       _loading = false;
     }
   }
 
-  /// Latencia simulada de una operación — la misma de load()
-  /// (convención §023); el busy inline dura lo que el mock tarda.
-  static const _actionLatency = Duration(milliseconds: 400);
+  /// GET /admin/orders/:id (§039) — al abrir el detalle: la comanda
+  /// completa (modifiers) + estado fresco reemplazan el snapshot del
+  /// listado. Falla silenciosa: el detalle ya muestra el snapshot.
+  Future<void> refreshOrder(String id) async {
+    final result = await _getOrderDetail(id);
+    if (isClosed) return;
+    result.fold((_) {}, (full) {
+      final inActive = state.active.any((o) => o.id == id);
+      if (inActive) {
+        emit(
+          state.copyWith(
+            active: [for (final o in state.active) o.id == id ? full : o],
+          ),
+        );
+        return;
+      }
+      if (state.history.any((o) => o.id == id)) {
+        emit(
+          state.copyWith(
+            history: [for (final o in state.history) o.id == id ? full : o],
+          ),
+        );
+      }
+      // No está en ninguna bandeja (history solo carga página 1): se
+      // ignora — el detalle sigue con el snapshot del extra.
+    });
+  }
+
+  /// Los ítems de una orden son inmutables — si el listado nuevo llega
+  /// con `modifiers` vacíos pero la copia previa ya los tiene (el
+  /// detalle §039 los hidrató), conserva los ítems hidratados para que
+  /// un `load()` concurrente no pise el fetch del detalle.
+  List<AdminOrder> _preserveHydratedItems(List<AdminOrder> incoming) => [
+    for (final o in incoming)
+      () {
+        final prev = state.orderById(o.id);
+        return prev != null &&
+                prev.items.any((i) => i.modifiers.isNotEmpty) &&
+                !o.items.any((i) => i.modifiers.isNotEmpty)
+            ? o.copyWith(items: prev.items)
+            : o;
+      }(),
+  ];
 
   /// Avanza un paso en la matriz del §022: received→confirmed→
   /// preparing→ready→done; terminal → no-op. En integración =
@@ -123,11 +172,15 @@ class AdminQueueCubit extends Cubit<AdminQueueState> {
         );
       });
 
-  /// Núcleo de las operaciones mock (§035): busy por pedido (el
+  /// Núcleo de las operaciones (§035): busy por pedido (el
   /// spinner inline del botón — adelanta la guardia anti doble-tap
-  /// del UPDATE condicional del backend), latencia, y el swap de
-  /// bucket cuando el resultado es terminal. `mutation` devuelve la
-  /// entidad actualizada o null = no-op (terminal / pago ya hecho).
+  /// del UPDATE condicional del backend) y el swap de bucket cuando
+  /// el resultado es terminal. `mutation` devuelve la entidad
+  /// actualizada o null = no-op (terminal / pago ya hecho).
+  /// PROVISIONAL (§038): las operaciones mutan SOLO el estado local hasta
+  /// sus ciclos de integración — PATCH /admin/orders/:id/status,
+  /// POST /admin/orders/:id/confirm-payment. El delay simulado se quita
+  /// cuando el endpoint responda de verdad.
   Future<void> _mutateOrder(
     String id,
     AdminOrder? Function(AdminOrder order) mutation,
@@ -138,7 +191,6 @@ class AdminQueueCubit extends Cubit<AdminQueueState> {
     if (state.busyOrderIds.contains(id)) return;
     emit(state.copyWith(busyOrderIds: {...state.busyOrderIds, id}));
     try {
-      await Future<void>.delayed(_actionLatency);
       if (isClosed) return;
       final busy = {...state.busyOrderIds}..remove(id);
       final current = state.orderById(id);
@@ -167,7 +219,6 @@ class AdminQueueCubit extends Cubit<AdminQueueState> {
           ),
         );
       }
-      _syncMocks();
     } finally {
       // El busy nunca queda prendido: si la mutación no corrió
       // (cubit cerrado a mitad de camino ya está cubierto arriba)
@@ -224,7 +275,6 @@ class AdminQueueCubit extends Cubit<AdminQueueState> {
     if (state.dayCloseBusy) return null;
     emit(state.copyWith(dayCloseBusy: true));
     try {
-      await Future<void>.delayed(_actionLatency);
       if (isClosed) return null;
       loadDayClosePreview();
       final summary = state.dayClose;
@@ -242,1151 +292,11 @@ class AdminQueueCubit extends Cubit<AdminQueueState> {
           dayCloseBusy: false,
         ),
       );
-      _syncMocks();
       return summary;
     } finally {
       if (!isClosed && state.dayCloseBusy) {
         emit(state.copyWith(dayCloseBusy: false));
       }
     }
-  }
-
-  /// Los mocks son el "servidor" de la fase presentación: la
-  /// mutación persiste en ellos para que el próximo load() (pull-
-  /// to-refresh, re-entry al tab) la vea y no resucite pedidos ya
-  /// operados — sin esto un pull haría reaparecer en Activos lo que
-  /// el dueño acababa de completar o cancelar.
-  void _syncMocks() {
-    _mockActive
-      ..clear()
-      ..addAll(state.active);
-    _mockHistory
-      ..clear()
-      ..addAll(state.history);
-  }
-
-  /// Cola viva mock (§036): todos los carriles poblados con todas
-  /// las variantes — la puerta de confirmación queda a la vista en
-  /// Pendiente: la recogida PRESENCIAL sin cobrar (mostrador/
-  /// teléfono, pending/failed) se bloquea a "Registrar pago" y el
-  /// resto confirma libre; la recogida ONLINE solo acepta Nequi —
-  /// se congela hasta el webhook (pending = rótulo de espera,
-  /// failed = solo cancelar; ya pagado fluye normal).
-  /// canales online/presencial, serviceType pickup/delivery/
-  /// dineIn, pago efectivo/transferencia/nequi en los 3 estados. El
-  /// cierre muestra el desglose de métodos.
-  static List<AdminOrder> _defaultActive() {
-    final now = DateTime.now();
-    return [
-      // PENDIENTE — online delivery, transfer pendiente. El caso
-      // "me escriben por WhatsApp que ya pagaron" del dueño.
-      AdminOrder(
-        id: 'adm-1',
-        channel: AdminOrderChannel.online,
-        serviceType: AdminServiceType.delivery,
-        status: OrderStatus.received,
-        items: const [
-          OrderItem(
-            productId: 'p-depredador',
-            productSlug: 'depredador',
-            name: 'El Depredador',
-            quantity: 2,
-            unitPrice: 25000,
-            includedNames: [
-              'Pan artesanal', 'Salchicha', 'Papitas', 'Queso', 'Salsas',
-            ],
-            modifiers: [
-              CartModifier(
-                optionId: 'ing-cebolla',
-                optionName: 'Cebolla',
-                action: CartModifierAction.removed,
-                priceDelta: 0,
-              ),
-              CartModifier(
-                optionId: 'ex-queso',
-                optionName: 'Queso cheddar',
-                action: CartModifierAction.added,
-                priceDelta: 2500,
-                group: CartModifierGroup.extra,
-              ),
-              CartModifier(
-                optionId: 'sa-pina',
-                optionName: 'Piña',
-                action: CartModifierAction.added,
-                priceDelta: 0,
-                group: CartModifierGroup.sauce,
-              ),
-            ],
-          ),
-          OrderItem(
-            productId: 'p-papas',
-            productSlug: 'manada-papas',
-            name: 'Manada de papas',
-            quantity: 1,
-            unitPrice: 6000,
-            includedNames: ['Papas criollas', 'Queso', 'Salsas de la casa'],
-          ),
-        ],
-        paymentMethod: AdminPaymentMethod.transfer,
-        paymentStatus: OrderPaymentStatus.pending,
-        subtotal: 56000,
-        deliveryFee: 5000,
-        placedAt: now.subtract(const Duration(minutes: 12)),
-        customerName: 'Ana Uno',
-        addressLabel: 'Casa',
-        landmark: 'Portón negro frente a la cancha',
-        neighborhood: 'Barrio La Esperanza',
-        hasLocationPin: true,
-        locationUrl: 'https://maps.app.goo.gl/s5RiFni6LsV4Ptmj9',
-        locationLat: 6.2442,
-        locationLng: -75.5812,
-        contactPhone: '3001234567',
-        note: 'Sin picante — es para el niño',
-      ),
-      // CONFIRMADO — dine_in Mesa 3, cash pendiente (cobrar no es
-      // la acción de card en estados tempranos — en mesa se sirve
-      // antes de cobrar).
-      AdminOrder(
-        id: 'adm-2',
-        channel: AdminOrderChannel.presencial,
-        serviceType: AdminServiceType.dineIn,
-        status: OrderStatus.confirmed,
-        statusChangedAt: now.subtract(const Duration(minutes: 9)),
-        items: const [
-          OrderItem(
-            productId: 'p-cachorro',
-            productSlug: 'cachorro',
-            name: 'El Cachorro',
-            quantity: 1,
-            unitPrice: 14000,
-          ),
-        ],
-        paymentMethod: AdminPaymentMethod.cash,
-        paymentStatus: OrderPaymentStatus.pending,
-        subtotal: 14000,
-        deliveryFee: 0,
-        placedAt: now.subtract(const Duration(minutes: 4)),
-        tableLabel: 'Mesa 3',
-      ),
-      // CONFIRMADO — presencial mostrador pagado (adm-4 pasa de
-      // received a confirmed: el backend §019 crea presenciales ya
-      // confirmados — un 'received' presencial es contrato viejo).
-      AdminOrder(
-        id: 'adm-4',
-        channel: AdminOrderChannel.presencial,
-        serviceType: AdminServiceType.pickup,
-        status: OrderStatus.confirmed,
-        statusChangedAt: now.subtract(const Duration(minutes: 8)),
-        items: const [
-          OrderItem(
-            productId: 'p-coyote',
-            productSlug: 'coyote',
-            name: 'El Coyote',
-            quantity: 2,
-            unitPrice: 18000,
-            includedNames: [
-              'Pan artesanal', 'Salchicha', 'Papitas', 'Queso', 'Salsas',
-            ],
-            modifiers: [
-              CartModifier(
-                optionId: 'ing-cebolla',
-                optionName: 'Cebolla',
-                action: CartModifierAction.removed,
-                priceDelta: 0,
-              ),
-              CartModifier(
-                optionId: 'sa-pina',
-                optionName: 'Piña',
-                action: CartModifierAction.added,
-                priceDelta: 0,
-                group: CartModifierGroup.sauce,
-              ),
-            ],
-          ),
-        ],
-        paymentMethod: AdminPaymentMethod.cash,
-        paymentStatus: OrderPaymentStatus.paid,
-        subtotal: 36000,
-        deliveryFee: 0,
-        placedAt: now.subtract(const Duration(minutes: 1)),
-      ),
-      // CONFIRMADO — online delivery NEQUI ya pagado: el webhook
-      // llegó primero y confirmó — el pedido fluye normal (acción
-      // "Preparar"); contracara de los Nequi congelados en
-      // Pendiente (§036).
-      AdminOrder(
-        id: 'adm-32',
-        channel: AdminOrderChannel.online,
-        serviceType: AdminServiceType.delivery,
-        status: OrderStatus.confirmed,
-        statusChangedAt: now.subtract(const Duration(minutes: 7)),
-        items: const [
-          OrderItem(
-            productId: 'p-depredador',
-            productSlug: 'depredador',
-            name: 'El Depredador',
-            quantity: 1,
-            unitPrice: 25000,
-          ),
-        ],
-        paymentMethod: AdminPaymentMethod.nequi,
-        paymentStatus: OrderPaymentStatus.paid,
-        subtotal: 25000,
-        deliveryFee: 3000,
-        placedAt: now.subtract(const Duration(minutes: 3)),
-        customerName: 'Wanda Treintaidós',
-        addressLabel: 'Trabajo',
-        landmark: 'Edificio azul de la esquina, segundo piso',
-        neighborhood: 'Barrio El Centro',
-        contactPhone: '3019876543',
-      ),
-      // PREPARANDO — Mesa 5 (la orden grande) dine_in cash paid:
-      // 1× de cada producto del menú (7 líneas) — cubre el resumen
-      // largo de la card (maxLines 2 → la cola real trunca con "…").
-      AdminOrder(
-        id: 'adm-7',
-        channel: AdminOrderChannel.presencial,
-        serviceType: AdminServiceType.dineIn,
-        status: OrderStatus.preparing,
-        statusChangedAt: now.subtract(const Duration(minutes: 5)),
-        items: const [
-          OrderItem(
-            productId: 'p-depredador',
-            productSlug: 'depredador',
-            name: 'El Depredador',
-            quantity: 1,
-            unitPrice: 25000,
-            includedNames: [
-              'Pan artesanal', 'Salchicha', 'Papitas', 'Queso', 'Salsas',
-            ],
-            modifiers: [
-              CartModifier(
-                optionId: 'ing-cebolla',
-                optionName: 'Cebolla',
-                action: CartModifierAction.removed,
-                priceDelta: 0,
-              ),
-              CartModifier(
-                optionId: 'ex-tocineta',
-                optionName: 'Tocineta',
-                action: CartModifierAction.added,
-                priceDelta: 3500,
-                group: CartModifierGroup.extra,
-              ),
-            ],
-          ),
-          OrderItem(
-            productId: 'p-carnicero',
-            productSlug: 'carnicero',
-            name: 'El Carnicero',
-            quantity: 1,
-            unitPrice: 17000,
-            includedNames: [
-              'Pan artesanal', 'Salchicha', 'Papitas', 'Queso', 'Salsas',
-            ],
-            modifiers: [
-              CartModifier(
-                optionId: 'ex-queso',
-                optionName: 'Queso cheddar',
-                action: CartModifierAction.added,
-                priceDelta: 2500,
-                group: CartModifierGroup.extra,
-              ),
-            ],
-          ),
-          OrderItem(
-            productId: 'p-coyote',
-            productSlug: 'coyote',
-            name: 'El Coyote',
-            quantity: 1,
-            unitPrice: 18000,
-            includedNames: [
-              'Pan artesanal', 'Salchicha', 'Papitas', 'Queso', 'Salsas',
-            ],
-          ),
-          OrderItem(
-            productId: 'p-ave',
-            productSlug: 'ave-presa',
-            name: 'Ave de Presa',
-            quantity: 1,
-            unitPrice: 18000,
-            modifiers: [
-              CartModifier(
-                optionId: 'ing-tomate',
-                optionName: 'Tomate',
-                action: CartModifierAction.removed,
-                priceDelta: 0,
-              ),
-              CartModifier(
-                optionId: 'sa-pina',
-                optionName: 'Piña',
-                action: CartModifierAction.added,
-                priceDelta: 0,
-                group: CartModifierGroup.sauce,
-              ),
-            ],
-          ),
-          OrderItem(
-            productId: 'p-trampa',
-            productSlug: 'trampa',
-            name: 'La Trampa',
-            quantity: 1,
-            unitPrice: 16000,
-            includedNames: [
-              'Pan artesanal', 'Salchicha', 'Papitas', 'Queso', 'Salsas',
-            ],
-            modifiers: [
-              CartModifier(
-                optionId: 'ing-repollo',
-                optionName: 'Repollo',
-                action: CartModifierAction.removed,
-                priceDelta: 0,
-              ),
-            ],
-          ),
-          OrderItem(
-            productId: 'p-cachorro',
-            productSlug: 'cachorro',
-            name: 'El Cachorro',
-            quantity: 1,
-            unitPrice: 14000,
-          ),
-          OrderItem(
-            productId: 'p-papas',
-            productSlug: 'manada-papas',
-            name: 'Manada de Papas',
-            quantity: 1,
-            unitPrice: 10000,
-            includedNames: ['Papas criollas', 'Queso', 'Salsas de la casa'],
-          ),
-        ],
-        paymentMethod: AdminPaymentMethod.cash,
-        paymentStatus: OrderPaymentStatus.paid,
-        subtotal: 118000,
-        deliveryFee: 0,
-        placedAt: now.subtract(const Duration(minutes: 8)),
-        tableLabel: 'Mesa 5',
-        note: 'Uno sin cebolla porfa',
-      ),
-      // PENDIENTE — online pickup NEQUI FALLIDO: el webhook ya
-      // rechazó el cobro — online pickup SOLO acepta Nequi (§036:
-      // efectivo/transfer dejan al cliente ghostear la producción);
-      // sin botones, la única salida es cancelar.
-      AdminOrder(
-        id: 'adm-9',
-        channel: AdminOrderChannel.online,
-        serviceType: AdminServiceType.pickup,
-        status: OrderStatus.received,
-        items: const [
-          OrderItem(
-            productId: 'p-coyote',
-            productSlug: 'coyote',
-            name: 'El Coyote',
-            quantity: 2,
-            unitPrice: 18000,
-          ),
-          OrderItem(
-            productId: 'p-papas',
-            productSlug: 'manada-papas',
-            name: 'Manada de papas',
-            quantity: 1,
-            unitPrice: 10000,
-          ),
-        ],
-        paymentMethod: AdminPaymentMethod.nequi,
-        paymentStatus: OrderPaymentStatus.failed,
-        subtotal: 46000,
-        deliveryFee: 0,
-        placedAt: now.subtract(const Duration(minutes: 3)),
-        customerName: 'Daniela Cuatro',
-        contactPhone: '3171234567',
-      ),
-      // PENDIENTE — online delivery, transfer pendiente, pedido
-      // de ítem único grande.
-      AdminOrder(
-        id: 'adm-10',
-        channel: AdminOrderChannel.online,
-        serviceType: AdminServiceType.delivery,
-        status: OrderStatus.received,
-        items: const [
-          OrderItem(
-            productId: 'p-trampa',
-            productSlug: 'trampa',
-            name: 'La Trampa',
-            quantity: 3,
-            unitPrice: 16000,
-          ),
-        ],
-        paymentMethod: AdminPaymentMethod.transfer,
-        paymentStatus: OrderPaymentStatus.pending,
-        subtotal: 48000,
-        deliveryFee: 4000,
-        placedAt: now.subtract(const Duration(minutes: 2)),
-        customerName: 'Elena Cinco',
-        addressLabel: 'Casa',
-        landmark: 'Al lado de la tienda Don Pedro',
-        neighborhood: 'Barrio San José',
-        hasLocationPin: true,
-        locationUrl: 'https://maps.app.goo.gl/s5RiFni6LsV4Ptmj9',
-        locationLat: 6.2518,
-        locationLng: -75.5636,
-        contactPhone: '3023456789',
-      ),
-      // PENDIENTE — online delivery PAGADO: prepaid, confirma sin
-      // fricción (contracara de los delivery sin cobrar).
-      AdminOrder(
-        id: 'adm-20',
-        channel: AdminOrderChannel.online,
-        serviceType: AdminServiceType.delivery,
-        status: OrderStatus.received,
-        items: const [
-          OrderItem(
-            productId: 'p-ave',
-            productSlug: 'ave-presa',
-            name: 'Ave de Presa',
-            quantity: 1,
-            unitPrice: 18000,
-          ),
-        ],
-        paymentMethod: AdminPaymentMethod.transfer,
-        paymentStatus: OrderPaymentStatus.paid,
-        subtotal: 18000,
-        deliveryFee: 3000,
-        placedAt: now.subtract(const Duration(minutes: 11)),
-        customerName: 'Mario Doce',
-        addressLabel: 'Casa de mi mamá',
-        landmark: 'Casa verde de dos pisos',
-        neighborhood: 'Barrio La Floresta',
-        contactPhone: '3104567890',
-      ),
-      // PENDIENTE — online delivery CONTRAENTREGA (efectivo en la
-      // puerta): pidió por la app y paga al recibir — SÍ confirma
-      // porque la entrega la hace el dueño y nada sale sin él; el
-      // cobro se registra con "Registrar pago" en la puerta.
-      AdminOrder(
-        id: 'adm-28',
-        channel: AdminOrderChannel.online,
-        serviceType: AdminServiceType.delivery,
-        status: OrderStatus.received,
-        items: const [
-          OrderItem(
-            productId: 'p-carnicero',
-            productSlug: 'carnicero',
-            name: 'El Carnicero',
-            quantity: 1,
-            unitPrice: 17000,
-          ),
-          OrderItem(
-            productId: 'p-papas',
-            productSlug: 'manada-papas',
-            name: 'Manada de papas',
-            quantity: 1,
-            unitPrice: 6000,
-          ),
-        ],
-        paymentMethod: AdminPaymentMethod.cash,
-        paymentStatus: OrderPaymentStatus.pending,
-        subtotal: 23000,
-        deliveryFee: 3000,
-        placedAt: now.subtract(const Duration(minutes: 7)),
-        customerName: 'Pablo Veintiocho',
-        addressLabel: 'Casa',
-        landmark: 'Frente a la iglesia',
-        neighborhood: 'Barrio El Carmen',
-        hasLocationPin: true,
-        locationUrl: 'https://maps.app.goo.gl/s5RiFni6LsV4Ptmj9',
-        locationLat: 6.2309,
-        locationLng: -75.5901,
-        contactPhone: '3115678901',
-      ),
-      // PENDIENTE — online pickup NEQUI esperando webhook (§036):
-      // el cobro dentro de la app no lo toca el dueño — la card
-      // muestra el rótulo de espera, sin botones.
-      AdminOrder(
-        id: 'adm-29',
-        channel: AdminOrderChannel.online,
-        serviceType: AdminServiceType.pickup,
-        status: OrderStatus.received,
-        items: const [
-          OrderItem(
-            productId: 'p-ave',
-            productSlug: 'ave-presa',
-            name: 'Ave de Presa',
-            quantity: 2,
-            unitPrice: 18000,
-          ),
-        ],
-        paymentMethod: AdminPaymentMethod.nequi,
-        paymentStatus: OrderPaymentStatus.pending,
-        subtotal: 36000,
-        deliveryFee: 0,
-        placedAt: now.subtract(const Duration(minutes: 6)),
-        customerName: 'Tomás Veintinueve',
-        contactPhone: '3182345678',
-      ),
-      // PENDIENTE — online delivery NEQUI esperando webhook: la
-      // regla congela TAMBIÉN el domicilio — aunque el dueño
-      // entregue, ni Confirmar ni Registrar pago existen hasta
-      // que el webhook hable (decisión §036).
-      AdminOrder(
-        id: 'adm-30',
-        channel: AdminOrderChannel.online,
-        serviceType: AdminServiceType.delivery,
-        status: OrderStatus.received,
-        items: const [
-          OrderItem(
-            productId: 'p-trampa',
-            productSlug: 'trampa',
-            name: 'La Trampa',
-            quantity: 2,
-            unitPrice: 16000,
-            includedNames: [
-              'Pan artesanal', 'Salchicha', 'Papitas', 'Queso', 'Salsas',
-            ],
-            modifiers: [
-              CartModifier(
-                optionId: 'ing-repollo',
-                optionName: 'Repollo',
-                action: CartModifierAction.removed,
-                priceDelta: 0,
-              ),
-              CartModifier(
-                optionId: 'ex-tocineta',
-                optionName: 'Tocineta',
-                action: CartModifierAction.added,
-                priceDelta: 3500,
-                group: CartModifierGroup.extra,
-              ),
-            ],
-          ),
-        ],
-        paymentMethod: AdminPaymentMethod.nequi,
-        paymentStatus: OrderPaymentStatus.pending,
-        subtotal: 32000,
-        deliveryFee: 4000,
-        placedAt: now.subtract(const Duration(minutes: 5)),
-        customerName: 'Uriel Treinta',
-        addressLabel: 'Oficina',
-        landmark: 'Local 4, centro comercial La Esquina',
-        neighborhood: 'Barrio El Centro',
-        contactPhone: '3126789012',
-      ),
-      // PENDIENTE — online pickup NEQUI FALLIDO: el webhook ya
-      // reportó el rechazo — sin botones de avance ni cobro, la
-      // única salida es cancelar (decisión §036).
-      AdminOrder(
-        id: 'adm-31',
-        channel: AdminOrderChannel.online,
-        serviceType: AdminServiceType.pickup,
-        status: OrderStatus.received,
-        items: const [
-          OrderItem(
-            productId: 'p-cachorro',
-            productSlug: 'cachorro',
-            name: 'El Cachorro',
-            quantity: 1,
-            unitPrice: 14000,
-          ),
-        ],
-        paymentMethod: AdminPaymentMethod.nequi,
-        paymentStatus: OrderPaymentStatus.failed,
-        subtotal: 14000,
-        deliveryFee: 0,
-        placedAt: now.subtract(const Duration(minutes: 2)),
-        customerName: 'Valeria Treintaiuno',
-        contactPhone: '3193456789',
-      ),
-      // PENDIENTE — online pickup NEQUI PAGADO: el webhook ya
-      // confirmó — la recogida sí confirma (contracara de los
-      // Nequi congelados).
-      AdminOrder(
-        id: 'adm-21',
-        channel: AdminOrderChannel.online,
-        serviceType: AdminServiceType.pickup,
-        status: OrderStatus.received,
-        items: const [
-          OrderItem(
-            productId: 'p-trampa',
-            productSlug: 'trampa',
-            name: 'La Trampa',
-            quantity: 1,
-            unitPrice: 16000,
-          ),
-        ],
-        paymentMethod: AdminPaymentMethod.nequi,
-        paymentStatus: OrderPaymentStatus.paid,
-        subtotal: 16000,
-        deliveryFee: 0,
-        placedAt: now.subtract(const Duration(minutes: 10)),
-        customerName: 'Nora Trece',
-        contactPhone: '3204567890',
-        note: 'La recoge mi hermano',
-      ),
-      // CONFIRMADO NATURAL — presencial delivery sin cobrar
-      // (pedido tomado por teléfono): el dueño ES el confirmador —
-      // nace confirmed como la mesa, nunca pisa Pendiente (§036);
-      // el cobro se resuelve en la puerta al entregar.
-      AdminOrder(
-        id: 'adm-22',
-        channel: AdminOrderChannel.presencial,
-        serviceType: AdminServiceType.delivery,
-        status: OrderStatus.confirmed,
-        statusChangedAt: now.subtract(const Duration(minutes: 6)),
-        items: const [
-          OrderItem(
-            productId: 'p-depredador',
-            productSlug: 'depredador',
-            name: 'El Depredador',
-            quantity: 1,
-            unitPrice: 25000,
-          ),
-        ],
-        paymentMethod: AdminPaymentMethod.transfer,
-        paymentStatus: OrderPaymentStatus.pending,
-        subtotal: 25000,
-        deliveryFee: 3000,
-        placedAt: now.subtract(const Duration(minutes: 9)),
-        customerName: 'Óscar Catorce',
-        addressLabel: 'Casa',
-        landmark: 'Portón blanco con reja',
-        neighborhood: 'Barrio La Esperanza',
-        hasLocationPin: true,
-        locationUrl: 'https://maps.app.goo.gl/s5RiFni6LsV4Ptmj9',
-        locationLat: 6.2701,
-        locationLng: -75.5723,
-        contactPhone: '3137890123',
-      ),
-      // CONFIRMADO NATURAL — presencial dineIn cash pendiente
-      // (Mesa 4): el dueño la tomó → nace confirmed (§036); en
-      // mesa se sirve primero y se cobra cuando se van.
-      AdminOrder(
-        id: 'adm-23',
-        channel: AdminOrderChannel.presencial,
-        serviceType: AdminServiceType.dineIn,
-        status: OrderStatus.confirmed,
-        statusChangedAt: now.subtract(const Duration(minutes: 5)),
-        items: const [
-          OrderItem(
-            productId: 'p-carnicero',
-            productSlug: 'carnicero',
-            name: 'El Carnicero',
-            quantity: 2,
-            unitPrice: 17000,
-          ),
-        ],
-        paymentMethod: AdminPaymentMethod.cash,
-        paymentStatus: OrderPaymentStatus.pending,
-        subtotal: 34000,
-        deliveryFee: 0,
-        placedAt: now.subtract(const Duration(minutes: 8)),
-        tableLabel: 'Mesa 4',
-      ),
-      // CONFIRMADO NATURAL — presencial dineIn TRANSFER pendiente
-      // (Mesa 6 paga QR al final): misma regla — nace confirmed,
-      // el cobro se resuelve al cerrar la cuenta.
-      AdminOrder(
-        id: 'adm-27',
-        channel: AdminOrderChannel.presencial,
-        serviceType: AdminServiceType.dineIn,
-        status: OrderStatus.confirmed,
-        statusChangedAt: now.subtract(const Duration(minutes: 4)),
-        items: const [
-          OrderItem(
-            productId: 'p-cachorro',
-            productSlug: 'cachorro',
-            name: 'El Cachorro',
-            quantity: 3,
-            unitPrice: 14000,
-          ),
-        ],
-        paymentMethod: AdminPaymentMethod.transfer,
-        paymentStatus: OrderPaymentStatus.pending,
-        subtotal: 42000,
-        deliveryFee: 0,
-        placedAt: now.subtract(const Duration(minutes: 7)),
-        tableLabel: 'Mesa 6',
-      ),
-      // PENDIENTE — online pickup NEQUI esperando webhook: online
-      // pickup SOLO acepta Nequi (§036 — el efectivo/transfer deja
-      // producción perdida si no recogen). La card espera el
-      // webhook — sin botones.
-      AdminOrder(
-        id: 'adm-24',
-        channel: AdminOrderChannel.online,
-        serviceType: AdminServiceType.pickup,
-        status: OrderStatus.received,
-        items: const [
-          OrderItem(
-            productId: 'p-coyote',
-            productSlug: 'coyote',
-            name: 'El Coyote',
-            quantity: 1,
-            unitPrice: 18000,
-          ),
-        ],
-        paymentMethod: AdminPaymentMethod.nequi,
-        paymentStatus: OrderPaymentStatus.pending,
-        subtotal: 18000,
-        deliveryFee: 0,
-        placedAt: now.subtract(const Duration(minutes: 5)),
-        customerName: 'Sara Quince',
-        contactPhone: '3215678901',
-      ),
-      // PENDIENTE — presencial pickup (mostrador) cash PENDIENTE:
-      // en mostrador se cobra al tomar — sin cobrar no entra a
-      // cocina → BLOQUEADO, "Registrar pago". Variante mock: el presencial
-      // podría nacer received si quedó sin cobrar (§022 la decide).
-      AdminOrder(
-        id: 'adm-25',
-        channel: AdminOrderChannel.presencial,
-        serviceType: AdminServiceType.pickup,
-        status: OrderStatus.received,
-        items: const [
-          OrderItem(
-            productId: 'p-ave',
-            productSlug: 'ave-presa',
-            name: 'Ave de Presa',
-            quantity: 1,
-            unitPrice: 18000,
-          ),
-        ],
-        paymentMethod: AdminPaymentMethod.cash,
-        paymentStatus: OrderPaymentStatus.pending,
-        subtotal: 18000,
-        deliveryFee: 0,
-        placedAt: now.subtract(const Duration(minutes: 4)),
-      ),
-      // PENDIENTE — presencial pickup (mostrador) cash PAGADO:
-      // cobrado al tomarlo → SÍ confirma.
-      AdminOrder(
-        id: 'adm-26',
-        channel: AdminOrderChannel.presencial,
-        serviceType: AdminServiceType.pickup,
-        status: OrderStatus.received,
-        items: const [
-          OrderItem(
-            productId: 'p-trampa',
-            productSlug: 'trampa',
-            name: 'La Trampa',
-            quantity: 1,
-            unitPrice: 16000,
-          ),
-          OrderItem(
-            productId: 'p-papas',
-            productSlug: 'manada-papas',
-            name: 'Manada de papas',
-            quantity: 1,
-            unitPrice: 10000,
-          ),
-        ],
-        paymentMethod: AdminPaymentMethod.cash,
-        paymentStatus: OrderPaymentStatus.paid,
-        subtotal: 26000,
-        deliveryFee: 0,
-        placedAt: now.subtract(const Duration(minutes: 3)),
-      ),
-      // PENDIENTE — presencial pickup por TELÉFONO, transfer
-      // PENDIENTE: el cliente dice "ya te transfiero" — presencial
-      // sí admite transfer manual (el dueño la certifica con
-      // "Registrar pago"); sin plata no entra a cocina → BLOQUEADO.
-      // La prohibición de transfer solo es para online (§036).
-      AdminOrder(
-        id: 'adm-33',
-        channel: AdminOrderChannel.presencial,
-        serviceType: AdminServiceType.pickup,
-        status: OrderStatus.received,
-        items: const [
-          OrderItem(
-            productId: 'p-carnicero',
-            productSlug: 'carnicero',
-            name: 'El Carnicero',
-            quantity: 1,
-            unitPrice: 17000,
-          ),
-        ],
-        paymentMethod: AdminPaymentMethod.transfer,
-        paymentStatus: OrderPaymentStatus.pending,
-        subtotal: 17000,
-        deliveryFee: 0,
-        placedAt: now.subtract(const Duration(minutes: 1)),
-      ),
-      // CONFIRMADO — online delivery YA PAGADO por adelantado: la
-      // cocina prepara sin preocuparse por el cobro.
-      AdminOrder(
-        id: 'adm-11',
-        channel: AdminOrderChannel.online,
-        serviceType: AdminServiceType.delivery,
-        status: OrderStatus.confirmed,
-        statusChangedAt: now.subtract(const Duration(minutes: 3)),
-        items: const [
-          OrderItem(
-            productId: 'p-ave',
-            productSlug: 'ave-presa',
-            name: 'Ave de Presa',
-            quantity: 2,
-            unitPrice: 18000,
-          ),
-        ],
-        paymentMethod: AdminPaymentMethod.transfer,
-        paymentStatus: OrderPaymentStatus.paid,
-        subtotal: 36000,
-        deliveryFee: 4000,
-        placedAt: now.subtract(const Duration(minutes: 6)),
-        customerName: 'Felipe Seis',
-        addressLabel: 'Casa',
-        landmark: 'Al final del callejón, casa amarilla',
-        neighborhood: 'Barrio San Antonio',
-        contactPhone: '3148901234',
-      ),
-      // PREPARANDO — online pickup sin cobrar (el cliente paga
-      // transfer al recoger — pickup no acepta efectivo).
-      AdminOrder(
-        id: 'adm-12',
-        channel: AdminOrderChannel.online,
-        serviceType: AdminServiceType.pickup,
-        status: OrderStatus.preparing,
-        statusChangedAt: now.subtract(const Duration(minutes: 3)),
-        items: const [
-          OrderItem(
-            productId: 'p-depredador',
-            productSlug: 'depredador',
-            name: 'El Depredador',
-            quantity: 1,
-            unitPrice: 25000,
-          ),
-        ],
-        paymentMethod: AdminPaymentMethod.transfer,
-        paymentStatus: OrderPaymentStatus.pending,
-        subtotal: 25000,
-        deliveryFee: 0,
-        placedAt: now.subtract(const Duration(minutes: 5)),
-        customerName: 'Gabriel Siete',
-        contactPhone: '3226789012',
-      ),
-      // PREPARANDO — online delivery pagado.
-      AdminOrder(
-        id: 'adm-13',
-        channel: AdminOrderChannel.online,
-        serviceType: AdminServiceType.delivery,
-        status: OrderStatus.preparing,
-        statusChangedAt: now.subtract(const Duration(minutes: 1)),
-        items: const [
-          OrderItem(
-            productId: 'p-cachorro',
-            productSlug: 'cachorro',
-            name: 'El Cachorro',
-            quantity: 2,
-            unitPrice: 14000,
-          ),
-          OrderItem(
-            productId: 'p-papas',
-            productSlug: 'manada-papas',
-            name: 'Manada de papas',
-            quantity: 1,
-            unitPrice: 6000,
-          ),
-        ],
-        paymentMethod: AdminPaymentMethod.transfer,
-        paymentStatus: OrderPaymentStatus.paid,
-        subtotal: 34000,
-        deliveryFee: 4000,
-        placedAt: now.subtract(const Duration(minutes: 7)),
-        customerName: 'Héctor Ocho',
-        addressLabel: 'Trabajo',
-        landmark: 'Bodega de la esquina, preguntar por él',
-        neighborhood: 'Barrio El Progreso',
-        hasLocationPin: true,
-        locationUrl: 'https://maps.app.goo.gl/s5RiFni6LsV4Ptmj9',
-        locationLat: 6.2178,
-        locationLng: -75.6044,
-        contactPhone: '3159012345',
-      ),
-      // LISTO delivery pagado — "Entregado" (ya salió en camino
-      // cobrado).
-      AdminOrder(
-        id: 'adm-14',
-        channel: AdminOrderChannel.online,
-        serviceType: AdminServiceType.delivery,
-        status: OrderStatus.ready,
-        statusChangedAt: now.subtract(const Duration(minutes: 7)),
-        items: const [
-          OrderItem(
-            productId: 'p-carnicero',
-            productSlug: 'carnicero',
-            name: 'El Carnicero',
-            quantity: 1,
-            unitPrice: 17000,
-          ),
-          OrderItem(
-            productId: 'p-papas',
-            productSlug: 'manada-papas',
-            name: 'Manada de papas',
-            quantity: 1,
-            unitPrice: 10000,
-          ),
-        ],
-        paymentMethod: AdminPaymentMethod.transfer,
-        paymentStatus: OrderPaymentStatus.paid,
-        subtotal: 27000,
-        deliveryFee: 3000,
-        placedAt: now.subtract(const Duration(minutes: 22)),
-        customerName: 'Inés Nueve',
-        addressLabel: 'Casa',
-        landmark: 'Casa rosada junto al parqueadero',
-        neighborhood: 'Barrio La Paz',
-        contactPhone: '3160123456',
-      ),
-      // LISTO dine_in YA COBRADO — Mesa 1: "Entregado" libera la
-      // mesa (la contracara de Mesa 7, que aún debe).
-      AdminOrder(
-        id: 'adm-15',
-        channel: AdminOrderChannel.presencial,
-        serviceType: AdminServiceType.dineIn,
-        status: OrderStatus.ready,
-        statusChangedAt: now.subtract(const Duration(minutes: 5)),
-        items: const [
-          OrderItem(
-            productId: 'p-coyote',
-            productSlug: 'coyote',
-            name: 'El Coyote',
-            quantity: 2,
-            unitPrice: 18000,
-          ),
-        ],
-        paymentMethod: AdminPaymentMethod.cash,
-        paymentStatus: OrderPaymentStatus.paid,
-        subtotal: 36000,
-        deliveryFee: 0,
-        placedAt: now.subtract(const Duration(minutes: 30)),
-        tableLabel: 'Mesa 1',
-      ),
-      // ENTREGADO dine_in cash — segundo método para el resumen
-      // del cierre (efectivo + transferencia en el desglose).
-      AdminOrder(
-        id: 'adm-16',
-        channel: AdminOrderChannel.presencial,
-        serviceType: AdminServiceType.dineIn,
-        status: OrderStatus.done,
-        statusChangedAt: now.subtract(const Duration(minutes: 8)),
-        items: const [
-          OrderItem(
-            productId: 'p-trampa',
-            productSlug: 'trampa',
-            name: 'La Trampa',
-            quantity: 1,
-            unitPrice: 16000,
-          ),
-          OrderItem(
-            productId: 'p-papas',
-            productSlug: 'manada-papas',
-            name: 'Manada de papas',
-            quantity: 1,
-            unitPrice: 10000,
-          ),
-        ],
-        paymentMethod: AdminPaymentMethod.cash,
-        paymentStatus: OrderPaymentStatus.paid,
-        subtotal: 26000,
-        deliveryFee: 0,
-        placedAt: now.subtract(const Duration(hours: 4)),
-        tableLabel: 'Mesa 9',
-      ),
-      // ENTREGADO online pickup transfer — tercer entregado.
-      AdminOrder(
-        id: 'adm-17',
-        channel: AdminOrderChannel.online,
-        serviceType: AdminServiceType.pickup,
-        status: OrderStatus.done,
-        statusChangedAt: now.subtract(const Duration(minutes: 5)),
-        items: const [
-          OrderItem(
-            productId: 'p-cachorro',
-            productSlug: 'cachorro',
-            name: 'El Cachorro',
-            quantity: 1,
-            unitPrice: 14000,
-          ),
-        ],
-        paymentMethod: AdminPaymentMethod.transfer,
-        paymentStatus: OrderPaymentStatus.paid,
-        subtotal: 14000,
-        deliveryFee: 0,
-        placedAt: now.subtract(const Duration(hours: 2)),
-        customerName: 'Jorge Diez',
-        contactPhone: '3237890123',
-      ),
-      // LISTO pickup pagado — Beto ya está en `ready`: su acción
-      // de card es "Entregado" (pagado), no el label del paso.
-      AdminOrder(
-        id: 'adm-3',
-        channel: AdminOrderChannel.online,
-        serviceType: AdminServiceType.pickup,
-        status: OrderStatus.ready,
-        statusChangedAt: now.subtract(const Duration(minutes: 3)),
-        items: const [
-          OrderItem(
-            productId: 'p-ave',
-            productSlug: 'ave-presa',
-            name: 'Ave de Presa',
-            quantity: 1,
-            unitPrice: 18000,
-          ),
-          OrderItem(
-            productId: 'p-trampa',
-            productSlug: 'trampa',
-            name: 'La Trampa',
-            quantity: 1,
-            unitPrice: 16000,
-          ),
-        ],
-        paymentMethod: AdminPaymentMethod.transfer,
-        paymentStatus: OrderPaymentStatus.paid,
-        subtotal: 34000,
-        deliveryFee: 0,
-        placedAt: now.subtract(const Duration(minutes: 26)),
-        customerName: 'Beto Dos',
-        contactPhone: '3248901234',
-      ),
-      // LISTO dine_in sin cobrar — Mesa 7: la card muestra "Me
-      // pagó" (el cobro bloquea el Entregado — caso del §022).
-      AdminOrder(
-        id: 'adm-8',
-        channel: AdminOrderChannel.presencial,
-        serviceType: AdminServiceType.dineIn,
-        status: OrderStatus.ready,
-        statusChangedAt: now.subtract(const Duration(minutes: 1)),
-        items: const [
-          OrderItem(
-            productId: 'p-carnicero',
-            productSlug: 'carnicero',
-            name: 'El Carnicero',
-            quantity: 1,
-            unitPrice: 17000,
-          ),
-        ],
-        paymentMethod: AdminPaymentMethod.cash,
-        paymentStatus: OrderPaymentStatus.pending,
-        subtotal: 17000,
-        deliveryFee: 0,
-        placedAt: now.subtract(const Duration(minutes: 18)),
-        tableLabel: 'Mesa 7',
-      ),
-      // ENTREGADO sin cerrar — Carla done pagado: vive en `active`
-      // hasta el cierre (el mock demuestra el modelo nuevo).
-      AdminOrder(
-        id: 'adm-5',
-        channel: AdminOrderChannel.online,
-        serviceType: AdminServiceType.delivery,
-        status: OrderStatus.done,
-        statusChangedAt: now.subtract(const Duration(minutes: 2)),
-        items: const [
-          OrderItem(
-            productId: 'p-depredador',
-            productSlug: 'depredador',
-            name: 'El Depredador',
-            quantity: 1,
-            unitPrice: 25000,
-          ),
-        ],
-        paymentMethod: AdminPaymentMethod.transfer,
-        paymentStatus: OrderPaymentStatus.paid,
-        subtotal: 22000,
-        deliveryFee: 3000,
-        placedAt: now.subtract(const Duration(hours: 3)),
-        customerName: 'Carla Tres',
-        addressLabel: 'Casa',
-        landmark: 'Segunda casa después de la bomba',
-        neighborhood: 'Barrio El Prado',
-        hasLocationPin: true,
-        locationUrl: 'https://maps.app.goo.gl/s5RiFni6LsV4Ptmj9',
-        locationLat: 6.2567,
-        locationLng: -75.5988,
-        contactPhone: '3171234567',
-      ),
-    ];
-  }
-
-  /// Historial mock (§036): solo el cancelado — el done migró a la
-  /// cola viva (espera el cierre de caja para archivarse).
-  static List<AdminOrder> _defaultHistory() {
-    final now = DateTime.now();
-    return [
-      AdminOrder(
-        id: 'adm-6',
-        channel: AdminOrderChannel.presencial,
-        serviceType: AdminServiceType.dineIn,
-        status: OrderStatus.cancelled,
-        items: const [
-          OrderItem(
-            productId: 'p-cachorro',
-            productSlug: 'cachorro',
-            name: 'El Cachorro',
-            quantity: 2,
-            unitPrice: 14000,
-          ),
-        ],
-        paymentMethod: AdminPaymentMethod.cash,
-        // Se canceló antes de cobrar — el backend marca el pago
-        // failed al cancelar con cobro pendiente (§019); card y
-        // detalle lo suprimen en terminal (deuda fantasma, §034).
-        paymentStatus: OrderPaymentStatus.failed,
-        subtotal: 28000,
-        deliveryFee: 0,
-        placedAt: now.subtract(const Duration(hours: 5)),
-        tableLabel: 'Mesa 2',
-      ),
-      // Cancelado CON MOTIVO — el historial/detalle muestra la
-      // razón que el dueño dejó.
-      AdminOrder(
-        id: 'adm-18',
-        channel: AdminOrderChannel.online,
-        serviceType: AdminServiceType.delivery,
-        status: OrderStatus.cancelled,
-        items: const [
-          OrderItem(
-            productId: 'p-depredador',
-            productSlug: 'depredador',
-            name: 'El Depredador',
-            quantity: 1,
-            unitPrice: 25000,
-          ),
-        ],
-        paymentMethod: AdminPaymentMethod.transfer,
-        paymentStatus: OrderPaymentStatus.failed,
-        subtotal: 21000,
-        deliveryFee: 4000,
-        placedAt: now.subtract(const Duration(hours: 7)),
-        customerName: 'Karla Once',
-        addressLabel: 'Casa',
-        landmark: 'Frente al colegio',
-        neighborhood: 'Barrio Versalles',
-        contactPhone: '3182345678',
-        cancelReason: 'El cliente no contestó al confirmar',
-      ),
-      // Cancelado YA COBRADO — caso borde: la plata entró y hay
-      // que devolverla; el historial no puede esconderlo.
-      AdminOrder(
-        id: 'adm-19',
-        channel: AdminOrderChannel.presencial,
-        serviceType: AdminServiceType.dineIn,
-        status: OrderStatus.cancelled,
-        items: const [
-          OrderItem(
-            productId: 'p-trampa',
-            productSlug: 'trampa',
-            name: 'La Trampa',
-            quantity: 2,
-            unitPrice: 16000,
-          ),
-        ],
-        paymentMethod: AdminPaymentMethod.cash,
-        paymentStatus: OrderPaymentStatus.paid,
-        subtotal: 32000,
-        deliveryFee: 0,
-        placedAt: now.subtract(const Duration(hours: 6)),
-        tableLabel: 'Mesa 8',
-        cancelReason: 'El cliente pidió otro plato en su lugar',
-      ),
-    ];
   }
 }

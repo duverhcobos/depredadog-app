@@ -17,12 +17,6 @@ class AdminOrderDetailHeader extends StatelessWidget {
 
   final AdminOrder order;
 
-  /// Cola del id para el tag "#id" — 6 caracteres bastan para
-  /// distinguir pedidos del día (los UUID del backend son largos);
-  /// un id corto (los mocks 'adm-N') se muestra completo.
-  static String shortId(String id) =>
-      id.length <= 6 ? id : id.substring(id.length - 6);
-
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
@@ -38,7 +32,7 @@ class AdminOrderDetailHeader extends StatelessWidget {
             : l10n.adminOrderInHouse);
     return CustomizationSection(
       title: l10n.adminOrderDetailOrderSection,
-      tag: l10n.adminOrderShortId(shortId(order.id)),
+      tag: l10n.adminOrderShortId(order.shortTag),
       children: [
         Padding(
           padding: const EdgeInsets.fromLTRB(14, 8, 14, 14),

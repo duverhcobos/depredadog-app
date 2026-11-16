@@ -16,12 +16,14 @@ import 'package:depredadog_app/features/admin/presentation/screens/admin_queue_s
 import 'package:depredadog_app/features/orders/domain/entities/customer_order.dart';
 import 'package:depredadog_app/l10n/app_localizations.dart';
 
+import '../../fixtures/admin_order_fixtures.dart';
+
 void main() {
   final locator = GetIt.instance;
   late AdminQueueCubit cubit;
 
   setUp(() {
-    cubit = AdminQueueCubit();
+    cubit = buildAdminQueueCubit();
     locator.registerSingleton<AdminQueueCubit>(cubit);
   });
 
@@ -103,7 +105,8 @@ void main() {
         ),
       );
 
-  /// Deja la cola cargada (venzan los 400ms del mock).
+  /// Deja la cola cargada (el stub del use case resuelve en
+  /// microtask — §038 sin delay).
   Future<void> loadQueue(WidgetTester tester) async {
     final load = cubit.load();
     await tester.pump(const Duration(milliseconds: 500));
@@ -149,10 +152,8 @@ void main() {
     await tester.pumpAndSettle();
 
     await tester.tap(find.text('Confirmar cierre'));
-    // El cierre mock corre ~400ms con el spinner dentro del CTA.
-    await tester.pump(const Duration(milliseconds: 100));
-    expect(cubit.state.dayCloseBusy, isTrue);
-    await tester.pump(const Duration(milliseconds: 450));
+    // El cierre local es instantáneo en esta fase (PROVISIONAL §038
+    // — sin delay; la latencia real la pondrá el POST /admin/day-close).
     await tester.pumpAndSettle();
 
     // Resultado: check + el resumen queda fijo (aunque el cubit ya
@@ -190,8 +191,8 @@ void main() {
     await cubit.close();
     await locator.reset();
     // Cola sin entregados: un solo pedido vivo en la plancha.
-    cubit = AdminQueueCubit(
-      mockActive: [
+    cubit = buildAdminQueueCubit(
+      active: [
         AdminOrder(
           id: 'solo',
           channel: AdminOrderChannel.presencial,
@@ -205,7 +206,7 @@ void main() {
           placedAt: DateTime(2024, 1, 1),
         ),
       ],
-      mockHistory: const [],
+      history: const [],
     );
     locator.registerSingleton<AdminQueueCubit>(cubit);
 
@@ -227,7 +228,6 @@ void main() {
 
     // Confirmar también funciona — el registro queda como bitácora.
     await tester.tap(find.text('Confirmar cierre'));
-    await tester.pump(const Duration(milliseconds: 500));
     await tester.pumpAndSettle();
     expect(find.byIcon(Icons.check_circle_rounded), findsOneWidget);
     // El pedido en curso NO se archivó — el cierre solo toca done.

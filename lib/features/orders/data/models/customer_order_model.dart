@@ -1,5 +1,5 @@
-import '../../../cart/domain/entities/cart_modifier.dart';
 import '../../domain/entities/customer_order.dart';
+import 'order_item_modifier_mapper.dart';
 
 /// Parser del OrderResponseDto (§015/016) → CustomerOrder. Los
 /// mapeos: status pending→received · transfer→nequi · cash→onDelivery
@@ -58,7 +58,7 @@ class CustomerOrderModel extends CustomerOrder {
             ],
             modifiers: [
               for (final m in (i['modifiers'] as List<dynamic>? ?? []))
-                _modifierFromJson(m as Map<String, dynamic>),
+                cartModifierFromOrderJson(m as Map<String, dynamic>),
             ],
           ),
       ],
@@ -78,33 +78,6 @@ class CustomerOrderModel extends CustomerOrder {
       contactPhone: json['contactPhone'] as String?,
       note: json['notes'] as String?,
       cancelReason: json['cancelReason'] as String?,
-    );
-  }
-
-  /// Fila de modifier — el group sale del slug del snapshot §016 con
-  /// la misma asignación del detalle del producto: removed y la fila
-  /// del reemplazo siempre `ingredient`; added por slug; null legacy
-  /// → `extra` (fallback documentado del enum).
-  static CartModifier _modifierFromJson(Map<String, dynamic> m) {
-    final action = m['action'] == 'added'
-        ? CartModifierAction.added
-        : CartModifierAction.removed;
-    final replaces = m['replacesOptionId'] as String?;
-    final groupSlug = m['modifierGroup'] as String?;
-    final group = action == CartModifierAction.removed || replaces != null
-        ? CartModifierGroup.ingredient
-        : switch (groupSlug) {
-            'toppings' => CartModifierGroup.topping,
-            'sauces' => CartModifierGroup.sauce,
-            _ => CartModifierGroup.extra,
-          };
-    return CartModifier(
-      optionId: m['optionId'] as String? ?? '',
-      optionName: m['optionName'] as String,
-      action: action,
-      priceDelta: m['priceDelta'] as int,
-      replacesOptionId: replaces,
-      group: group,
     );
   }
 }

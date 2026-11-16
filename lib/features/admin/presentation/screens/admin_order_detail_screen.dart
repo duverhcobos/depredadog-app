@@ -26,20 +26,41 @@ import '../widgets/order_detail/admin_order_note_section.dart';
 /// bloque de acciones (avance por matriz + cancelar con motivo).
 /// Un terminal se queda abierto en solo lectura (las acciones se
 /// repliegan solas); tras cancelar hay pop a la cola — la orden ya
-/// no existe para mirarla.
-class AdminOrderDetailScreen extends StatelessWidget {
+/// no existe para mirarla. §039: al montar, initState dispara
+/// refreshOrder — GET /admin/orders/:id inyecta la comanda completa
+/// (los modifiers que el listado omite) con el estado más fresco.
+class AdminOrderDetailScreen extends StatefulWidget {
   const AdminOrderDetailScreen({required this.order, super.key});
 
   /// Snapshot de la card que abrió el detalle — fallback si la orden
   /// saliera de ambas bandejas del state.
   final AdminOrder order;
 
+  @override
+  State<AdminOrderDetailScreen> createState() =>
+      _AdminOrderDetailScreenState();
+}
+
+class _AdminOrderDetailScreenState extends State<AdminOrderDetailScreen> {
+  @override
+  void initState() {
+    super.initState();
+    // Post-frame: el cubit es singleton del shell — `context.read`
+    // seguro; cubre cualquier entry point, no solo el tap de la card.
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      context.read<AdminQueueCubit>().refreshOrder(widget.order.id);
+    });
+  }
+
   /// Cancela con motivo opcional (§035): el diálogo devuelve null si
   /// se arrepintió; confirmado → cancel mock → toast + pop a la cola.
   Future<void> _confirmCancel(BuildContext context) async {
     final reason = await showAdminOrderCancelDialog(context);
     if (reason == null || !context.mounted) return;
-    await context.read<AdminQueueCubit>().cancelOrder(order.id, reason: reason);
+    await context.read<AdminQueueCubit>().cancelOrder(
+      widget.order.id,
+      reason: reason,
+    );
     if (!context.mounted) return;
     AppToast.info(context, AppLocalizations.of(context)!.orderCancelledToast);
     context.pop();
@@ -58,7 +79,8 @@ class AdminOrderDetailScreen extends StatelessWidget {
               // La orden viva del cubit — tras cada acción el detalle
               // refleja el estado nuevo sin re-navegar (un terminal
               // sigue encontrándose en history).
-              final resolved = state.orderById(order.id) ?? order;
+              final resolved =
+                  state.orderById(widget.order.id) ?? widget.order;
               final busy = state.busyOrderIds.contains(resolved.id);
               return Column(
                 children: [

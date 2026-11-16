@@ -15,7 +15,8 @@ import '../cubit/admin_queue_state.dart';
 import '../widgets/admin_lane_strip.dart';
 import '../widgets/admin_queue_lane.dart';
 
-/// Tab Cocina del dueño (§036 — solo presentación, mocks del cubit):
+/// Tab Cocina del dueño (§036 kanban; §038 la cola es real — GET
+/// /admin/orders active+history; §039 el detalle hidrata modifiers):
 /// la cola deja de ser lista+filtro y se vuelve un KANBAN de 5
 /// carriles (Pendiente | Confirmado | Preparando | Listo | Entregado)
 /// — un carril por página del PageView, navegación por swipe o por

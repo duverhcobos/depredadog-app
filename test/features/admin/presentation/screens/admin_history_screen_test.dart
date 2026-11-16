@@ -9,12 +9,14 @@ import 'package:depredadog_app/features/admin/presentation/screens/admin_history
 import 'package:depredadog_app/features/admin/presentation/widgets/admin_order_card.dart';
 import 'package:depredadog_app/l10n/app_localizations.dart';
 
+import '../../fixtures/admin_order_fixtures.dart';
+
 void main() {
   final locator = GetIt.instance;
   late AdminQueueCubit cubit;
 
   setUp(() {
-    cubit = AdminQueueCubit();
+    cubit = buildAdminQueueCubit();
     locator.registerSingleton<AdminQueueCubit>(cubit);
   });
 
@@ -70,7 +72,7 @@ void main() {
   testWidgets('historial vacío: empty con copy de marca', (tester) async {
     await cubit.close();
     await locator.reset();
-    cubit = AdminQueueCubit(mockActive: const [], mockHistory: const []);
+    cubit = buildAdminQueueCubit(active: const [], history: const []);
     locator.registerSingleton<AdminQueueCubit>(cubit);
 
     await pumpHistory(tester);

@@ -4,7 +4,8 @@ import '../../../orders/domain/entities/customer_order.dart';
 import '../../domain/entities/admin_day_close.dart';
 import '../../domain/entities/admin_order.dart';
 
-/// Estado del tab Cocina kanban (§036, solo presentación — mocks):
+/// Estado del tab Cocina kanban (§036 presentación; §038 datos reales
+/// via LoadAdminQueueUseCase; §039 hidratación por refreshOrder):
 /// una sola bandeja `active` (en curso + entregados sin cerrar) de
 /// la que se derivan los 5 carriles; `history` guarda los archivados
 /// por cierre + cancelados; `dayClose` es el preview del cierre que
@@ -28,11 +29,11 @@ class AdminQueueState extends Equatable {
   final List<AdminOrder> history;
 
   /// Carga inicial / refresh completo en vuelo — arranca en true
-  /// (los datos mock llegan con el primer load).
+  /// (los datos llegan con el primer load).
   final bool dataLoading;
 
-  /// El load falló — estado de error con reintento (inalcanzable en
-  /// la fase mock; la forma ya queda para la integración).
+  /// El load falló — sin datos previos la vista de error completa;
+  /// con datos, el banner sobre la bandeja conservada (§038).
   final bool failed;
 
   /// Pedidos con una operación mock en vuelo (§035 — advance /

@@ -1,3 +1,4 @@
+import 'package:dartz/dartz.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
@@ -5,25 +6,38 @@ import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:get_it/get_it.dart';
 import 'package:go_router/go_router.dart';
+import 'package:mocktail/mocktail.dart';
 import 'package:depredadog_app/core/routes/auth_guard.dart';
 import 'package:depredadog_app/core/theme/app_theme.dart';
 import 'package:depredadog_app/features/admin/domain/entities/admin_order.dart';
+import 'package:depredadog_app/features/admin/domain/failures/admin_failure.dart';
 import 'package:depredadog_app/features/admin/presentation/cubit/admin_queue_cubit.dart';
 import 'package:depredadog_app/features/admin/presentation/screens/admin_day_close_screen.dart';
 import 'package:depredadog_app/features/admin/presentation/screens/admin_history_screen.dart';
 import 'package:depredadog_app/features/admin/presentation/screens/admin_order_detail_screen.dart';
 import 'package:depredadog_app/features/admin/presentation/screens/admin_queue_screen.dart';
+import 'package:depredadog_app/features/cart/domain/entities/cart_modifier.dart';
 import 'package:depredadog_app/features/orders/domain/entities/customer_order.dart';
 import 'package:depredadog_app/l10n/app_localizations.dart';
+
+import '../../fixtures/admin_order_fixtures.dart';
 
 void main() {
   final locator = GetIt.instance;
   late AdminQueueCubit cubit;
+  late FakeGetAdminOrderDetailUseCase detailUseCase;
 
   setUp(() {
-    // Cubit REAL con la semilla mock — el detalle lee la orden viva
-    // por id sobre la misma instancia que alimenta la cola.
-    cubit = AdminQueueCubit();
+    // Cubit REAL con la semilla de fixtures — el detalle lee la orden
+    // viva por id sobre la misma instancia que alimenta la cola.
+    // §039 — el detalle dispara refreshOrder al montar: Left default
+    // = no-op silencioso (los tests del §035-037 no esperan el fetch);
+    // el test del §039 lo re-stubbea con su comanda completa.
+    detailUseCase = FakeGetAdminOrderDetailUseCase();
+    when(
+      () => detailUseCase.call(any()),
+    ).thenAnswer((_) async => const Left(AdminServerFailure('stub')));
+    cubit = buildAdminQueueCubit(getOrderDetail: detailUseCase);
     locator.registerSingleton<AdminQueueCubit>(cubit);
   });
 
@@ -150,7 +164,8 @@ void main() {
         ),
       );
 
-  /// Deja la cola cargada (venzan los 400ms del mock).
+  /// Deja la cola cargada (el stub del use case resuelve en
+  /// microtask — §038 sin delay).
   Future<void> loadQueue(WidgetTester tester) async {
     final load = cubit.load();
     await tester.pump(const Duration(milliseconds: 500));
@@ -708,6 +723,65 @@ void main() {
       expect(find.text(r'$5.000'), findsOneWidget);
       expect(find.text('Total'), findsOneWidget);
       expect(find.text(r'$61.000'), findsOneWidget);
+    });
+
+    testWidgets('al montar el detalle dispara refreshOrder — el GET '
+        '/admin/orders/:id inyecta la comanda completa en el state y '
+        'los modifiers llegados aparecen auto-expandidos (§039)', (
+      tester,
+    ) async {
+      final router = buildAdminRouter();
+      await pumpAdminApp(tester, router: router);
+      await loadQueue(tester);
+      // Shape REAL del listado: las papas de adm-1 traen includedNames
+      // (chip "Detalle" visible, colapsado) y modifiers vacíos. El :id
+      // las hidrata con un extra — el didUpdateWidget §039 auto-expande
+      // la línea ya montada (no basta el late-init de nacimiento).
+      final snapshot = cubit.state.orderById('adm-1')!;
+      final papas = snapshot.items[1];
+      final hydratedPapas = OrderItem(
+        productId: papas.productId,
+        productSlug: papas.productSlug,
+        name: papas.name,
+        quantity: papas.quantity,
+        unitPrice: papas.unitPrice,
+        includedNames: papas.includedNames,
+        modifiers: const [
+          CartModifier(
+            optionId: 'ex-tocineta',
+            optionName: 'Tocineta crocante',
+            action: CartModifierAction.added,
+            priceDelta: 3000,
+          ),
+        ],
+      );
+      final full = snapshot.copyWith(
+        items: [snapshot.items[0], hydratedPapas],
+      );
+      when(
+        () => detailUseCase.call('adm-1'),
+      ).thenAnswer((_) async => Right(full));
+
+      await openDetail(tester, router, 'adm-1');
+
+      // El initState disparó el fetch con el id del snapshot.
+      verify(() => detailUseCase.call('adm-1')).called(1);
+      // La comanda completa reemplazó al snapshot en la bandeja —
+      // el BlocBuilder se re-renderizó solo.
+      expect(cubit.state.orderById('adm-1'), same(full));
+      // "Tocineta crocante" llegó por hidratación — el ítem que nació
+      // colapsado con solo incluidos se auto-expande SIN toque
+      // ("sin cebolla" es instrucción de cocina, §037/§039).
+      await tester.scrollUntilVisible(
+        find.textContaining('Tocineta crocante', findRichText: true),
+        200,
+        scrollable: find.byType(Scrollable).first,
+      );
+      await tester.pumpAndSettle();
+      expect(
+        find.textContaining('Tocineta crocante', findRichText: true),
+        findsOneWidget,
+      );
     });
   });
 }
