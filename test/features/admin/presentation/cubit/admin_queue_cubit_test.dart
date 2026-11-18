@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:bloc_test/bloc_test.dart';
 import 'package:dartz/dartz.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -14,19 +16,25 @@ import 'package:depredadog_app/features/orders/domain/entities/customer_order.da
 
 import '../../fixtures/admin_order_fixtures.dart';
 
-AdminOrder _order(String id, OrderStatus status, DateTime placedAt) =>
-    AdminOrder(
-      id: id,
-      channel: AdminOrderChannel.online,
-      serviceType: AdminServiceType.delivery,
-      status: status,
-      items: const [],
-      paymentMethod: AdminPaymentMethod.cash,
-      paymentStatus: OrderPaymentStatus.paid,
-      subtotal: 10000,
-      deliveryFee: 0,
-      placedAt: placedAt,
-    );
+AdminOrder _order(
+  String id,
+  OrderStatus status,
+  DateTime placedAt, {
+  AdminServiceType serviceType = AdminServiceType.delivery,
+  AdminPaymentMethod method = AdminPaymentMethod.cash,
+  OrderPaymentStatus payment = OrderPaymentStatus.paid,
+}) => AdminOrder(
+  id: id,
+  channel: AdminOrderChannel.online,
+  serviceType: serviceType,
+  status: status,
+  items: const [],
+  paymentMethod: method,
+  paymentStatus: payment,
+  subtotal: 10000,
+  deliveryFee: 0,
+  placedAt: placedAt,
+);
 
 void main() {
   group('AdminQueueCubit (§038 — cola real via LoadAdminQueueUseCase)', () {
@@ -99,6 +107,7 @@ void main() {
       final cubit = AdminQueueCubit(
         loadQueue: useCase,
         getOrderDetail: detail,
+        updateOrderStatus: FakeUpdateAdminOrderStatusUseCase(),
       );
       addTearDown(cubit.close);
       await cubit.load();
@@ -384,11 +393,11 @@ void main() {
     });
   });
 
-  group('AdminQueueCubit — operaciones §036 (PROVISIONAL: mutación '
-      'local instantánea §038)', () {
-    // Las operaciones siguen siendo simulación local sobre el estado
-    // — sin delay desde §038 (la latencia real la pondrá el HTTP en
-    // su ciclo de integración).
+  group('AdminQueueCubit — operaciones §040 (PATCH real — el echo '
+      'del fixture simula el servidor que aplica el `to` pedido)', () {
+    // advance/cancel ya pegan a UpdateAdminOrderStatusUseCase — el
+    // stub echo de buildAdminQueueCubit juega de backend (aplica `to`
+    // y re-sella statusChangedAt). markPaid sigue local hasta §041.
     Future<AdminQueueCubit> loaded() async {
       final cubit = buildAdminQueueCubit();
       addTearDown(cubit.close);
@@ -585,18 +594,345 @@ void main() {
       expect(cubit.state.busyOrderIds, isEmpty);
     });
 
-    test('PROVISIONAL (§038): la mutación es solo local — un load() '
-        'posterior vuelve a traer lo que el servidor reporta', () async {
+    test('un load() posterior RESINCRONIZA la cola — lo que el '
+        'servidor reporta manda sobre el estado local (§040)', () async {
       final cubit = await loaded();
 
-      await cubit.advanceOrder('adm-3'); // Beto → done (local).
+      await cubit.advanceOrder('adm-3'); // Beto → done (PATCH echo).
       await cubit.load();
 
-      // Sin PATCH real, el refresh devuelve la fixture intacta del
-      // "servidor" (use case stub) — la mutación local no persiste
-      // hasta su ciclo de integración.
+      // El resync devuelve la fixture del "servidor" (ready otra vez)
+      // — en producción el PATCH persiste y el load traería done.
       expect(cubit.state.orderById('adm-3')!.status, OrderStatus.ready);
       expect(cubit.state.deliveredCount, 3);
+    });
+  });
+
+  group('AdminQueueCubit — mutaciones remotas §040 (PATCH '
+      '/admin/orders/:id/status)', () {
+    // Cubit armado a mano: los 3 fakes nombrados para stub-lear y
+    // verificar el PATCH directo (buildAdminQueueCubit esconde el
+    // update echo detrás de su firma).
+    FakeLoadAdminQueueUseCase loadUseCase(
+      List<AdminOrder> active, [
+      List<AdminOrder> history = const [],
+    ]) {
+      final uc = FakeLoadAdminQueueUseCase();
+      when(uc.call).thenAnswer(
+        (_) async => AdminQueueData(
+          active: Right(active),
+          history: Right(
+            AdminHistoryPage(items: history, total: history.length),
+          ),
+        ),
+      );
+      return uc;
+    }
+
+    FakeGetAdminOrderDetailUseCase silentDetail() {
+      final d = FakeGetAdminOrderDetailUseCase();
+      when(
+        () => d.call(any()),
+      ).thenAnswer((_) async => const Left(AdminServerFailure('stub')));
+      return d;
+    }
+
+    AdminQueueCubit cubit({
+      required FakeLoadAdminQueueUseCase loadQueue,
+      required FakeUpdateAdminOrderStatusUseCase update,
+      FakeGetAdminOrderDetailUseCase? detail,
+    }) => AdminQueueCubit(
+      loadQueue: loadQueue,
+      getOrderDetail: detail ?? silentDetail(),
+      updateOrderStatus: update,
+    );
+
+    test('advanceOrder: la entidad devuelta por el PATCH REEMPLAZA al '
+        'snapshot — statusChangedAt lo sella el servidor (el reloj de '
+        'la cola no es el del teléfono)', () async {
+      final local = _order('w1', OrderStatus.received, DateTime(2024, 1, 1));
+      final serverClock = DateTime(2026, 11, 8, 18);
+      final moved = AdminOrder(
+        id: 'w1',
+        channel: AdminOrderChannel.online,
+        serviceType: AdminServiceType.delivery,
+        status: OrderStatus.confirmed,
+        statusChangedAt: serverClock,
+        items: const [],
+        paymentMethod: AdminPaymentMethod.cash,
+        paymentStatus: OrderPaymentStatus.paid,
+        subtotal: 10000,
+        deliveryFee: 0,
+        placedAt: DateTime(2024, 1, 1),
+      );
+      final update = FakeUpdateAdminOrderStatusUseCase();
+      when(
+        () => update.call(
+          'w1',
+          to: 'confirmed',
+          cancelReason: any(named: 'cancelReason'),
+        ),
+      ).thenAnswer((_) async => Right(moved));
+      final c = cubit(loadQueue: loadUseCase([local]), update: update);
+      addTearDown(c.close);
+      await c.load();
+
+      final failure = await c.advanceOrder('w1');
+
+      expect(failure, isNull);
+      // La MISMA instancia del servidor — no un copyWith local.
+      expect(c.state.orderById('w1'), same(moved));
+      expect(c.state.orderById('w1')!.statusChangedAt, serverClock);
+      expect(c.state.busyOrderIds, isEmpty);
+    });
+
+    test('cancelOrder: el PATCH cancelled migra la orden al FRENTE '
+        'del historial y el motivo viaja al body (§040)', () async {
+      final order = _order('w1', OrderStatus.confirmed, DateTime(2024, 1, 1));
+      final old = _order('h9', OrderStatus.cancelled, DateTime(2024, 1, 2));
+      final update = FakeUpdateAdminOrderStatusUseCase();
+      stubUpdateEcho(update, [order, old]);
+      final c = cubit(
+        loadQueue: loadUseCase([order], [old]),
+        update: update,
+      );
+      addTearDown(c.close);
+      await c.load();
+
+      final failure = await c.cancelOrder('w1', reason: '  se acabó el pan  ');
+
+      expect(failure, isNull);
+      verify(
+        () => update.call(
+          'w1',
+          to: 'cancelled',
+          cancelReason: 'se acabó el pan',
+        ),
+      ).called(1);
+      expect(c.state.active.any((o) => o.id == 'w1'), isFalse);
+      final cancelled = c.state.history.first;
+      expect(cancelled.id, 'w1');
+      expect(cancelled.status, OrderStatus.cancelled);
+      expect(cancelled.cancelReason, 'se acabó el pan');
+      // El done NO migra — solo cancelled cruza de una (§022).
+      expect(c.state.history, hasLength(2));
+    });
+
+    test('respuesta PATCH con modifiers vacíos NO pisa los ítems '
+        'hidratados por el detalle — la vista de listado los omite '
+        '(§040 reusa _preserveHydrated del §039)', () async {
+      final local = _order('w1', OrderStatus.received, DateTime(2024, 1, 1));
+      const hydratedItem = OrderItem(
+        productId: 'p-depredador',
+        productSlug: 'depredador',
+        name: 'El Depredador',
+        quantity: 1,
+        unitPrice: 25000,
+        modifiers: [
+          CartModifier(
+            optionId: 'ing-cebolla',
+            optionName: 'Cebolla',
+            action: CartModifierAction.removed,
+            priceDelta: 0,
+          ),
+        ],
+      );
+      final detail = FakeGetAdminOrderDetailUseCase();
+      when(() => detail.call('w1')).thenAnswer(
+        (_) async => Right(local.copyWith(items: const [hydratedItem])),
+      );
+      // El PATCH responde la vista de listado — mismo ítem SIN modifiers.
+      final update = FakeUpdateAdminOrderStatusUseCase();
+      when(
+        () => update.call(
+          'w1',
+          to: 'confirmed',
+          cancelReason: any(named: 'cancelReason'),
+        ),
+      ).thenAnswer(
+        (_) async => Right(
+          AdminOrder(
+            id: 'w1',
+            channel: AdminOrderChannel.online,
+            serviceType: AdminServiceType.delivery,
+            status: OrderStatus.confirmed,
+            items: const [
+              OrderItem(
+                productId: 'p-depredador',
+                productSlug: 'depredador',
+                name: 'El Depredador',
+                quantity: 1,
+                unitPrice: 25000,
+              ),
+            ],
+            paymentMethod: AdminPaymentMethod.cash,
+            paymentStatus: OrderPaymentStatus.paid,
+            subtotal: 10000,
+            deliveryFee: 0,
+            placedAt: DateTime(2024, 1, 1),
+          ),
+        ),
+      );
+      final c = cubit(
+        loadQueue: loadUseCase([local]),
+        update: update,
+        detail: detail,
+      );
+      addTearDown(c.close);
+      await c.load();
+      await c.refreshOrder('w1'); // hidrata los modifiers del :id
+
+      await c.advanceOrder('w1');
+
+      final w1 = c.state.orderById('w1')!;
+      expect(w1.status, OrderStatus.confirmed);
+      expect(w1.items.single.modifiers, hasLength(1));
+      expect(w1.items.single.modifiers.single.optionName, 'Cebolla');
+    });
+
+    test('409 → devuelve AdminConflictFailure y dispara el resync '
+        'silencioso de la cola (el pedido ya cambió server-side — '
+        'convención OrdersCubit §027)', () async {
+      final local = _order('w1', OrderStatus.received, DateTime(2024, 1, 1));
+      final load = loadUseCase([local]);
+      final update = FakeUpdateAdminOrderStatusUseCase();
+      when(
+        () => update.call(
+          'w1',
+          to: 'confirmed',
+          cancelReason: any(named: 'cancelReason'),
+        ),
+      ).thenAnswer(
+        (_) async =>
+            const Left(AdminConflictFailure('INVALID_STATUS_TRANSITION')),
+      );
+      final c = cubit(loadQueue: load, update: update);
+      addTearDown(c.close);
+      await c.load();
+
+      final failure = await c.advanceOrder('w1');
+
+      expect(
+        failure,
+        const AdminConflictFailure('INVALID_STATUS_TRANSITION'),
+      );
+      // El resync corrió en segundo plano — segundo llamado al load.
+      verify(() => load.call()).called(2);
+      // Sin mutación optimista: la orden sigue como el servidor la
+      // reportó (recibida, en el fixture).
+      expect(c.state.orderById('w1')!.status, OrderStatus.received);
+      expect(c.state.busyOrderIds, isEmpty);
+    });
+
+    test('busy anti-reentry: el segundo advance sobre el mismo pedido '
+        'es no-op mientras el PATCH sigue en vuelo (doble-tap §035)',
+        () async {
+      final local = _order('w1', OrderStatus.received, DateTime(2024, 1, 1));
+      final update = FakeUpdateAdminOrderStatusUseCase();
+      final completer = Completer<Either<AdminFailure, AdminOrder>>();
+      when(
+        () => update.call(
+          'w1',
+          to: 'confirmed',
+          cancelReason: any(named: 'cancelReason'),
+        ),
+      ).thenAnswer((_) => completer.future);
+      final c = cubit(loadQueue: loadUseCase([local]), update: update);
+      addTearDown(c.close);
+      await c.load();
+
+      final first = c.advanceOrder('w1'); // entra: emite busy + PATCH
+      expect(c.state.busyOrderIds, contains('w1'));
+
+      final second = await c.advanceOrder('w1'); // busy → no-op
+      expect(second, isNull);
+      verify(
+        () => update.call(
+          'w1',
+          to: 'confirmed',
+          cancelReason: any(named: 'cancelReason'),
+        ),
+      ).called(1);
+
+      completer.complete(
+        Right(local.copyWith(status: OrderStatus.confirmed)),
+      );
+      expect(await first, isNull);
+      expect(c.state.orderById('w1')!.status, OrderStatus.confirmed);
+      expect(c.state.busyOrderIds, isEmpty);
+    });
+
+    test('puertas locales = no-op SIN pegar al PATCH: terminal, Nequi '
+        'en espera del webhook, pickup sin cobrar e id desconocido '
+        '(el 409 del backend queda para estado viejo)', () async {
+      final orders = [
+        _order('done', OrderStatus.done, DateTime(2024, 1, 1)),
+        _order(
+          'nequi',
+          OrderStatus.received,
+          DateTime(2024, 1, 1),
+          method: AdminPaymentMethod.nequi,
+          payment: OrderPaymentStatus.pending,
+        ),
+        _order(
+          'pickup',
+          OrderStatus.received,
+          DateTime(2024, 1, 1),
+          serviceType: AdminServiceType.pickup,
+          payment: OrderPaymentStatus.pending,
+        ),
+      ];
+      final update = FakeUpdateAdminOrderStatusUseCase();
+      final c = cubit(loadQueue: loadUseCase(orders), update: update);
+      addTearDown(c.close);
+      await c.load();
+
+      expect(await c.advanceOrder('done'), isNull); // terminal
+      expect(await c.advanceOrder('nequi'), isNull); // awaitsWebhook
+      expect(await c.advanceOrder('pickup'), isNull); // puerta de pago
+      expect(await c.advanceOrder('ghost'), isNull); // fuera del state
+      // Cancel sobre terminal tampoco pega.
+      expect(await c.cancelOrder('done'), isNull);
+
+      verifyNever(
+        () => update.call(
+          any(),
+          to: any(named: 'to'),
+          cancelReason: any(named: 'cancelReason'),
+        ),
+      );
+      // Sin toques al servidor → sin busy prendido.
+      expect(c.state.busyOrderIds, isEmpty);
+      expect(c.state.orderById('done')!.status, OrderStatus.done);
+    });
+
+    test('markPaid sigue LOCAL — no pega al PATCH de status (su '
+        'endpoint es confirm-payment, ciclo §041)', () async {
+      final order = _order(
+        'w1',
+        OrderStatus.ready,
+        DateTime(2024, 1, 1),
+        payment: OrderPaymentStatus.pending,
+      );
+      final update = FakeUpdateAdminOrderStatusUseCase();
+      final c = cubit(loadQueue: loadUseCase([order]), update: update);
+      addTearDown(c.close);
+      await c.load();
+
+      await c.markPaid('w1');
+
+      verifyNever(
+        () => update.call(
+          any(),
+          to: any(named: 'to'),
+          cancelReason: any(named: 'cancelReason'),
+        ),
+      );
+      final w1 = c.state.orderById('w1')!;
+      expect(w1.paymentStatus, OrderPaymentStatus.paid);
+      // Cobrar era el único bloqueo — cierra de una (§036).
+      expect(w1.status, OrderStatus.done);
+      expect(c.state.busyOrderIds, isEmpty);
     });
   });
 

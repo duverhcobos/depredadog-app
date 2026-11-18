@@ -228,6 +228,146 @@ void main() {
         );
       });
     });
+
+    group('updateOrderStatus (§040 — PATCH /admin/orders/:id/status)', () {
+      test('éxito → Right(AdminOrder) del datasource con `to` y '
+          '`cancelReason` reenviados intactos', () async {
+        final moved = AdminOrderModel.fromJson(
+          orderJson(id: 'ord-1', status: 'cancelled'),
+        );
+        when(
+          () => remote.patchOrderStatus(
+            'ord-1',
+            to: 'cancelled',
+            cancelReason: 'se acabó el pan',
+          ),
+        ).thenAnswer((_) async => moved);
+
+        final result = await repository.updateOrderStatus(
+          'ord-1',
+          to: 'cancelled',
+          cancelReason: 'se acabó el pan',
+        );
+
+        result.fold(
+          (_) => fail('se esperaba Right con la orden actualizada'),
+          (o) => expect(o, moved),
+        );
+        verify(
+          () => remote.patchOrderStatus(
+            'ord-1',
+            to: 'cancelled',
+            cancelReason: 'se acabó el pan',
+          ),
+        ).called(1);
+      });
+
+      test('409 INVALID_STATUS_TRANSITION → AdminConflictFailure con '
+          'el errorCode viajando (la UI distingue conflicto vs. resto)',
+          () async {
+        when(
+          () => remote.patchOrderStatus(
+            'ord-1',
+            to: 'confirmed',
+            cancelReason: any(named: 'cancelReason'),
+          ),
+        ).thenThrow(
+          const ServerException(
+            'Invalid status transition',
+            statusCode: 409,
+            errorCode: 'INVALID_STATUS_TRANSITION',
+          ),
+        );
+
+        final result = await repository.updateOrderStatus(
+          'ord-1',
+          to: 'confirmed',
+        );
+
+        expect(
+          result,
+          const Left<AdminFailure, AdminOrder>(
+            AdminConflictFailure('INVALID_STATUS_TRANSITION'),
+          ),
+        );
+      });
+
+      test('409 PAYMENT_NOT_SETTLED → AdminConflictFailure — la '
+          'otra cara del conflicto (ready→done exige PAID)', () async {
+        when(
+          () => remote.patchOrderStatus(
+            'ord-1',
+            to: 'done',
+            cancelReason: any(named: 'cancelReason'),
+          ),
+        ).thenThrow(
+          const ServerException(
+            'Payment not settled',
+            statusCode: 409,
+            errorCode: 'PAYMENT_NOT_SETTLED',
+          ),
+        );
+
+        final result = await repository.updateOrderStatus(
+          'ord-1',
+          to: 'done',
+        );
+
+        expect(
+          result,
+          const Left<AdminFailure, AdminOrder>(
+            AdminConflictFailure('PAYMENT_NOT_SETTLED'),
+          ),
+        );
+      });
+
+      test('404 → AdminServerFailure (no es conflicto — el pedido no '
+          'existe, no una carrera perdida)', () async {
+        when(
+          () => remote.patchOrderStatus(
+            'ord-9',
+            to: 'confirmed',
+            cancelReason: any(named: 'cancelReason'),
+          ),
+        ).thenThrow(
+          const ServerException('ORDER_NOT_FOUND', statusCode: 404),
+        );
+
+        final result = await repository.updateOrderStatus(
+          'ord-9',
+          to: 'confirmed',
+        );
+
+        expect(
+          result,
+          const Left<AdminFailure, AdminOrder>(
+            AdminServerFailure('ORDER_NOT_FOUND'),
+          ),
+        );
+      });
+
+      test('sin conectividad → Left(AdminOfflineFailure) y el '
+          'datasource NUNCA se llama', () async {
+        when(() => networkInfo.isConnected).thenAnswer((_) async => false);
+
+        final result = await repository.updateOrderStatus(
+          'ord-1',
+          to: 'confirmed',
+        );
+
+        expect(
+          result,
+          const Left<AdminFailure, AdminOrder>(AdminOfflineFailure()),
+        );
+        verifyNever(
+          () => remote.patchOrderStatus(
+            any(),
+            to: any(named: 'to'),
+            cancelReason: any(named: 'cancelReason'),
+          ),
+        );
+      });
+    });
   });
 
   group('AdminRemoteDataSourceImpl', () {
@@ -330,6 +470,76 @@ void main() {
       );
       expect(res.items.single.modifiers.last.priceDelta, 2500);
       verify(() => network.get('/admin/orders/ord-1')).called(1);
+    });
+
+    test('patchOrderStatus → PATCH /admin/orders/:id/status con el '
+        '`to` pedido — sin cancelReason cuando no viaja (§040)', () async {
+      when(
+        () => network.patch(
+          '/admin/orders/ord-1/status',
+          body: {'to': 'confirmed'},
+        ),
+      ).thenAnswer((_) async => orderJson(id: 'ord-1', status: 'confirmed'));
+
+      final res = await dataSource.patchOrderStatus('ord-1', to: 'confirmed');
+
+      expect(res.status, OrderStatus.confirmed);
+      verify(
+        () => network.patch(
+          '/admin/orders/ord-1/status',
+          body: {'to': 'confirmed'},
+        ),
+      ).called(1);
+    });
+
+    test('patchOrderStatus con motivo → cancelReason viaja en el '
+        'body solo cuando viene (cancel con razón)', () async {
+      when(
+        () => network.patch(
+          '/admin/orders/ord-1/status',
+          body: {'to': 'cancelled', 'cancelReason': 'se acabó el pan'},
+        ),
+      ).thenAnswer(
+        (_) async => orderJson(
+          id: 'ord-1',
+          status: 'cancelled',
+        ),
+      );
+
+      final res = await dataSource.patchOrderStatus(
+        'ord-1',
+        to: 'cancelled',
+        cancelReason: 'se acabó el pan',
+      );
+
+      expect(res.status, OrderStatus.cancelled);
+      verify(
+        () => network.patch(
+          '/admin/orders/ord-1/status',
+          body: {'to': 'cancelled', 'cancelReason': 'se acabó el pan'},
+        ),
+      ).called(1);
+    });
+
+    test('patchOrderStatus parsea la vista admin completa del 200 — '
+        'statusChangedAt re-sellado llega al entity', () async {
+      when(
+        () => network.patch(
+          '/admin/orders/ord-1/status',
+          body: {'to': 'preparing'},
+        ),
+      ).thenAnswer(
+        (_) async => {
+          ...orderJson(id: 'ord-1', status: 'preparing'),
+          'statusChangedAt': '2026-11-08T17:55:00.000Z',
+        },
+      );
+
+      final res = await dataSource.patchOrderStatus('ord-1', to: 'preparing');
+
+      expect(res.status, OrderStatus.preparing);
+      expect(res.statusChangedAt, isNotNull);
+      expect(res.orderNumber, 7);
     });
   });
 }

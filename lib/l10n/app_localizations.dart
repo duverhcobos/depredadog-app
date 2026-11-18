@@ -2518,6 +2518,18 @@ abstract class AppLocalizations {
   /// **'Pedido listo'**
   String get adminToastOrderReady;
 
+  /// Toast de error genérico al avanzar/cancelar un pedido admin (offline/5xx — convención ordersCancelError §027)
+  ///
+  /// In es, this message translates to:
+  /// **'No pudimos actualizar el pedido — inténtalo de nuevo'**
+  String get adminToastActionFailed;
+
+  /// Toast cuando el backend rechaza la mutación con 409 (INVALID_STATUS_TRANSITION/PAYMENT_NOT_SETTLED — la cola ya se resincronizó sola; el mensaje del servidor viene en inglés y nunca se muestra)
+  ///
+  /// In es, this message translates to:
+  /// **'El pedido ya cambió — la cola se actualizó'**
+  String get adminToastActionRejected;
+
   /// Toast de éxito tras confirmar el cierre de caja del día — total = total vendido formateado (§036)
   ///
   /// In es, this message translates to:

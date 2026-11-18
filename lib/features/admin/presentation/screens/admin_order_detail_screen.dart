@@ -6,6 +6,7 @@ import '../../../../core/widgets/app_toast.dart';
 import '../../../../l10n/app_localizations.dart';
 import '../../../home/presentation/widgets/signature_strip.dart';
 import '../../domain/entities/admin_order.dart';
+import '../../domain/failures/admin_failure.dart';
 import '../cubit/admin_queue_cubit.dart';
 import '../cubit/admin_queue_state.dart';
 import '../widgets/order_detail/admin_order_cancel_dialog.dart';
@@ -52,17 +53,29 @@ class _AdminOrderDetailScreenState extends State<AdminOrderDetailScreen> {
     });
   }
 
-  /// Cancela con motivo opcional (§035): el diálogo devuelve null si
-  /// se arrepintió; confirmado → cancel mock → toast + pop a la cola.
+  /// Cancela con motivo opcional (§035/§040): el diálogo devuelve
+  /// null si se arrepintió; confirmado → PATCH status cancelled —
+  /// SOLO si el backend aceptó hay toast + pop a la cola (un 409
+  /// deja el detalle abierto: el pedido no se canceló).
   Future<void> _confirmCancel(BuildContext context) async {
     final reason = await showAdminOrderCancelDialog(context);
     if (reason == null || !context.mounted) return;
-    await context.read<AdminQueueCubit>().cancelOrder(
+    final failure = await context.read<AdminQueueCubit>().cancelOrder(
       widget.order.id,
       reason: reason,
     );
     if (!context.mounted) return;
-    AppToast.info(context, AppLocalizations.of(context)!.orderCancelledToast);
+    final l10n = AppLocalizations.of(context)!;
+    if (failure != null) {
+      AppToast.error(
+        context,
+        failure is AdminConflictFailure
+            ? l10n.adminToastActionRejected
+            : l10n.adminToastActionFailed,
+      );
+      return;
+    }
+    AppToast.info(context, l10n.orderCancelledToast);
     context.pop();
   }
 

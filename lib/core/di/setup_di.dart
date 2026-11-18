@@ -7,6 +7,7 @@ import '../../features/admin/data/repositories/admin_repository_impl.dart';
 import '../../features/admin/domain/repositories/i_admin_repository.dart';
 import '../../features/admin/domain/use_cases/get_admin_order_detail_use_case.dart';
 import '../../features/admin/domain/use_cases/load_admin_queue_use_case.dart';
+import '../../features/admin/domain/use_cases/update_admin_order_status_use_case.dart';
 import '../../features/admin/presentation/cubit/admin_queue_cubit.dart';
 import '../../features/auth/data/datasources/implementations/auth_local_datasource_impl.dart';
 import '../../features/auth/data/datasources/implementations/auth_remote_datasource_impl.dart';
@@ -325,8 +326,15 @@ void setupDI() {
   locator.registerLazySingleton<GetAdminOrderDetailUseCase>(
     () => GetAdminOrderDetailUseCase(locator()),
   );
+  locator.registerLazySingleton<UpdateAdminOrderStatusUseCase>(
+    () => UpdateAdminOrderStatusUseCase(locator()),
+  );
   locator.registerLazySingleton<AdminQueueCubit>(
-    () => AdminQueueCubit(loadQueue: locator(), getOrderDetail: locator()),
+    () => AdminQueueCubit(
+      loadQueue: locator(),
+      getOrderDetail: locator(),
+      updateOrderStatus: locator(),
+    ),
   );
 
   // --- Use Cases (auth) ---

@@ -26,4 +26,14 @@ abstract class IAdminRepository {
   /// detalle la pide al abrir — modifiers + estado fresco que el
   /// listado omite.
   Future<Either<AdminFailure, AdminOrder>> getOrderDetail(String orderId);
+
+  /// PATCH /admin/orders/:id/status (§040): `to` es el estado destino
+  /// en inglés del backend (confirmed|preparing|ready|done|cancelled);
+  /// `cancelReason` solo con `cancelled`. Devuelve la entidad completa
+  /// con `statusChangedAt` re-sellado.
+  Future<Either<AdminFailure, AdminOrder>> updateOrderStatus(
+    String orderId, {
+    required String to,
+    String? cancelReason,
+  });
 }

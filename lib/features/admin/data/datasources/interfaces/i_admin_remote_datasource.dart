@@ -14,4 +14,17 @@ abstract class IAdminRemoteDataSource {
   /// listado omite modifiers a propósito; el detalle los trae junto
   /// al estado más fresco.
   Future<AdminOrderModel> fetchAdminOrder(String orderId);
+
+  /// PATCH /admin/orders/:id/status (§040 — backend §022): mueve el
+  /// pedido por la matriz de 5 estados (`to`: confirmed | preparing |
+  /// ready | done | cancelled). `cancelReason` solo viaja con
+  /// `to='cancelled'`. Devuelve la vista admin completa con
+  /// `statusChangedAt` re-sellado — el reloj de la cola lo pone el
+  /// servidor. El 409 sale como ServerException con errorCode
+  /// (INVALID_STATUS_TRANSITION | PAYMENT_NOT_SETTLED).
+  Future<AdminOrderModel> patchOrderStatus(
+    String orderId, {
+    required String to,
+    String? cancelReason,
+  });
 }

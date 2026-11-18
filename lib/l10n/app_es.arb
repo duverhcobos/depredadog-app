@@ -1416,6 +1416,14 @@
   "@adminToastOrderReady": {
     "description": "Toast de éxito tras avanzar un pedido admin de preparing a ready — listo / en camino / servido según el canal (§036)"
   },
+  "adminToastActionFailed": "No pudimos actualizar el pedido — inténtalo de nuevo",
+  "@adminToastActionFailed": {
+    "description": "Toast de error genérico al avanzar/cancelar un pedido admin (offline/5xx — convención ordersCancelError §027)"
+  },
+  "adminToastActionRejected": "El pedido ya cambió — la cola se actualizó",
+  "@adminToastActionRejected": {
+    "description": "Toast cuando el backend rechaza la mutación con 409 (INVALID_STATUS_TRANSITION/PAYMENT_NOT_SETTLED — la cola ya se resincronizó sola; el mensaje del servidor viene en inglés y nunca se muestra)"
+  },
   "adminToastDayClosed": "Día cerrado — {total}",
   "@adminToastDayClosed": {
     "description": "Toast de éxito tras confirmar el cierre de caja del día — total = total vendido formateado (§036)",

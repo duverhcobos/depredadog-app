@@ -5,6 +5,7 @@ import 'package:depredadog_app/features/admin/domain/failures/admin_failure.dart
 import 'package:depredadog_app/features/admin/domain/repositories/i_admin_repository.dart';
 import 'package:depredadog_app/features/admin/domain/use_cases/get_admin_order_detail_use_case.dart';
 import 'package:depredadog_app/features/admin/domain/use_cases/load_admin_queue_use_case.dart';
+import 'package:depredadog_app/features/admin/domain/use_cases/update_admin_order_status_use_case.dart';
 import 'package:depredadog_app/features/admin/presentation/cubit/admin_queue_cubit.dart';
 import 'package:depredadog_app/features/cart/domain/entities/cart_modifier.dart';
 import 'package:depredadog_app/features/orders/domain/entities/customer_order.dart';
@@ -1148,39 +1149,96 @@ class FakeLoadAdminQueueUseCase extends Mock
 class FakeGetAdminOrderDetailUseCase extends Mock
     implements GetAdminOrderDetailUseCase {}
 
+/// Use case falso del PATCH status (§040 — PATCH
+/// /admin/orders/:id/status): el test lo arma con su propio when() o
+/// con `stubUpdateEcho` (mini-backend que aplica el `to` pedido).
+class FakeUpdateAdminOrderStatusUseCase extends Mock
+    implements UpdateAdminOrderStatusUseCase {}
+
+/// Stub "mini-backend" del PATCH status: aplica el `to` pedido sobre
+/// la orden conocida por id y devuelve la entidad con el estado nuevo
+/// — `copyWith` re-sella `statusChangedAt` igual que el servidor
+/// (§040). El `cancelReason` viaja solo cuando viene (cancel sin
+/// motivo deja el campo en null). Id desconocido → Left como un 404.
+void stubUpdateEcho(
+  FakeUpdateAdminOrderStatusUseCase update,
+  List<AdminOrder> known,
+) {
+  final byId = {for (final o in known) o.id: o};
+  when(
+    () => update.call(
+      any(),
+      to: any(named: 'to'),
+      cancelReason: any(named: 'cancelReason'),
+    ),
+  ).thenAnswer((inv) async {
+    final id = inv.positionalArguments.first as String;
+    final to = inv.namedArguments[#to] as String;
+    final reason = inv.namedArguments[#cancelReason] as String?;
+    final base = byId[id];
+    if (base == null) {
+      return const Left<AdminFailure, AdminOrder>(
+        AdminServerFailure('ORDER_NOT_FOUND'),
+      );
+    }
+    final next = switch (to) {
+      'confirmed' => OrderStatus.confirmed,
+      'preparing' => OrderStatus.preparing,
+      'ready' => OrderStatus.ready,
+      'done' => OrderStatus.done,
+      'cancelled' => OrderStatus.cancelled,
+      _ => base.status,
+    };
+    return Right<AdminFailure, AdminOrder>(
+      base.copyWith(status: next, cancelReason: reason),
+    );
+  });
+}
+
 /// Cubit listo para tests: `load()` devuelve las fixtures (o las listas
 /// inyectadas) — sustituye al viejo `AdminQueueCubit(mockActive:…)`.
 /// `getOrderDetail` (§039): sin inyección queda en Left silencioso —
 /// las pantallas disparan refreshOrder al montar el detalle y los
 /// tests que no lo ejercen no notan el fetch.
+/// `updateOrderStatus` (§040): sin inyección queda en `stubUpdateEcho`
+/// sobre las mismas listas servidas por load — el PATCH "responde"
+/// como el backend (estado nuevo + statusChangedAt re-sellado).
 AdminQueueCubit buildAdminQueueCubit({
   List<AdminOrder>? active,
   List<AdminOrder>? history,
   AdminFailure? activeFailure,
   AdminFailure? historyFailure,
   FakeGetAdminOrderDetailUseCase? getOrderDetail,
+  FakeUpdateAdminOrderStatusUseCase? updateOrderStatus,
 }) {
   final useCase = FakeLoadAdminQueueUseCase();
   final detail = getOrderDetail ?? FakeGetAdminOrderDetailUseCase();
+  final update = updateOrderStatus ?? FakeUpdateAdminOrderStatusUseCase();
   if (getOrderDetail == null) {
     when(() => detail.call(any())).thenAnswer(
       (_) async => const Left(AdminServerFailure('stub')),
     );
   }
+  final activeList = active ?? adminActiveFixtures();
+  final historyList = history ?? adminHistoryFixtures();
+  // El echo se siembra con las MISMAS listas que load() sirve — la
+  // mutación encuentra por id la orden que el state cargó.
+  if (updateOrderStatus == null) {
+    stubUpdateEcho(update, [...activeList, ...historyList]);
+  }
   when(useCase.call).thenAnswer(
     (_) async => AdminQueueData(
-      active: activeFailure != null
-          ? Left(activeFailure)
-          : Right(active ?? adminActiveFixtures()),
+      active: activeFailure != null ? Left(activeFailure) : Right(activeList),
       history: historyFailure != null
           ? Left(historyFailure)
           : Right(
-              AdminHistoryPage(
-                items: history ?? adminHistoryFixtures(),
-                total: (history ?? adminHistoryFixtures()).length,
-              ),
+              AdminHistoryPage(items: historyList, total: historyList.length),
             ),
     ),
   );
-  return AdminQueueCubit(loadQueue: useCase, getOrderDetail: detail);
+  return AdminQueueCubit(
+    loadQueue: useCase,
+    getOrderDetail: detail,
+    updateOrderStatus: update,
+  );
 }

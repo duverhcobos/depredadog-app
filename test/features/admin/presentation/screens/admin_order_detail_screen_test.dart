@@ -513,6 +513,110 @@ void main() {
     await tester.pump(const Duration(seconds: 2));
   });
 
+  testWidgets('cancelar con 409: toast "El pedido ya cambió" + el '
+      'detalle NO hace pop — el pedido no se canceló (§040)', (
+    tester,
+  ) async {
+    final calls = stubToast(tester);
+    // PATCH rechazado — la carrera la perdió este cliente (el pedido
+    // cambió server-side); el cubit resincroniza la cola solo.
+    await cubit.close();
+    await locator.reset();
+    final update = FakeUpdateAdminOrderStatusUseCase();
+    when(
+      () => update.call(
+        any(),
+        to: any(named: 'to'),
+        cancelReason: any(named: 'cancelReason'),
+      ),
+    ).thenAnswer(
+      (_) async =>
+          const Left(AdminConflictFailure('INVALID_STATUS_TRANSITION')),
+    );
+    cubit = buildAdminQueueCubit(
+      getOrderDetail: detailUseCase,
+      updateOrderStatus: update,
+    );
+    locator.registerSingleton<AdminQueueCubit>(cubit);
+    final router = buildAdminRouter();
+    await pumpAdminApp(tester, router: router);
+    await loadQueue(tester);
+    await openDetail(tester, router, 'adm-1');
+    await scrollToTappable(tester, find.text('Cancelar pedido'));
+
+    await tester.tap(find.text('Cancelar pedido'));
+    await tester.pumpAndSettle();
+    await tester.enterText(find.byType(TextField), 'llegó tarde');
+    await tester.tap(find.text('Sí, cancelar'));
+    await tester.pump(const Duration(milliseconds: 500));
+    await tester.pumpAndSettle();
+
+    // El detalle SIGUE abierto — nada se canceló de verdad.
+    expect(find.byType(AdminOrderDetailScreen), findsOneWidget);
+    // La orden no mutó localmente (sin cancel optimista).
+    expect(cubit.state.orderById('adm-1')!.status, OrderStatus.received);
+    expect(
+      calls.any(
+        (c) =>
+            c.arguments['msg'] ==
+            'El pedido ya cambió — la cola se actualizó',
+      ),
+      isTrue,
+    );
+    // El toast de cancelación NO salió.
+    expect(
+      calls.any((c) => c.arguments['msg'] == 'Pedido cancelado'),
+      isFalse,
+    );
+
+    await tester.pump(const Duration(seconds: 2));
+  });
+
+  testWidgets('cancelar con falla genérica: toast "No pudimos '
+      'actualizar el pedido" + el detalle tampoco hace pop (§040)', (
+    tester,
+  ) async {
+    final calls = stubToast(tester);
+    await cubit.close();
+    await locator.reset();
+    final update = FakeUpdateAdminOrderStatusUseCase();
+    when(
+      () => update.call(
+        any(),
+        to: any(named: 'to'),
+        cancelReason: any(named: 'cancelReason'),
+      ),
+    ).thenAnswer((_) async => const Left(AdminServerFailure('boom')));
+    cubit = buildAdminQueueCubit(
+      getOrderDetail: detailUseCase,
+      updateOrderStatus: update,
+    );
+    locator.registerSingleton<AdminQueueCubit>(cubit);
+    final router = buildAdminRouter();
+    await pumpAdminApp(tester, router: router);
+    await loadQueue(tester);
+    await openDetail(tester, router, 'adm-1');
+    await scrollToTappable(tester, find.text('Cancelar pedido'));
+
+    await tester.tap(find.text('Cancelar pedido'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Sí, cancelar'));
+    await tester.pump(const Duration(milliseconds: 500));
+    await tester.pumpAndSettle();
+
+    expect(find.byType(AdminOrderDetailScreen), findsOneWidget);
+    expect(
+      calls.any(
+        (c) =>
+            c.arguments['msg'] ==
+            'No pudimos actualizar el pedido — inténtalo de nuevo',
+      ),
+      isTrue,
+    );
+
+    await tester.pump(const Duration(seconds: 2));
+  });
+
   testWidgets('deep link /admin/:id SIN extra → redirect a /admin '
       '(patrón /orders/:id)', (tester) async {
     final router = buildAdminRouter();

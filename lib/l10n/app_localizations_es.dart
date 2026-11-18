@@ -1374,6 +1374,14 @@ class AppLocalizationsEs extends AppLocalizations {
   String get adminToastOrderReady => 'Pedido listo';
 
   @override
+  String get adminToastActionFailed =>
+      'No pudimos actualizar el pedido — inténtalo de nuevo';
+
+  @override
+  String get adminToastActionRejected =>
+      'El pedido ya cambió — la cola se actualizó';
+
+  @override
   String adminToastDayClosed(String total) {
     return 'Día cerrado — $total';
   }

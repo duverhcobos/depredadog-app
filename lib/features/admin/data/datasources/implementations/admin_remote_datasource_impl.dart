@@ -34,4 +34,17 @@ class AdminRemoteDataSourceImpl implements IAdminRemoteDataSource {
     final response = await _networkService.get('/admin/orders/$orderId');
     return AdminOrderModel.fromJson(response as Map<String, dynamic>);
   }
+
+  @override
+  Future<AdminOrderModel> patchOrderStatus(
+    String orderId, {
+    required String to,
+    String? cancelReason,
+  }) async {
+    final response = await _networkService.patch(
+      '/admin/orders/$orderId/status',
+      body: {'to': to, 'cancelReason': ?cancelReason},
+    );
+    return AdminOrderModel.fromJson(response as Map<String, dynamic>);
+  }
 }

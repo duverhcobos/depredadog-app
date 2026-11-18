@@ -6,6 +6,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:get_it/get_it.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:depredadog_app/core/theme/app_theme.dart';
+import 'package:depredadog_app/features/admin/domain/entities/admin_order.dart';
 import 'package:depredadog_app/features/admin/domain/failures/admin_failure.dart';
 import 'package:depredadog_app/features/admin/domain/repositories/i_admin_repository.dart';
 import 'package:depredadog_app/features/admin/domain/use_cases/load_admin_queue_use_case.dart';
@@ -47,6 +48,18 @@ FakeGetAdminOrderDetailUseCase _fixtureDetailUseCase() {
   return detail;
 }
 
+/// Use case falso del PATCH status (§040) — echo sobre las fixtures:
+/// las subclases de abajo ejercen mutaciones vía tap y necesitan el
+/// "servidor" que aplica el `to` pedido.
+FakeUpdateAdminOrderStatusUseCase _fixtureUpdateUseCase() {
+  final update = FakeUpdateAdminOrderStatusUseCase();
+  stubUpdateEcho(update, [
+    ...adminActiveFixtures(),
+    ...adminHistoryFixtures(),
+  ]);
+  return update;
+}
+
 /// Cola que falla la primera carga — se emite el flag failed para
 /// ejercer la rama de error + reintento (el use case real también
 /// devuelve Left en este camino, §038).
@@ -55,6 +68,7 @@ class _FailingQueueCubit extends AdminQueueCubit {
     : super(
         loadQueue: _fixtureUseCase(),
         getOrderDetail: _fixtureDetailUseCase(),
+        updateOrderStatus: _fixtureUpdateUseCase(),
       );
 
   bool fail = true;
@@ -76,6 +90,7 @@ class _CountingQueueCubit extends AdminQueueCubit {
     : super(
         loadQueue: _fixtureUseCase(),
         getOrderDetail: _fixtureDetailUseCase(),
+        updateOrderStatus: _fixtureUpdateUseCase(),
       );
 
   int loads = 0;
@@ -96,6 +111,7 @@ class _StaleErrorQueueCubit extends AdminQueueCubit {
     : super(
         loadQueue: _fixtureUseCase(),
         getOrderDetail: _fixtureDetailUseCase(),
+        updateOrderStatus: _fixtureUpdateUseCase(),
       );
 
   @override
@@ -231,7 +247,6 @@ void main() {
     expect(find.text('2× El Depredador, 1× Manada de papas'), findsOneWidget);
     expect(find.text('\$61.000'), findsOneWidget);
     expect(find.text('hace 12 min'), findsOneWidget);
-    // El chip de la card es el de SERVICIO (decisión del dueño):
     // El chip de la card es el SERVICIO: Pendiente solo muestra
     // Domicilio/Recogida — Mesa NUNCA pisa este carril porque el
     // presencial dineIn nace Confirmado (§036). El canal vive en
@@ -304,7 +319,7 @@ void main() {
     expect(find.text('Registrar pago'), findsNothing);
     // Scroll al fondo del carril — las confirmadas de nacimiento.
     for (var i = 0; i < 6; i++) {
-      await tester.drag(find.byType(ListView), const Offset(0, -350));
+      await tester.drag(find.byType(AnimatedList), const Offset(0, -350));
       await tester.pump();
     }
     await tester.pumpAndSettle();
@@ -427,9 +442,13 @@ void main() {
     await loadQueue(tester);
     expect(counting.loads, 1);
 
-    // Pull-down sobre el ListView del carril visible — la misma
+    // Pull-down sobre el AnimatedList del carril visible — la misma
     // distancia/velocidad del test de orders (§027).
-    await tester.fling(find.byType(ListView).first, const Offset(0, 400), 1000);
+    await tester.fling(
+      find.byType(AnimatedList),
+      const Offset(0, 400),
+      1000,
+    );
     // Pump fijo mientras el RefreshIndicator anima (el load del stub
     // es instantáneo — §038 sin delay).
     await tester.pump(const Duration(milliseconds: 500));
@@ -447,8 +466,8 @@ void main() {
 
     // Las recogidas presenciales sin cobrar son las ÚLTIMAS del FIFO
     // (mostrador cash + teléfono transfer — 4 y 1 min): drag al
-    // fondo del ListView del carril para construirlas.
-    final laneList = find.byType(ListView);
+    // fondo del AnimatedList del carril para construirlas.
+    final laneList = find.byType(AnimatedList);
     for (var i = 0; i < 8; i++) {
       await tester.drag(laneList, const Offset(0, -400));
       await tester.pump();
@@ -490,7 +509,7 @@ void main() {
     // drag-loop construye las cards lazy del ListView del carril.
     Future<void> expectFrozen(String name, String hint) async {
       for (var i = 0; i < 12 && find.text(name).evaluate().isEmpty; i++) {
-        await tester.drag(find.byType(ListView), const Offset(0, -350));
+        await tester.drag(find.byType(AnimatedList), const Offset(0, -350));
         await tester.pump();
       }
       await tester.pumpAndSettle();
@@ -574,6 +593,32 @@ void main() {
     await tester.pump(const Duration(seconds: 2));
   });
 
+  testWidgets('la card SALE animada del carril — sigue visible '
+      'durante el colapso, no teletransporta (fix UX §040)', (
+    tester,
+  ) async {
+    stubToast(tester);
+    await pumpQueue(tester);
+    await loadQueue(tester);
+
+    // Ana Uno encabeza Pendiente → su "Confirmar" es el .first.
+    await tester.tap(find.text('Confirmar').first);
+    // El PATCH stub resuelve en microtask y la emisión dispara el
+    // removeItem (~320ms): a mitad de la animación la card AÚN está
+    // en el árbol colapsándose — antes salía de golpe en un pump.
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 80));
+    expect(find.text('Ana Uno'), findsOneWidget);
+
+    // Terminada la salida ya no queda ni la saliente ni la entrante
+    // (el carril Confirmado es página vecina no montada).
+    await tester.pumpAndSettle();
+    expect(find.text('Ana Uno'), findsNothing);
+    expect(cubit.state.orderById('adm-1')!.status, OrderStatus.confirmed);
+
+    await tester.pump(const Duration(seconds: 2));
+  });
+
   testWidgets('header dentro del scroll: colapsa con el carril, el '
       'strip queda fijado y la flecha vuelve al inicio (§036)', (
     tester,
@@ -590,7 +635,7 @@ void main() {
 
     // Scroll profundo del carril (4×400px > el umbral ~2 cards).
     for (var i = 0; i < 4; i++) {
-      await tester.drag(find.byType(ListView), const Offset(0, -400));
+      await tester.drag(find.byType(AnimatedList), const Offset(0, -400));
       await tester.pump();
     }
     await tester.pumpAndSettle();
@@ -614,5 +659,94 @@ void main() {
     expect(find.text('COCINA'), findsOneWidget);
     expect(find.text('Ana Uno'), findsOneWidget);
     expect(find.byIcon(Icons.keyboard_arrow_up_rounded), findsNothing);
+  });
+
+  group('PATCH status falla (§040) — toast por tipo de failure', () {
+    /// Reemplaza el cubit del setUp por uno con el PATCH stub-eado al
+    /// resultado dado — misma mecánica de los tests de cola vacía.
+    Future<void> withUpdateResult(
+      WidgetTester tester,
+      Either<AdminFailure, AdminOrder> Function() respond,
+    ) async {
+      await cubit.close();
+      await locator.reset();
+      final update = FakeUpdateAdminOrderStatusUseCase();
+      when(
+        () => update.call(
+          any(),
+          to: any(named: 'to'),
+          cancelReason: any(named: 'cancelReason'),
+        ),
+      ).thenAnswer((_) async => respond());
+      cubit = buildAdminQueueCubit(updateOrderStatus: update);
+      locator.registerSingleton<AdminQueueCubit>(cubit);
+      await pumpQueue(tester);
+      await loadQueue(tester);
+    }
+
+    testWidgets('409 → toast "El pedido ya cambió — la cola se '
+        'actualizó" y NUNCA el toast de éxito (carrera perdida)', (
+      tester,
+    ) async {
+      final calls = stubToast(tester);
+      await withUpdateResult(
+        tester,
+        () => const Left(AdminConflictFailure('INVALID_STATUS_TRANSITION')),
+      );
+
+      // Ana Uno (received) encabeza el FIFO de Pendiente → su
+      // "Confirmar" es el .first.
+      await tester.tap(find.text('Confirmar').first);
+      await tester.pump(const Duration(milliseconds: 500));
+      await tester.pumpAndSettle();
+
+      expect(
+        calls.any(
+          (c) =>
+              c.arguments['msg'] ==
+              'El pedido ya cambió — la cola se actualizó',
+        ),
+        isTrue,
+      );
+      expect(
+        calls.any((c) => c.arguments['msg'] == 'Pedido confirmado'),
+        isFalse,
+      );
+      // El resync dejó la orden como la reporta el "servidor".
+      expect(
+        cubit.state.orderById('adm-1')!.status,
+        OrderStatus.received,
+      );
+
+      await tester.pump(const Duration(seconds: 2));
+    });
+
+    testWidgets('error genérico (offline/5xx) → toast "No pudimos '
+        'actualizar el pedido" + sin toast de éxito', (tester) async {
+      final calls = stubToast(tester);
+      await withUpdateResult(
+        tester,
+        () => const Left(AdminServerFailure('boom')),
+      );
+
+      await tester.tap(find.text('Confirmar').first);
+      await tester.pump(const Duration(milliseconds: 500));
+      await tester.pumpAndSettle();
+
+      expect(
+        calls.any(
+          (c) =>
+              c.arguments['msg'] ==
+              'No pudimos actualizar el pedido — inténtalo de nuevo',
+        ),
+        isTrue,
+      );
+      expect(
+        calls.any((c) => c.arguments['msg'] == 'Pedido confirmado'),
+        isFalse,
+      );
+
+      await tester.pump(const Duration(seconds: 2));
+    });
   });
 }

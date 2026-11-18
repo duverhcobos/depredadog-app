@@ -38,6 +38,19 @@ class AdminRepositoryImpl implements IAdminRepository {
   Future<Either<AdminFailure, AdminOrder>> getOrderDetail(String orderId) =>
       _guard(() => _remoteDataSource.fetchAdminOrder(orderId));
 
+  @override
+  Future<Either<AdminFailure, AdminOrder>> updateOrderStatus(
+    String orderId, {
+    required String to,
+    String? cancelReason,
+  }) => _guard(
+    () => _remoteDataSource.patchOrderStatus(
+      orderId,
+      to: to,
+      cancelReason: cancelReason,
+    ),
+  );
+
   /// Red de seguridad idéntica a la de orders: un 200 malformado (cast del
   /// datasource) no es NetworkException — sin el catch de respaldo la UI
   /// quedaría en loading para siempre.
@@ -54,7 +67,11 @@ class AdminRepositoryImpl implements IAdminRepository {
     }
   }
 
-  AdminFailure _mapFailure(NetworkException e) => e is NoConnectionException
-      ? const AdminOfflineFailure()
-      : AdminServerFailure(e.message);
+  AdminFailure _mapFailure(NetworkException e) {
+    if (e is NoConnectionException) return const AdminOfflineFailure();
+    if (e is ServerException && e.statusCode == 409) {
+      return AdminConflictFailure(e.errorCode ?? 'CONFLICT');
+    }
+    return AdminServerFailure(e.message);
+  }
 }

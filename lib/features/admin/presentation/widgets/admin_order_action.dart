@@ -5,6 +5,7 @@ import '../../../../core/widgets/app_toast.dart';
 import '../../../../l10n/app_localizations.dart';
 import '../../../orders/domain/entities/customer_order.dart';
 import '../../domain/entities/admin_order.dart';
+import '../../domain/failures/admin_failure.dart';
 import '../cubit/admin_queue_cubit.dart';
 
 /// La siguiente acción real del pedido en la matriz de 5 pasos
@@ -71,8 +72,10 @@ String adminOrderActionLabel(
   AdminOrderAction.markDone => l10n.adminActionDeliver,
 };
 
-/// Ejecuta [action] sobre el cubit compartido y, al resolver el
-/// mock, levanta el toast de éxito correspondiente. La acción llega
+/// Ejecuta [action] sobre el cubit compartido y levanta el toast
+/// correspondiente al resultado: éxito SOLO si la mutación devolvió
+/// null (§040 — el PATCH pudo fallar); conflicto 409 → "el pedido ya
+/// cambió"; el resto → error genérico. La acción llega
 /// explícita — el llamador decide: el botón primario usa la matriz
 /// (`adminOrderNextAction`) pero el "Registrar pago" de la fila de pago del
 /// detalle SIEMPRE cobra, aunque la matriz apunte a otro paso (un
@@ -86,20 +89,29 @@ Future<void> runAdminOrderAction(
   AdminOrderAction action,
 ) async {
   final cubit = context.read<AdminQueueCubit>();
+  // markPaid sigue local (Future<void>) hasta §041 — el switch por
+  // caso captura el AdminFailure? solo en las ramas del PATCH.
+  AdminFailure? failure;
   switch (action) {
-    case AdminOrderAction.confirm:
-      await cubit.advanceOrder(order.id);
-    case AdminOrderAction.prepare:
-      await cubit.advanceOrder(order.id);
-    case AdminOrderAction.markReady:
-      await cubit.advanceOrder(order.id);
     case AdminOrderAction.markPaid:
       await cubit.markPaid(order.id);
+    case AdminOrderAction.confirm:
+    case AdminOrderAction.prepare:
+    case AdminOrderAction.markReady:
     case AdminOrderAction.markDone:
-      await cubit.advanceOrder(order.id);
+      failure = await cubit.advanceOrder(order.id);
   }
   if (!context.mounted) return;
   final l10n = AppLocalizations.of(context)!;
+  if (failure != null) {
+    AppToast.error(
+      context,
+      failure is AdminConflictFailure
+          ? l10n.adminToastActionRejected
+          : l10n.adminToastActionFailed,
+    );
+    return;
+  }
   AppToast.success(context, switch (action) {
     AdminOrderAction.confirm => l10n.adminToastOrderConfirmed,
     AdminOrderAction.prepare => l10n.adminToastOrderPreparing,
