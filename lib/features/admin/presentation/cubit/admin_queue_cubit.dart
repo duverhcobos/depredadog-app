@@ -6,7 +6,10 @@ import '../../../orders/domain/entities/customer_order.dart';
 import '../../domain/entities/admin_day_close.dart';
 import '../../domain/entities/admin_order.dart';
 import '../../domain/failures/admin_failure.dart';
+import '../../domain/use_cases/close_admin_day_use_case.dart';
+import '../../domain/use_cases/confirm_admin_order_payment_use_case.dart';
 import '../../domain/use_cases/get_admin_order_detail_use_case.dart';
+import '../../domain/use_cases/load_admin_day_close_use_case.dart';
 import '../../domain/use_cases/load_admin_queue_use_case.dart';
 import '../../domain/use_cases/update_admin_order_status_use_case.dart';
 import 'admin_queue_state.dart';
@@ -22,11 +25,17 @@ class AdminQueueCubit extends Cubit<AdminQueueState> {
     required this._loadQueue,
     required this._getOrderDetail,
     required this._updateOrderStatus,
+    required this._confirmOrderPayment,
+    required this._loadDayClose,
+    required this._closeDay,
   }) : super(const AdminQueueState());
 
   final LoadAdminQueueUseCase _loadQueue;
   final GetAdminOrderDetailUseCase _getOrderDetail;
   final UpdateAdminOrderStatusUseCase _updateOrderStatus;
+  final ConfirmAdminOrderPaymentUseCase _confirmOrderPayment;
+  final LoadAdminDayCloseUseCase _loadDayClose;
+  final CloseAdminDayUseCase _closeDay;
 
   /// Guardia de reentry — load corre por visita al tab, por pull-
   /// to-refresh y por reintento; un loading paralelo no compite.
@@ -143,36 +152,54 @@ class AdminQueueCubit extends Cubit<AdminQueueState> {
         };
       });
 
-  /// "Registrar pago" — paymentStatus pending/failed → paid (POST
-  /// /admin/orders/:id/confirm-payment en integración, claim
-  /// atómico — ciclo §041; por ahora sigue LOCAL/provisional).
-  /// Failed también se cobra: un pago rechazado sigue
-  /// debiendo — la matriz lo trata como pendiente de cobro, no
-  /// como saldado (revisor-ui §035). No-op en terminal o paid — y
-  /// en Nequi SIEMPRE (§036): el cobro dentro de la app lo confirma
-  /// el webhook, nadie lo registra a mano.
-  /// Cobrar era el ÚNICO bloqueo — un toque también AVANZA el
-  /// estado (§036, decisión del dueño): la recogida presencial
-  /// pendiente entra directo a Confirmado; el Listo cierra de una
-  /// (mesa que paga y se va, delivery cobrado en la puerta).
-  Future<void> markPaid(String id) => _mutateOrder(id, (order) {
-    if (order.isTerminal ||
-        order.paymentMethod == AdminPaymentMethod.nequi ||
-        order.paymentStatus == OrderPaymentStatus.paid) {
-      return null;
+  /// "Registrar pago" — POST /admin/orders/:id/confirm-payment
+  /// (§041, backend §022): el servidor cobra Y avanza en el mismo
+  /// hecho atómico (pending+presencial+pickup→confirmed, ready→done;
+  /// idempotente en `paid`). Las puertas locales se conservan como
+  /// no-op — terminal, Nequi (el webhook manda, §036) y pago ya
+  /// saldado: el backend responde 200-idempotente pero no gastamos
+  /// el request. En falla: resync silencioso de la cola.
+  Future<AdminFailure?> markPaid(String id) {
+    final current = state.orderById(id);
+    if (current == null ||
+        current.isTerminal ||
+        current.paymentMethod == AdminPaymentMethod.nequi ||
+        current.paymentStatus == OrderPaymentStatus.paid) {
+      return Future.value();
     }
-    final next = switch (order.status) {
-      OrderStatus.received
-          when order.serviceType == AdminServiceType.pickup =>
-        OrderStatus.confirmed,
-      OrderStatus.ready => OrderStatus.done,
-      _ => order.status,
-    };
-    return order.copyWith(
-      paymentStatus: OrderPaymentStatus.paid,
-      status: next,
-    );
-  });
+    return _mutatePayment(id);
+  }
+
+  /// Gemelo de `_mutateRemote` para el claim de pago: misma busy
+  /// por pedido + el mismo fold (falla → resync; éxito → la entidad
+  /// devuelta reemplaza con `_preserveHydrated`). Comparten
+  /// `_replaceOrder` — el POST nunca devuelve `cancelled` pero el
+  /// helper cubre el caso igual que el PATCH.
+  Future<AdminFailure?> _mutatePayment(String id) async {
+    if (state.busyOrderIds.contains(id)) return null;
+    emit(state.copyWith(busyOrderIds: {...state.busyOrderIds, id}));
+    try {
+      final result = await _confirmOrderPayment(id);
+      if (isClosed) return null;
+      final outcome = result.fold(
+        (failure) {
+          unawaited(load());
+          return failure;
+        },
+        (updated) {
+          _replaceOrder(updated);
+          return null;
+        },
+      );
+      return outcome;
+    } finally {
+      if (!isClosed && state.busyOrderIds.contains(id)) {
+        emit(
+          state.copyWith(busyOrderIds: {...state.busyOrderIds}..remove(id)),
+        );
+      }
+    }
+  }
 
   /// Cancela un pedido no-terminal: PATCH {to: 'cancelled',
   /// cancelReason?} — el motivo (español, user-facing) viaja al
@@ -222,29 +249,7 @@ class AdminQueueCubit extends Cubit<AdminQueueState> {
           return failure;
         },
         (updated) {
-          final hydrated = _preserveHydrated(updated);
-          if (updated.status == OrderStatus.cancelled) {
-            emit(
-              state.copyWith(
-                active: state.active.where((o) => o.id != id).toList(),
-                history: [
-                  hydrated,
-                  ...state.history.where((o) => o.id != id),
-                ],
-              ),
-            );
-          } else {
-            emit(
-              state.copyWith(
-                active: [
-                  for (final o in state.active) o.id == id ? hydrated : o,
-                ],
-                history: [
-                  for (final o in state.history) o.id == id ? hydrated : o,
-                ],
-              ),
-            );
-          }
+          _replaceOrder(updated);
           return null;
         },
       );
@@ -256,126 +261,84 @@ class AdminQueueCubit extends Cubit<AdminQueueState> {
     }
   }
 
-  /// Núcleo de `markPaid` (§035): busy por pedido (el
-  /// spinner inline del botón — adelanta la guardia anti doble-tap
-  /// del UPDATE condicional del backend) y el swap de bucket cuando
-  /// el resultado es terminal. `mutation` devuelve la entidad
-  /// actualizada o null = no-op (terminal / pago ya hecho).
-  /// PROVISIONAL (§040): solo markPaid muta SOLO el estado local —
-  /// advance/cancel ya son PATCH reales; su endpoint es POST
-  /// /admin/orders/:id/confirm-payment (ciclo §041).
-  Future<void> _mutateOrder(
-    String id,
-    AdminOrder? Function(AdminOrder order) mutation,
-  ) async {
-    // Guarda de re-entrada (convención CheckoutCubit): la UI deja el
-    // botón vivo bajo IgnorePointer y el cubit es quien ignora el
-    // segundo toque — un busy ya en curso sobre el pedido es no-op.
-    if (state.busyOrderIds.contains(id)) return;
-    emit(state.copyWith(busyOrderIds: {...state.busyOrderIds, id}));
-    try {
-      if (isClosed) return;
-      final busy = {...state.busyOrderIds}..remove(id);
-      final current = state.orderById(id);
-      final updated = current == null ? null : mutation(current);
-      if (updated == null) {
-        emit(state.copyWith(busyOrderIds: busy));
-        return;
-      }
-      if (updated.status == OrderStatus.cancelled) {
-        // Solo el cancelado sale de Cocina de una (decisión §022);
-        // el done se queda en `active` — vive en el carril
-        // Entregado hasta que el cierre lo archive.
-        emit(
-          state.copyWith(
-            active: state.active.where((o) => o.id != id).toList(),
-            history: [updated, ...state.history.where((o) => o.id != id)],
-            busyOrderIds: busy,
-          ),
-        );
-      } else {
-        emit(
-          state.copyWith(
-            active: [for (final o in state.active) o.id == id ? updated : o],
-            history: [for (final o in state.history) o.id == id ? updated : o],
-            busyOrderIds: busy,
-          ),
-        );
-      }
-    } finally {
-      // El busy nunca queda prendido: si la mutación no corrió
-      // (cubit cerrado a mitad de camino ya está cubierto arriba)
-      // el pedido no puede quedar congelado con spinner eterno.
-      if (!isClosed && state.busyOrderIds.contains(id)) {
-        emit(state.copyWith(busyOrderIds: {...state.busyOrderIds}..remove(id)));
-      }
+  /// La entidad devuelta por PATCH/POST REEMPLAZA a la local en
+  /// ambos buckets — `statusChangedAt` re-sellado ordena el carril
+  /// nuevo; `cancelled` migra al frente del historial.
+  void _replaceOrder(AdminOrder updated) {
+    final hydrated = _preserveHydrated(updated);
+    if (updated.status == OrderStatus.cancelled) {
+      emit(
+        state.copyWith(
+          active: state.active.where((o) => o.id != updated.id).toList(),
+          history: [
+            hydrated,
+            ...state.history.where((o) => o.id != updated.id),
+          ],
+        ),
+      );
+    } else {
+      emit(
+        state.copyWith(
+          active: [
+            for (final o in state.active) o.id == updated.id ? hydrated : o,
+          ],
+          history: [
+            for (final o in state.history) o.id == updated.id ? hydrated : o,
+          ],
+        ),
+      );
     }
   }
 
-  /// Preview del cierre (GET /admin/day-close en integración):
-  /// calcula el resumen de los done-sin-cerrar + cancelados de la
-  /// jornada (en mock: los cancelled actuales del history).
-  void loadDayClosePreview() {
-    final done = [
-      for (final o in state.active)
-        if (o.status == OrderStatus.done) o,
-    ];
-    final cancelled = [
-      for (final o in state.history)
-        if (o.status == OrderStatus.cancelled) o,
-    ];
-    final byMethod = <String, ({int count, int amount})>{};
-    for (final o in done) {
-      final m = o.paymentMethod.name;
-      final cur = byMethod[m] ?? (count: 0, amount: 0);
-      byMethod[m] = (count: cur.count + 1, amount: cur.amount + o.total);
-    }
-    emit(
-      state.copyWith(
-        dayClose: () => AdminDayClose(
-          orderCount: done.length,
-          totalAmount: done.fold(0, (acc, o) => acc + o.total),
-          byMethod: [
-            for (final e in byMethod.entries)
-              AdminDayCloseMethod(
-                method: e.key,
-                count: e.value.count,
-                amount: e.value.amount,
-              ),
-          ],
-          cancelledCount: cancelled.length,
-          cancelledAmount: cancelled.fold(0, (acc, o) => acc + o.total),
-        ),
-      ),
+  /// Preview del cierre — GET /admin/day-close (§041): el servidor
+  /// calcula los terminales sin cerrar; falla → dayCloseFailed (la
+  /// pantalla muestra error + Reintentar, no spinner eterno).
+  Future<void> loadDayClosePreview() async {
+    emit(state.copyWith(dayCloseFailed: false));
+    final result = await _loadDayClose();
+    if (isClosed) return;
+    result.fold(
+      (_) => emit(state.copyWith(dayCloseFailed: true)),
+      (summary) => emit(state.copyWith(dayClose: () => summary)),
     );
   }
 
-  /// Cierre del día (POST /admin/day-close en integración): los
-  /// done del activo se archivan al history (el mock simula el
-  /// `day_close_id` que el backend estampa); cancelados ya viven
-  /// ahí. Devuelve el resumen para la pantalla de éxito.
+  /// Cierre del periodo — POST /admin/day-close (§041): el snapshot
+  /// del servidor queda en `dayClose` como resumen de éxito y los
+  /// `done` salen del carril Entregado al FRENTE del historial (el
+  /// más reciente primero — la cola por carril los tenía asc). La
+  /// animación de salida del AnimatedList juega sola: el diff ve a
+  /// todos irse de una. En falla devuelve null — la pantalla toastea
+  /// y se queda en el preview.
   Future<AdminDayClose?> closeDay() async {
     if (state.dayCloseBusy) return null;
     emit(state.copyWith(dayCloseBusy: true));
     try {
+      final result = await _closeDay();
       if (isClosed) return null;
-      loadDayClosePreview();
-      final summary = state.dayClose;
-      emit(
-        state.copyWith(
-          active: [
-            for (final o in state.active)
-              if (o.status != OrderStatus.done) o,
-          ],
-          history: [
+      // El fold va a variable antes del return — devolver la llamada
+      // directa dispara unawaited_return_in_try_block (Dart 3.13).
+      final outcome = result.fold(
+        (_) => null,
+        (summary) {
+          final closed = [
             for (final o in state.active)
               if (o.status == OrderStatus.done) o,
-            ...state.history,
-          ],
-          dayCloseBusy: false,
-        ),
+          ];
+          emit(
+            state.copyWith(
+              active: [
+                for (final o in state.active)
+                  if (o.status != OrderStatus.done) o,
+              ],
+              history: [...closed.reversed, ...state.history],
+              dayClose: () => summary,
+            ),
+          );
+          return summary;
+        },
       );
-      return summary;
+      return outcome;
     } finally {
       if (!isClosed && state.dayCloseBusy) {
         emit(state.copyWith(dayCloseBusy: false));

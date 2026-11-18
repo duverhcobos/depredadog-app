@@ -108,6 +108,9 @@ void main() {
         loadQueue: useCase,
         getOrderDetail: detail,
         updateOrderStatus: FakeUpdateAdminOrderStatusUseCase(),
+        confirmOrderPayment: FakeConfirmAdminOrderPaymentUseCase(),
+        loadDayClose: FakeLoadAdminDayCloseUseCase(),
+        closeDay: FakeCloseAdminDayUseCase(),
       );
       addTearDown(cubit.close);
       await cubit.load();
@@ -397,7 +400,8 @@ void main() {
       'del fixture simula el servidor que aplica el `to` pedido)', () {
     // advance/cancel ya pegan a UpdateAdminOrderStatusUseCase — el
     // stub echo de buildAdminQueueCubit juega de backend (aplica `to`
-    // y re-sella statusChangedAt). markPaid sigue local hasta §041.
+    // y re-sella statusChangedAt). markPaid pega al POST
+    // confirm-payment — su echo §041 cobra y avanza igual.
     Future<AdminQueueCubit> loaded() async {
       final cubit = buildAdminQueueCubit();
       addTearDown(cubit.close);
@@ -482,8 +486,9 @@ void main() {
       expect(order.cancelReason, isNull);
     });
 
-    test('markPaid: pago failed → pagado — un cobro rechazado '
-        'sigue debiendo (contrato §035)', () async {
+    test('markPaid: pago failed → 409 PAYMENT_NOT_CONFIRMABLE — un '
+        'cobro rechazado NO resucita a mano: el backend dice que el '
+        'flujo muerto es terminal (§041)', () async {
       final failed = _order(
         'f1',
         OrderStatus.confirmed,
@@ -493,13 +498,20 @@ void main() {
       addTearDown(cubit.close);
       await cubit.load();
 
-      await cubit.markPaid('f1');
+      final failure = await cubit.markPaid('f1');
 
       expect(
+        failure,
+        const AdminConflictFailure('PAYMENT_NOT_CONFIRMABLE'),
+      );
+      // El resync deja la orden como la reporta el "servidor" —
+      // sigue debiendo y en su carril.
+      expect(
         cubit.state.orderById('f1')!.paymentStatus,
-        OrderPaymentStatus.paid,
+        OrderPaymentStatus.failed,
       );
       expect(cubit.state.orderById('f1')!.status, OrderStatus.confirmed);
+      expect(cubit.state.busyOrderIds, isEmpty);
     });
 
     test('advanceOrder: la recogida PRESENCIAL sin cobrar NO confirma '
@@ -641,10 +653,17 @@ void main() {
       required FakeLoadAdminQueueUseCase loadQueue,
       required FakeUpdateAdminOrderStatusUseCase update,
       FakeGetAdminOrderDetailUseCase? detail,
+      FakeConfirmAdminOrderPaymentUseCase? confirm,
+      FakeLoadAdminDayCloseUseCase? loadDayClose,
+      FakeCloseAdminDayUseCase? closeDay,
     }) => AdminQueueCubit(
       loadQueue: loadQueue,
       getOrderDetail: detail ?? silentDetail(),
       updateOrderStatus: update,
+      confirmOrderPayment:
+          confirm ?? FakeConfirmAdminOrderPaymentUseCase(),
+      loadDayClose: loadDayClose ?? FakeLoadAdminDayCloseUseCase(),
+      closeDay: closeDay ?? FakeCloseAdminDayUseCase(),
     );
 
     test('advanceOrder: la entidad devuelta por el PATCH REEMPLAZA al '
@@ -906,8 +925,9 @@ void main() {
       expect(c.state.orderById('done')!.status, OrderStatus.done);
     });
 
-    test('markPaid sigue LOCAL — no pega al PATCH de status (su '
-        'endpoint es confirm-payment, ciclo §041)', () async {
+    test('markPaid pega al POST confirm-payment (§041) — NO al '
+        'PATCH de status: ready pendiente → done pagado en un solo '
+        'hecho y QUEDA en active esperando el cierre', () async {
       final order = _order(
         'w1',
         OrderStatus.ready,
@@ -915,12 +935,20 @@ void main() {
         payment: OrderPaymentStatus.pending,
       );
       final update = FakeUpdateAdminOrderStatusUseCase();
-      final c = cubit(loadQueue: loadUseCase([order]), update: update);
+      final confirm = FakeConfirmAdminOrderPaymentUseCase();
+      stubConfirmEcho(confirm, [order]);
+      final c = cubit(
+        loadQueue: loadUseCase([order]),
+        update: update,
+        confirm: confirm,
+      );
       addTearDown(c.close);
       await c.load();
 
-      await c.markPaid('w1');
+      final failure = await c.markPaid('w1');
 
+      expect(failure, isNull);
+      verify(() => confirm.call('w1')).called(1);
       verifyNever(
         () => update.call(
           any(),
@@ -930,20 +958,190 @@ void main() {
       );
       final w1 = c.state.orderById('w1')!;
       expect(w1.paymentStatus, OrderPaymentStatus.paid);
-      // Cobrar era el único bloqueo — cierra de una (§036).
+      // Cobrar era el único bloqueo — cierra de una (§036) y el
+      // done se queda en el carril Entregado hasta el cierre.
       expect(w1.status, OrderStatus.done);
+      expect(c.state.active.any((o) => o.id == 'w1'), isTrue);
+      expect(c.state.busyOrderIds, isEmpty);
+    });
+
+    test('markPaid: pickup PRESENCIAL pendiente → el POST cobra Y '
+        'avanza a confirmed en el mismo hecho — la entidad devuelta '
+        'reemplaza y sale del carril Pendiente (§041)', () async {
+      final order = AdminOrder(
+        id: 'w1',
+        channel: AdminOrderChannel.presencial,
+        serviceType: AdminServiceType.pickup,
+        status: OrderStatus.received,
+        items: const [],
+        paymentMethod: AdminPaymentMethod.cash,
+        paymentStatus: OrderPaymentStatus.pending,
+        subtotal: 18000,
+        deliveryFee: 0,
+        placedAt: DateTime(2024, 1, 1),
+      );
+      final confirm = FakeConfirmAdminOrderPaymentUseCase();
+      stubConfirmEcho(confirm, [order]);
+      final c = cubit(
+        loadQueue: loadUseCase([order]),
+        update: FakeUpdateAdminOrderStatusUseCase(),
+        confirm: confirm,
+      );
+      addTearDown(c.close);
+      await c.load();
+      expect(
+        c.state.laneOrders(OrderStatus.received).map((o) => o.id),
+        contains('w1'),
+      );
+
+      final failure = await c.markPaid('w1');
+
+      expect(failure, isNull);
+      verify(() => confirm.call('w1')).called(1);
+      final w1 = c.state.orderById('w1')!;
+      expect(w1.paymentStatus, OrderPaymentStatus.paid);
+      expect(w1.status, OrderStatus.confirmed);
+      // Salió del carril Pendiente → vive en Confirmado.
+      expect(
+        c.state.laneOrders(OrderStatus.received).map((o) => o.id),
+        isNot(contains('w1')),
+      );
+      expect(
+        c.state.laneOrders(OrderStatus.confirmed).map((o) => o.id),
+        contains('w1'),
+      );
+    });
+
+    test('markPaid: puertas locales = no-op SIN pegar al POST — '
+        'terminal, Nequi en espera del webhook y pago ya saldado '
+        '(§041)', () async {
+      final orders = [
+        _order(
+          'done',
+          OrderStatus.done,
+          DateTime(2024, 1, 1),
+          payment: OrderPaymentStatus.pending,
+        ),
+        _order(
+          'nequi',
+          OrderStatus.received,
+          DateTime(2024, 1, 1),
+          method: AdminPaymentMethod.nequi,
+          payment: OrderPaymentStatus.pending,
+        ),
+        _order(
+          'paid',
+          OrderStatus.received,
+          DateTime(2024, 1, 1),
+          payment: OrderPaymentStatus.paid,
+        ),
+      ];
+      final confirm = FakeConfirmAdminOrderPaymentUseCase();
+      final c = cubit(
+        loadQueue: loadUseCase(orders),
+        update: FakeUpdateAdminOrderStatusUseCase(),
+        confirm: confirm,
+      );
+      addTearDown(c.close);
+      await c.load();
+
+      expect(await c.markPaid('done'), isNull); // terminal
+      expect(await c.markPaid('nequi'), isNull); // el webhook manda
+      expect(await c.markPaid('paid'), isNull); // ya saldado
+      expect(await c.markPaid('ghost'), isNull); // fuera del state
+
+      verifyNever(() => confirm.call(any()));
+      // Sin toques al servidor → sin busy prendido.
+      expect(c.state.busyOrderIds, isEmpty);
+      expect(c.state.orderById('done')!.status, OrderStatus.done);
+    });
+
+    test('markPaid: falla del POST → devuelve la Failure y dispara '
+        'el resync silencioso de la cola (convención §040)', () async {
+      final order = _order(
+        'w1',
+        OrderStatus.ready,
+        DateTime(2024, 1, 1),
+        payment: OrderPaymentStatus.pending,
+      );
+      final load = loadUseCase([order]);
+      final confirm = FakeConfirmAdminOrderPaymentUseCase();
+      when(() => confirm.call('w1')).thenAnswer(
+        (_) async =>
+            const Left(AdminConflictFailure('PAYMENT_NOT_CONFIRMABLE')),
+      );
+      final c = cubit(
+        loadQueue: load,
+        update: FakeUpdateAdminOrderStatusUseCase(),
+        confirm: confirm,
+      );
+      addTearDown(c.close);
+      await c.load();
+
+      final failure = await c.markPaid('w1');
+
+      expect(
+        failure,
+        const AdminConflictFailure('PAYMENT_NOT_CONFIRMABLE'),
+      );
+      // El resync corrió en segundo plano — segundo llamado al load.
+      verify(() => load.call()).called(2);
+      expect(
+        c.state.orderById('w1')!.paymentStatus,
+        OrderPaymentStatus.pending,
+      );
+      expect(c.state.busyOrderIds, isEmpty);
+    });
+
+    test('markPaid busy anti-reentry: el segundo cobro sobre el '
+        'mismo pedido es no-op mientras el POST sigue en vuelo '
+        '(doble-tap §035)', () async {
+      final order = _order(
+        'w1',
+        OrderStatus.ready,
+        DateTime(2024, 1, 1),
+        payment: OrderPaymentStatus.pending,
+      );
+      final confirm = FakeConfirmAdminOrderPaymentUseCase();
+      final completer = Completer<Either<AdminFailure, AdminOrder>>();
+      when(() => confirm.call('w1')).thenAnswer((_) => completer.future);
+      final c = cubit(
+        loadQueue: loadUseCase([order]),
+        update: FakeUpdateAdminOrderStatusUseCase(),
+        confirm: confirm,
+      );
+      addTearDown(c.close);
+      await c.load();
+
+      final first = c.markPaid('w1'); // entra: emite busy + POST
+      expect(c.state.busyOrderIds, contains('w1'));
+
+      final second = await c.markPaid('w1'); // busy → no-op
+      expect(second, isNull);
+      verify(() => confirm.call('w1')).called(1);
+
+      completer.complete(
+        Right(order.copyWith(paymentStatus: OrderPaymentStatus.paid)),
+      );
+      expect(await first, isNull);
+      expect(
+        c.state.orderById('w1')!.paymentStatus,
+        OrderPaymentStatus.paid,
+      );
       expect(c.state.busyOrderIds, isEmpty);
     });
   });
 
-  group('AdminQueueCubit — cierre de caja §036', () {
+  group('AdminQueueCubit — cierre de caja §041 (GET/POST '
+      '/admin/day-close — el "servidor" del fixture responde el '
+      'resumen echo)', () {
     test('loadDayClosePreview: resumen del día — entregados, total, '
         'por método y cancelados como contexto', () async {
       final cubit = buildAdminQueueCubit();
       addTearDown(cubit.close);
       await cubit.load();
 
-      cubit.loadDayClosePreview();
+      await cubit.loadDayClosePreview();
 
       final preview = cubit.state.dayClose!;
       // Tres done-sin-cerrar: adm-16 ($26.000 cash), adm-17
@@ -968,10 +1166,38 @@ void main() {
       // El preview NO muta la cola.
       expect(cubit.state.active, hasLength(30));
       expect(cubit.state.history, hasLength(3));
+      expect(cubit.state.dayCloseFailed, isFalse);
     });
 
-    test('closeDay: archiva los done al history, devuelve el resumen '
-        'y el carril Entregado queda vacío de verdad', () async {
+    test('loadDayClosePreview: Left → dayCloseFailed (la pantalla '
+        'muestra error + Reintentar, no spinner eterno — §041)', () async {
+      final preview = FakeLoadAdminDayCloseUseCase();
+      when(() => preview.call()).thenAnswer(
+        (_) async => const Left(AdminOfflineFailure()),
+      );
+      final cubit = buildAdminQueueCubit(loadDayClose: preview);
+      addTearDown(cubit.close);
+      await cubit.load();
+
+      await cubit.loadDayClosePreview();
+
+      expect(cubit.state.dayCloseFailed, isTrue);
+      expect(cubit.state.dayClose, isNull);
+      // El reintento con el canal sano apaga el flag y llega el
+      // resumen.
+      stubLoadDayClose(
+        preview,
+        adminActiveFixtures(),
+        adminHistoryFixtures(),
+      );
+      await cubit.loadDayClosePreview();
+      expect(cubit.state.dayCloseFailed, isFalse);
+      expect(cubit.state.dayClose, isNotNull);
+    });
+
+    test('closeDay: archiva los done al FRENTE del history (el más '
+        'reciente primero — reversed), devuelve el resumen del '
+        'servidor y el carril Entregado queda vacío de verdad', () async {
       final cubit = buildAdminQueueCubit();
       addTearDown(cubit.close);
       await cubit.load();
@@ -981,18 +1207,38 @@ void main() {
       expect(summary!.orderCount, 3);
       expect(summary.totalAmount, 65000);
       expect(cubit.state.dayCloseBusy, isFalse);
-      // Los 3 done se archivaron al frente del historial (en orden
-      // del activo: adm-16 primero); el carril Entregado quedó
-      // vacío.
+      // Los 3 done se archivaron al frente del historial — el más
+      // reciente primero (closed.reversed: adm-5 entró último al
+      // carril Entregado); el carril quedó vacío.
       expect(cubit.state.deliveredCount, 0);
       expect(cubit.state.active.any((o) => o.id == 'adm-5'), isFalse);
       expect(cubit.state.active.any((o) => o.id == 'adm-16'), isFalse);
       expect(cubit.state.active.any((o) => o.id == 'adm-17'), isFalse);
-      expect(cubit.state.history.first.id, 'adm-16');
-      // PROVISIONAL (§038): un load posterior vuelve a traer los
-      // done del "servidor" (fixture) — el archivo local del cierre
-      // no persiste hasta el ciclo de integración del day-close.
+      expect(
+        cubit.state.history.take(3).map((o) => o.id),
+        equals(['adm-5', 'adm-17', 'adm-16']),
+      );
+      // El resync del load vuelve a traer los done del "servidor"
+      // (fixture estática) — en producción ya vendrían cerrados.
       await cubit.load();
+      expect(cubit.state.deliveredCount, 3);
+    });
+
+    test('closeDay: falla del POST → null y busy apagado — la '
+        'pantalla toastea y se queda en el preview (§041)', () async {
+      final close = FakeCloseAdminDayUseCase();
+      when(() => close.call()).thenAnswer(
+        (_) async => const Left(AdminServerFailure('boom')),
+      );
+      final cubit = buildAdminQueueCubit(closeDay: close);
+      addTearDown(cubit.close);
+      await cubit.load();
+
+      final summary = await cubit.closeDay();
+
+      expect(summary, isNull);
+      expect(cubit.state.dayCloseBusy, isFalse);
+      // Nada se archivó — el carril Entregado sigue lleno.
       expect(cubit.state.deliveredCount, 3);
     });
 

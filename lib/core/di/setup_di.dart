@@ -5,7 +5,10 @@ import '../../features/admin/data/datasources/implementations/admin_remote_datas
 import '../../features/admin/data/datasources/interfaces/i_admin_remote_datasource.dart';
 import '../../features/admin/data/repositories/admin_repository_impl.dart';
 import '../../features/admin/domain/repositories/i_admin_repository.dart';
+import '../../features/admin/domain/use_cases/close_admin_day_use_case.dart';
+import '../../features/admin/domain/use_cases/confirm_admin_order_payment_use_case.dart';
 import '../../features/admin/domain/use_cases/get_admin_order_detail_use_case.dart';
+import '../../features/admin/domain/use_cases/load_admin_day_close_use_case.dart';
 import '../../features/admin/domain/use_cases/load_admin_queue_use_case.dart';
 import '../../features/admin/domain/use_cases/update_admin_order_status_use_case.dart';
 import '../../features/admin/presentation/cubit/admin_queue_cubit.dart';
@@ -329,11 +332,23 @@ void setupDI() {
   locator.registerLazySingleton<UpdateAdminOrderStatusUseCase>(
     () => UpdateAdminOrderStatusUseCase(locator()),
   );
+  locator.registerLazySingleton<ConfirmAdminOrderPaymentUseCase>(
+    () => ConfirmAdminOrderPaymentUseCase(locator()),
+  );
+  locator.registerLazySingleton<LoadAdminDayCloseUseCase>(
+    () => LoadAdminDayCloseUseCase(locator()),
+  );
+  locator.registerLazySingleton<CloseAdminDayUseCase>(
+    () => CloseAdminDayUseCase(locator()),
+  );
   locator.registerLazySingleton<AdminQueueCubit>(
     () => AdminQueueCubit(
       loadQueue: locator(),
       getOrderDetail: locator(),
       updateOrderStatus: locator(),
+      confirmOrderPayment: locator(),
+      loadDayClose: locator(),
+      closeDay: locator(),
     ),
   );
 

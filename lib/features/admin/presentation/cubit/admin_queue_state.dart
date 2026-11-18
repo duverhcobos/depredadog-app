@@ -19,6 +19,7 @@ class AdminQueueState extends Equatable {
     this.busyOrderIds = const {},
     this.dayClose,
     this.dayCloseBusy = false,
+    this.dayCloseFailed = false,
   });
 
   /// Cola viva: en curso (received→ready) + done SIN cerrar — el
@@ -36,19 +37,25 @@ class AdminQueueState extends Equatable {
   /// con datos, el banner sobre la bandeja conservada (§038).
   final bool failed;
 
-  /// Pedidos con una operación mock en vuelo (§035 — advance /
-  /// markPaid / cancel): prende el spinner inline del botón de
-  /// acción en card y detalle, y bloquea el doble-tap — la misma
+  /// Pedidos con una mutación remota en vuelo (§040/§041 — PATCH
+  /// de estado o POST de cobro): prende el spinner inline del botón
+  /// de acción en card y detalle, y bloquea el doble-tap — la misma
   /// guardia que el UPDATE condicional del backend resuelve con 409.
   final Set<String> busyOrderIds;
 
-  /// Preview del cierre calculado en mocks — null hasta que la
-  /// pantalla /admin/day-close lo pida.
+  /// Preview del cierre tal como lo devuelve el servidor (§041 —
+  /// GET /admin/day-close) — null hasta que la pantalla
+  /// /admin/day-close lo pida.
   final AdminDayClose? dayClose;
 
-  /// El cierre mock está en vuelo — el CTA de confirmar muestra
+  /// El POST del cierre está en vuelo — el CTA de confirmar muestra
   /// spinner (convención checkout).
   final bool dayCloseBusy;
+
+  /// El preview del cierre FALLÓ (§041 — GET /admin/day-close):
+  /// sin este flag la pantalla quedaba en spinner eterno — ahora
+  /// muestra error + Reintentar (misma convención de la cola).
+  final bool dayCloseFailed;
 
   /// Carriles del kanban en orden fijo — done va último (es el
   /// "carril entregados" que espera el cierre).
@@ -99,6 +106,7 @@ class AdminQueueState extends Equatable {
     Set<String>? busyOrderIds,
     AdminDayClose? Function()? dayClose,
     bool? dayCloseBusy,
+    bool? dayCloseFailed,
   }) => AdminQueueState(
     active: active ?? this.active,
     history: history ?? this.history,
@@ -107,6 +115,7 @@ class AdminQueueState extends Equatable {
     busyOrderIds: busyOrderIds ?? this.busyOrderIds,
     dayClose: dayClose != null ? dayClose() : this.dayClose,
     dayCloseBusy: dayCloseBusy ?? this.dayCloseBusy,
+    dayCloseFailed: dayCloseFailed ?? this.dayCloseFailed,
   );
 
   @override
@@ -118,5 +127,6 @@ class AdminQueueState extends Equatable {
     busyOrderIds,
     dayClose,
     dayCloseBusy,
+    dayCloseFailed,
   ];
 }

@@ -6,8 +6,10 @@ import 'package:depredadog_app/core/network/interfaces/i_network_info.dart';
 import 'package:depredadog_app/core/network/interfaces/i_network_service.dart';
 import 'package:depredadog_app/features/admin/data/datasources/implementations/admin_remote_datasource_impl.dart';
 import 'package:depredadog_app/features/admin/data/datasources/interfaces/i_admin_remote_datasource.dart';
+import 'package:depredadog_app/features/admin/data/models/admin_day_close_model.dart';
 import 'package:depredadog_app/features/admin/data/models/admin_order_model.dart';
 import 'package:depredadog_app/features/admin/data/repositories/admin_repository_impl.dart';
+import 'package:depredadog_app/features/admin/domain/entities/admin_day_close.dart';
 import 'package:depredadog_app/features/admin/domain/entities/admin_order.dart';
 import 'package:depredadog_app/features/admin/domain/failures/admin_failure.dart';
 import 'package:depredadog_app/features/admin/domain/repositories/i_admin_repository.dart';
@@ -366,6 +368,124 @@ void main() {
             cancelReason: any(named: 'cancelReason'),
           ),
         );
+      });
+    });
+
+    group('confirmOrderPayment (§041 — POST '
+        '/admin/orders/:id/confirm-payment)', () {
+      test('éxito → Right(AdminOrder) del datasource — la orden '
+          'cobrada y avanzada en el mismo hecho viaja intacta', () async {
+        final paid = AdminOrderModel.fromJson(
+          orderJson(id: 'ord-1', status: 'done'),
+        );
+        when(
+          () => remote.confirmPayment('ord-1'),
+        ).thenAnswer((_) async => paid);
+
+        final result = await repository.confirmOrderPayment('ord-1');
+
+        result.fold(
+          (_) => fail('se esperaba Right con la orden cobrada'),
+          (o) => expect(o, paid),
+        );
+        verify(() => remote.confirmPayment('ord-1')).called(1);
+      });
+
+      test('409 PAYMENT_NOT_CONFIRMABLE → AdminConflictFailure con '
+          'el errorCode viajando (la UI muestra "el pedido ya '
+          'cambió")', () async {
+        when(() => remote.confirmPayment('ord-1')).thenThrow(
+          const ServerException(
+            'Payment cannot be confirmed',
+            statusCode: 409,
+            errorCode: 'PAYMENT_NOT_CONFIRMABLE',
+          ),
+        );
+
+        final result = await repository.confirmOrderPayment('ord-1');
+
+        expect(
+          result,
+          const Left<AdminFailure, AdminOrder>(
+            AdminConflictFailure('PAYMENT_NOT_CONFIRMABLE'),
+          ),
+        );
+      });
+
+      test('sin conectividad → Left(AdminOfflineFailure) y el '
+          'datasource NUNCA se llama', () async {
+        when(() => networkInfo.isConnected).thenAnswer((_) async => false);
+
+        final result = await repository.confirmOrderPayment('ord-1');
+
+        expect(
+          result,
+          const Left<AdminFailure, AdminOrder>(AdminOfflineFailure()),
+        );
+        verifyNever(() => remote.confirmPayment(any()));
+      });
+    });
+
+    group('day-close (§041 — GET/POST /admin/day-close)', () {
+      final snapshot = AdminDayCloseModel.fromJson(
+        const {
+          'orderCount': 2,
+          'totalAmount': 44000,
+          'byMethod': [
+            {'method': 'cash', 'count': 1, 'amount': 28000},
+          ],
+          'cancelledCount': 1,
+          'cancelledAmount': 16000,
+        },
+      );
+
+      test('getDayClosePreview éxito → Right(snapshot) del '
+          'datasource', () async {
+        when(
+          () => remote.fetchDayClose(),
+        ).thenAnswer((_) async => snapshot);
+
+        final result = await repository.getDayClosePreview();
+
+        result.fold(
+          (_) => fail('se esperaba Right con el preview'),
+          (s) => expect(s, snapshot),
+        );
+        verify(() => remote.fetchDayClose()).called(1);
+      });
+
+      test('closeDay éxito → Right(snapshot persistido) del '
+          'datasource', () async {
+        when(
+          () => remote.postDayClose(),
+        ).thenAnswer((_) async => snapshot);
+
+        final result = await repository.closeDay();
+
+        result.fold(
+          (_) => fail('se esperaba Right con el cierre'),
+          (s) => expect(s, snapshot),
+        );
+        verify(() => remote.postDayClose()).called(1);
+      });
+
+      test('sin conectividad → Left(AdminOfflineFailure) en AMBOS y '
+          'el datasource NUNCA se llama', () async {
+        when(() => networkInfo.isConnected).thenAnswer((_) async => false);
+
+        final preview = await repository.getDayClosePreview();
+        final closed = await repository.closeDay();
+
+        expect(
+          preview,
+          const Left<AdminFailure, AdminDayClose>(AdminOfflineFailure()),
+        );
+        expect(
+          closed,
+          const Left<AdminFailure, AdminDayClose>(AdminOfflineFailure()),
+        );
+        verifyNever(() => remote.fetchDayClose());
+        verifyNever(() => remote.postDayClose());
       });
     });
   });

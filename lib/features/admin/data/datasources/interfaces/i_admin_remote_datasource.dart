@@ -1,3 +1,4 @@
+import '../../models/admin_day_close_model.dart';
 import '../../models/admin_order_model.dart';
 
 /// Puerto remoto de la cola del local (GET /admin/orders — backend §019).
@@ -27,4 +28,21 @@ abstract class IAdminRemoteDataSource {
     required String to,
     String? cancelReason,
   });
+
+  /// POST /admin/orders/:id/confirm-payment (§041 — backend §022):
+  /// cobra el pago pending (claim atómico, idempotente — un pago ya
+  /// `paid` responde la misma orden) y AVANZA la orden cuando el
+  /// estado lo amerita: pending+presencial+pickup→confirmed,
+  /// ready→done. El 409 sale como ServerException con errorCode
+  /// (PAYMENT_NOT_CONFIRMABLE).
+  Future<AdminOrderModel> confirmPayment(String orderId);
+
+  /// GET /admin/day-close (§041 — backend §022): preview de solo
+  /// lectura — los terminales (`done`+`cancelled`) aún sin cerrar.
+  Future<AdminDayCloseModel> fetchDayClose();
+
+  /// POST /admin/day-close (§041 — backend §022): ejecuta el cierre
+  /// atómico — crea el registro, estampa `day_close_id` en los
+  /// terminales y devuelve el snapshot persistido.
+  Future<AdminDayCloseModel> postDayClose();
 }

@@ -1408,6 +1408,10 @@
   "@adminDayCloseEmpty": {
     "description": "Nota del resumen del cierre de caja cuando no hubo pedidos entregados — el cierre vacío está permitido (§036)"
   },
+  "adminDayCloseLoadError": "No pudimos cargar el cierre",
+  "@adminDayCloseLoadError": {
+    "description": "Vista de error del preview del cierre de caja cuando el GET /admin/day-close falla — con botón Reintentar (§041)"
+  },
   "adminToastOrderPreparing": "Pedido a la plancha",
   "@adminToastOrderPreparing": {
     "description": "Toast de éxito tras avanzar un pedido admin de confirmed a preparing (§036)"
@@ -1432,6 +1436,14 @@
         "type": "String"
       }
     }
+  },
+  "adminToastPaymentFailed": "No pudimos registrar el pago — inténtalo de nuevo",
+  "@adminToastPaymentFailed": {
+    "description": "Toast de error específico del cobro manual admin (POST confirm-payment offline/5xx — el 409 usa el genérico 'el pedido ya cambió', §041)"
+  },
+  "adminToastDayCloseFailed": "No pudimos cerrar la caja — inténtalo de nuevo",
+  "@adminToastDayCloseFailed": {
+    "description": "Toast de error cuando el POST /admin/day-close falla — la pantalla se queda en el preview para reintentar (§041)"
   },
   "adminLaneEmpty": "Sin pedidos",
   "@adminLaneEmpty": {

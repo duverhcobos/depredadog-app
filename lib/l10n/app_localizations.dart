@@ -2506,6 +2506,12 @@ abstract class AppLocalizations {
   /// **'Cierre del día — sin pedidos entregados. El registro queda como bitácora.'**
   String get adminDayCloseEmpty;
 
+  /// Vista de error del preview del cierre de caja cuando el GET /admin/day-close falla — con botón Reintentar (§041)
+  ///
+  /// In es, this message translates to:
+  /// **'No pudimos cargar el cierre'**
+  String get adminDayCloseLoadError;
+
   /// Toast de éxito tras avanzar un pedido admin de confirmed a preparing (§036)
   ///
   /// In es, this message translates to:
@@ -2535,6 +2541,18 @@ abstract class AppLocalizations {
   /// In es, this message translates to:
   /// **'Día cerrado — {total}'**
   String adminToastDayClosed(String total);
+
+  /// Toast de error específico del cobro manual admin (POST confirm-payment offline/5xx — el 409 usa el genérico 'el pedido ya cambió', §041)
+  ///
+  /// In es, this message translates to:
+  /// **'No pudimos registrar el pago — inténtalo de nuevo'**
+  String get adminToastPaymentFailed;
+
+  /// Toast de error cuando el POST /admin/day-close falla — la pantalla se queda en el preview para reintentar (§041)
+  ///
+  /// In es, this message translates to:
+  /// **'No pudimos cerrar la caja — inténtalo de nuevo'**
+  String get adminToastDayCloseFailed;
 
   /// Vacío compacto de un carril del kanban de Cocina sin pedidos — el carril existe aunque esté vacío (§036)
   ///

@@ -1368,6 +1368,9 @@ class AppLocalizationsEs extends AppLocalizations {
       'Cierre del día — sin pedidos entregados. El registro queda como bitácora.';
 
   @override
+  String get adminDayCloseLoadError => 'No pudimos cargar el cierre';
+
+  @override
   String get adminToastOrderPreparing => 'Pedido a la plancha';
 
   @override
@@ -1385,6 +1388,14 @@ class AppLocalizationsEs extends AppLocalizations {
   String adminToastDayClosed(String total) {
     return 'Día cerrado — $total';
   }
+
+  @override
+  String get adminToastPaymentFailed =>
+      'No pudimos registrar el pago — inténtalo de nuevo';
+
+  @override
+  String get adminToastDayCloseFailed =>
+      'No pudimos cerrar la caja — inténtalo de nuevo';
 
   @override
   String get adminLaneEmpty => 'Sin pedidos';

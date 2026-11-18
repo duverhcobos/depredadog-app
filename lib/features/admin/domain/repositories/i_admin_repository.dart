@@ -1,5 +1,6 @@
 import 'package:dartz/dartz.dart';
 
+import '../entities/admin_day_close.dart';
 import '../entities/admin_order.dart';
 import '../failures/admin_failure.dart';
 
@@ -36,4 +37,18 @@ abstract class IAdminRepository {
     required String to,
     String? cancelReason,
   });
+
+  /// POST /admin/orders/:id/confirm-payment (§041): cobra y avanza
+  /// (pending+presencial+pickup→confirmed, ready→done); idempotente
+  /// en `paid`. Devuelve la entidad completa.
+  Future<Either<AdminFailure, AdminOrder>> confirmOrderPayment(
+    String orderId,
+  );
+
+  /// GET /admin/day-close (§041): preview de terminales sin cerrar.
+  Future<Either<AdminFailure, AdminDayClose>> getDayClosePreview();
+
+  /// POST /admin/day-close (§041): cierra el periodo — devuelve el
+  /// snapshot persistido del servidor.
+  Future<Either<AdminFailure, AdminDayClose>> closeDay();
 }

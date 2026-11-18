@@ -10,10 +10,11 @@ import '../../domain/entities/admin_day_close.dart';
 import '../cubit/admin_queue_cubit.dart';
 import '../cubit/admin_queue_state.dart';
 
-/// Cierre de caja del día (§036 — presentación, mocks del cubit):
-/// preview del resumen (entregados por archivar, total, por método,
-/// cancelados del periodo) → "Confirmar cierre" ejecuta → estado de
-/// éxito con check + el resumen cerrado + "Listo" que regresa.
+/// Cierre de caja del día (§036 presentación; §041 integración
+/// real — GET/POST /admin/day-close): preview del resumen
+/// (entregados por archivar, total, por método, cancelados del
+/// periodo) → "Confirmar cierre" ejecuta → estado de éxito con
+/// check + el resumen cerrado + "Listo" que regresa.
 /// El cierre vacío está permitido (decisión del dueño) — con cero
 /// entregados la pantalla muestra el resumen en ceros con su nota.
 /// Lenguaje: firma de marca (franja + flecha onPrimary + título
@@ -34,13 +35,20 @@ class _AdminDayCloseScreenState extends State<AdminDayCloseScreen> {
   @override
   void initState() {
     super.initState();
-    // Preview al entrar (GET /admin/day-close en integración).
+    // Preview al entrar — GET /admin/day-close real (§041).
     context.read<AdminQueueCubit>().loadDayClosePreview();
   }
 
   Future<void> _confirmClose() async {
     final result = await context.read<AdminQueueCubit>().closeDay();
-    if (!mounted || result == null) return;
+    if (!mounted) return;
+    if (result == null) {
+      AppToast.error(
+        context,
+        AppLocalizations.of(context)!.adminToastDayCloseFailed,
+      );
+      return;
+    }
     AppToast.success(
       context,
       AppLocalizations.of(context)!
@@ -65,16 +73,23 @@ class _AdminDayCloseScreenState extends State<AdminDayCloseScreen> {
                   Expanded(
                     child: summary == null
                         ? LayoutBuilder(
-                            builder: (context, c) => Padding(
-                              padding: EdgeInsets.only(
-                                left: c.maxWidth * kSignatureStripFraction,
-                              ),
-                              child: Center(
-                                child: CircularProgressIndicator(
-                                  color: colors.primary,
-                                ),
-                              ),
-                            ),
+                            builder: (context, c) => state.dayCloseFailed
+                                ? _DayCloseError(
+                                    onRetry: () => context
+                                        .read<AdminQueueCubit>()
+                                        .loadDayClosePreview(),
+                                  )
+                                : Padding(
+                                    padding: EdgeInsets.only(
+                                      left: c.maxWidth *
+                                          kSignatureStripFraction,
+                                    ),
+                                    child: Center(
+                                      child: CircularProgressIndicator(
+                                        color: colors.primary,
+                                      ),
+                                    ),
+                                  ),
                           )
                         : LayoutBuilder(
                             builder: (context, c) => ListView(
@@ -138,7 +153,13 @@ class _AdminDayCloseScreenState extends State<AdminDayCloseScreen> {
                               ? IgnorePointer(
                                   ignoring: state.dayCloseBusy,
                                   child: FilledButton(
-                                    onPressed: _confirmClose,
+                                    // Sin resumen visible NO se
+                                    // cierra a ciegas: disabled
+                                    // mientras carga o tras el
+                                    // error del preview (revisor
+                                    // §041).
+                                    onPressed:
+                                        summary == null ? null : _confirmClose,
                                     child: state.dayCloseBusy
                                         ? SizedBox(
                                             height: 18,
@@ -178,6 +199,52 @@ class _AdminDayCloseScreenState extends State<AdminDayCloseScreen> {
           ),
         );
       },
+    );
+  }
+}
+
+/// Error del preview (§041 — misma familia `_QueueError` de la
+/// cola): ícono cloud_off + mensaje + Reintentar, acotado a la zona
+/// negra como el spinner — el GET /admin/day-close se re-pide en el
+/// toque. Sin el flag dayCloseFailed la pantalla quedaba en spinner
+/// eterno.
+class _DayCloseError extends StatelessWidget {
+  const _DayCloseError({required this.onRetry});
+
+  final VoidCallback onRetry;
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
+    final colors = Theme.of(context).colorScheme;
+    final text = Theme.of(context).textTheme;
+    return LayoutBuilder(
+      builder: (context, c) => Padding(
+        padding: EdgeInsets.only(left: c.maxWidth * kSignatureStripFraction),
+        child: Center(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(
+                Icons.cloud_off_rounded,
+                size: 40,
+                color: colors.onSurface.withValues(alpha: 0.5),
+              ),
+              const SizedBox(height: 12),
+              Text(
+                l10n.adminDayCloseLoadError,
+                textAlign: TextAlign.center,
+                style: text.titleSmall?.copyWith(fontWeight: FontWeight.w700),
+              ),
+              const SizedBox(height: 16),
+              OutlinedButton(
+                onPressed: onRetry,
+                child: Text(l10n.ordersRetry),
+              ),
+            ],
+          ),
+        ),
+      ),
     );
   }
 }

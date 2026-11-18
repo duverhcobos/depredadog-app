@@ -60,6 +60,31 @@ FakeUpdateAdminOrderStatusUseCase _fixtureUpdateUseCase() {
   return update;
 }
 
+/// Use case falso del claim de pago (§041) — echo sobre las
+/// fixtures: el tap en "Registrar pago" pega al POST stub.
+FakeConfirmAdminOrderPaymentUseCase _fixtureConfirmUseCase() {
+  final confirm = FakeConfirmAdminOrderPaymentUseCase();
+  stubConfirmEcho(confirm, [
+    ...adminActiveFixtures(),
+    ...adminHistoryFixtures(),
+  ]);
+  return confirm;
+}
+
+/// Use cases falsos del cierre (§041) — resumen echo; ningún test
+/// de esta pantalla toca el cierre pero el ctor los exige.
+FakeLoadAdminDayCloseUseCase _fixtureLoadDayCloseUseCase() {
+  final preview = FakeLoadAdminDayCloseUseCase();
+  stubLoadDayClose(preview, adminActiveFixtures(), adminHistoryFixtures());
+  return preview;
+}
+
+FakeCloseAdminDayUseCase _fixtureCloseDayUseCase() {
+  final close = FakeCloseAdminDayUseCase();
+  stubCloseDay(close, adminActiveFixtures(), adminHistoryFixtures());
+  return close;
+}
+
 /// Cola que falla la primera carga — se emite el flag failed para
 /// ejercer la rama de error + reintento (el use case real también
 /// devuelve Left en este camino, §038).
@@ -69,6 +94,9 @@ class _FailingQueueCubit extends AdminQueueCubit {
         loadQueue: _fixtureUseCase(),
         getOrderDetail: _fixtureDetailUseCase(),
         updateOrderStatus: _fixtureUpdateUseCase(),
+        confirmOrderPayment: _fixtureConfirmUseCase(),
+        loadDayClose: _fixtureLoadDayCloseUseCase(),
+        closeDay: _fixtureCloseDayUseCase(),
       );
 
   bool fail = true;
@@ -91,6 +119,9 @@ class _CountingQueueCubit extends AdminQueueCubit {
         loadQueue: _fixtureUseCase(),
         getOrderDetail: _fixtureDetailUseCase(),
         updateOrderStatus: _fixtureUpdateUseCase(),
+        confirmOrderPayment: _fixtureConfirmUseCase(),
+        loadDayClose: _fixtureLoadDayCloseUseCase(),
+        closeDay: _fixtureCloseDayUseCase(),
       );
 
   int loads = 0;
@@ -112,6 +143,9 @@ class _StaleErrorQueueCubit extends AdminQueueCubit {
         loadQueue: _fixtureUseCase(),
         getOrderDetail: _fixtureDetailUseCase(),
         updateOrderStatus: _fixtureUpdateUseCase(),
+        confirmOrderPayment: _fixtureConfirmUseCase(),
+        loadDayClose: _fixtureLoadDayCloseUseCase(),
+        closeDay: _fixtureCloseDayUseCase(),
       );
 
   @override
@@ -496,6 +530,49 @@ void main() {
       OrderStatus.confirmed,
     );
     expect(find.text('Registrar pago'), findsOneWidget);
+  });
+
+  testWidgets('"Registrar pago" mueve el pickup pendiente al carril '
+      'Confirmado: toast de pago + el chip del carril pulsa '
+      '(§041 — POST confirm-payment real)', (tester) async {
+    final calls = stubToast(tester);
+    await pumpQueue(tester);
+    await loadQueue(tester);
+
+    // Las recogidas presenciales sin cobrar van al FONDO del FIFO —
+    // el mismo drag-loop del test de la puerta las construye.
+    final laneList = find.byType(AnimatedList);
+    for (var i = 0; i < 8; i++) {
+      await tester.drag(laneList, const Offset(0, -400));
+      await tester.pump();
+    }
+    await tester.pumpAndSettle();
+    expect(find.text('Registrar pago'), findsNWidgets(2));
+
+    // adm-25 (mostrador cash pendiente) es la primera — el POST
+    // stub cobra y avanza a Confirmado en el mismo hecho.
+    await tester.tap(find.text('Registrar pago').first);
+    await tester.pump(const Duration(milliseconds: 500));
+    await tester.pumpAndSettle();
+
+    expect(
+      calls.any((c) => c.arguments['msg'] == 'Pago confirmado'),
+      isTrue,
+    );
+    expect(
+      cubit.state.orderById('adm-25')!.status,
+      OrderStatus.confirmed,
+    );
+    expect(
+      cubit.state.orderById('adm-25')!.paymentStatus,
+      OrderPaymentStatus.paid,
+    );
+    // El chip Confirmado pulsó 7→8 y Pendiente 13→12 — ambos
+    // contadores son únicos en el strip.
+    expect(find.text('8'), findsOneWidget);
+    expect(find.text('12'), findsOneWidget);
+
+    await tester.pump(const Duration(seconds: 2));
   });
 
   testWidgets('cobro Nequi congelado: rótulo de espera SIN botones '

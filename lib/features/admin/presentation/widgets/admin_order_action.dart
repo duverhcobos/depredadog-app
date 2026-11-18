@@ -74,8 +74,9 @@ String adminOrderActionLabel(
 
 /// Ejecuta [action] sobre el cubit compartido y levanta el toast
 /// correspondiente al resultado: éxito SOLO si la mutación devolvió
-/// null (§040 — el PATCH pudo fallar); conflicto 409 → "el pedido ya
-/// cambió"; el resto → error genérico. La acción llega
+/// null (§040/§041 — el PATCH o el POST de cobro pudo fallar);
+/// conflicto 409 → "el pedido ya cambió"; cobro fallido → toast de
+/// pago específico; el resto → error genérico. La acción llega
 /// explícita — el llamador decide: el botón primario usa la matriz
 /// (`adminOrderNextAction`) pero el "Registrar pago" de la fila de pago del
 /// detalle SIEMPRE cobra, aunque la matriz apunte a otro paso (un
@@ -89,12 +90,10 @@ Future<void> runAdminOrderAction(
   AdminOrderAction action,
 ) async {
   final cubit = context.read<AdminQueueCubit>();
-  // markPaid sigue local (Future<void>) hasta §041 — el switch por
-  // caso captura el AdminFailure? solo en las ramas del PATCH.
   AdminFailure? failure;
   switch (action) {
     case AdminOrderAction.markPaid:
-      await cubit.markPaid(order.id);
+      failure = await cubit.markPaid(order.id);
     case AdminOrderAction.confirm:
     case AdminOrderAction.prepare:
     case AdminOrderAction.markReady:
@@ -108,7 +107,9 @@ Future<void> runAdminOrderAction(
       context,
       failure is AdminConflictFailure
           ? l10n.adminToastActionRejected
-          : l10n.adminToastActionFailed,
+          : action == AdminOrderAction.markPaid
+              ? l10n.adminToastPaymentFailed
+              : l10n.adminToastActionFailed,
     );
     return;
   }

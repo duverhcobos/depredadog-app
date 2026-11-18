@@ -1,9 +1,13 @@
 import 'package:dartz/dartz.dart';
 import 'package:mocktail/mocktail.dart';
+import 'package:depredadog_app/features/admin/domain/entities/admin_day_close.dart';
 import 'package:depredadog_app/features/admin/domain/entities/admin_order.dart';
 import 'package:depredadog_app/features/admin/domain/failures/admin_failure.dart';
 import 'package:depredadog_app/features/admin/domain/repositories/i_admin_repository.dart';
+import 'package:depredadog_app/features/admin/domain/use_cases/close_admin_day_use_case.dart';
+import 'package:depredadog_app/features/admin/domain/use_cases/confirm_admin_order_payment_use_case.dart';
 import 'package:depredadog_app/features/admin/domain/use_cases/get_admin_order_detail_use_case.dart';
+import 'package:depredadog_app/features/admin/domain/use_cases/load_admin_day_close_use_case.dart';
 import 'package:depredadog_app/features/admin/domain/use_cases/load_admin_queue_use_case.dart';
 import 'package:depredadog_app/features/admin/domain/use_cases/update_admin_order_status_use_case.dart';
 import 'package:depredadog_app/features/admin/presentation/cubit/admin_queue_cubit.dart';
@@ -1155,6 +1159,24 @@ class FakeGetAdminOrderDetailUseCase extends Mock
 class FakeUpdateAdminOrderStatusUseCase extends Mock
     implements UpdateAdminOrderStatusUseCase {}
 
+/// Use case falso del claim de pago (§041 — POST
+/// /admin/orders/:id/confirm-payment): el test lo arma con su propio
+/// when() o con `stubConfirmEcho` (mini-backend que cobra y avanza).
+class FakeConfirmAdminOrderPaymentUseCase extends Mock
+    implements ConfirmAdminOrderPaymentUseCase {}
+
+/// Use case falso del preview del cierre (§041 — GET
+/// /admin/day-close): el test lo arma con su propio when() o con
+/// `stubDayClose`/`stubLoadDayClose` (resumen echo de las fixtures).
+class FakeLoadAdminDayCloseUseCase extends Mock
+    implements LoadAdminDayCloseUseCase {}
+
+/// Use case falso del cierre ejecutado (§041 — POST
+/// /admin/day-close): el test lo arma con su propio when() o con
+/// `stubDayClose`/`stubCloseDay` (resumen echo de las fixtures).
+class FakeCloseAdminDayUseCase extends Mock
+    implements CloseAdminDayUseCase {}
+
 /// Stub "mini-backend" del PATCH status: aplica el `to` pedido sobre
 /// la orden conocida por id y devuelve la entidad con el estado nuevo
 /// — `copyWith` re-sella `statusChangedAt` igual que el servidor
@@ -1195,6 +1217,127 @@ void stubUpdateEcho(
   });
 }
 
+/// Stub "mini-backend" del POST confirm-payment (§041 — backend
+/// §022): cobra el pago pending Y avanza la orden en el mismo hecho
+/// — pending+presencial+pickup→confirmed, ready→done, cualquier otro
+/// estado solo cobra; `paid` es idempotente (responde la orden tal
+/// cual). Un pago `failed` NO resucita: el backend responde 409
+/// PAYMENT_NOT_CONFIRMABLE (el flujo muerto es terminal). Misma
+/// forma de `stubUpdateEcho`: encuentra por id y devuelve la entidad
+/// ya mutada (copyWith re-sella statusChangedAt cuando se mueve).
+void stubConfirmEcho(
+  FakeConfirmAdminOrderPaymentUseCase confirm,
+  List<AdminOrder> known,
+) {
+  final byId = {for (final o in known) o.id: o};
+  when(() => confirm.call(any())).thenAnswer((inv) async {
+    final id = inv.positionalArguments.first as String;
+    final base = byId[id];
+    if (base == null) {
+      return const Left<AdminFailure, AdminOrder>(
+        AdminServerFailure('ORDER_NOT_FOUND'),
+      );
+    }
+    if (base.paymentStatus == OrderPaymentStatus.failed) {
+      return const Left<AdminFailure, AdminOrder>(
+        AdminConflictFailure('PAYMENT_NOT_CONFIRMABLE'),
+      );
+    }
+    final next = switch (base.status) {
+      OrderStatus.received
+          when base.channel == AdminOrderChannel.presencial &&
+              base.serviceType == AdminServiceType.pickup =>
+        OrderStatus.confirmed,
+      OrderStatus.ready => OrderStatus.done,
+      _ => base.status,
+    };
+    return Right<AdminFailure, AdminOrder>(
+      base.copyWith(status: next, paymentStatus: OrderPaymentStatus.paid),
+    );
+  });
+}
+
+/// Resumen echo del cierre (§041 — GET y POST /admin/day-close
+/// responden el MISMO snapshot): la agregación que el backend
+/// devolvería sobre las listas servidas — done-sin-cerrar del
+/// active suman y desglosan por método (en orden de aparición),
+/// cancelled del history cuentan aparte como contexto.
+AdminDayClose adminDayCloseSummaryOf(
+  List<AdminOrder> active,
+  List<AdminOrder> history,
+) {
+  final done = [
+    for (final o in active)
+      if (o.status == OrderStatus.done) o,
+  ];
+  final cancelled = [
+    for (final o in history)
+      if (o.status == OrderStatus.cancelled) o,
+  ];
+  final byMethod = <String, ({int count, int amount})>{};
+  for (final o in done) {
+    final m = o.paymentMethod.name;
+    final cur = byMethod[m] ?? (count: 0, amount: 0);
+    byMethod[m] = (count: cur.count + 1, amount: cur.amount + o.total);
+  }
+  return AdminDayClose(
+    orderCount: done.length,
+    totalAmount: done.fold(0, (acc, o) => acc + o.total),
+    byMethod: [
+      for (final e in byMethod.entries)
+        AdminDayCloseMethod(
+          method: e.key,
+          count: e.value.count,
+          amount: e.value.amount,
+        ),
+    ],
+    cancelledCount: cancelled.length,
+    cancelledAmount: cancelled.fold(0, (acc, o) => acc + o.total),
+  );
+}
+
+/// Stub del preview (§041 — GET /admin/day-close): Right con el
+/// resumen echo de las listas servidas.
+void stubLoadDayClose(
+  FakeLoadAdminDayCloseUseCase loadDayClose,
+  List<AdminOrder> active,
+  List<AdminOrder> history,
+) {
+  when(() => loadDayClose.call()).thenAnswer(
+    (_) async =>
+        Right<AdminFailure, AdminDayClose>(
+          adminDayCloseSummaryOf(active, history),
+        ),
+  );
+}
+
+/// Stub del cierre (§041 — POST /admin/day-close): Right con el
+/// MISMO resumen echo que el preview — el snapshot persistido.
+void stubCloseDay(
+  FakeCloseAdminDayUseCase closeDay,
+  List<AdminOrder> active,
+  List<AdminOrder> history,
+) {
+  when(() => closeDay.call()).thenAnswer(
+    (_) async =>
+        Right<AdminFailure, AdminDayClose>(
+          adminDayCloseSummaryOf(active, history),
+        ),
+  );
+}
+
+/// Los dos lados del cierre con un solo stub (§041): el preview
+/// y la ejecución responden el mismo snapshot echo.
+void stubDayClose(
+  FakeLoadAdminDayCloseUseCase loadDayClose,
+  FakeCloseAdminDayUseCase closeDay,
+  List<AdminOrder> active,
+  List<AdminOrder> history,
+) {
+  stubLoadDayClose(loadDayClose, active, history);
+  stubCloseDay(closeDay, active, history);
+}
+
 /// Cubit listo para tests: `load()` devuelve las fixtures (o las listas
 /// inyectadas) — sustituye al viejo `AdminQueueCubit(mockActive:…)`.
 /// `getOrderDetail` (§039): sin inyección queda en Left silencioso —
@@ -1203,6 +1346,10 @@ void stubUpdateEcho(
 /// `updateOrderStatus` (§040): sin inyección queda en `stubUpdateEcho`
 /// sobre las mismas listas servidas por load — el PATCH "responde"
 /// como el backend (estado nuevo + statusChangedAt re-sellado).
+/// `confirmOrderPayment` (§041): sin inyección queda en
+/// `stubConfirmEcho` — cobra y avanza como el backend.
+/// `loadDayClose`/`closeDay` (§041): sin inyección responden el
+/// resumen echo de `adminDayCloseSummaryOf` sobre las mismas listas.
 AdminQueueCubit buildAdminQueueCubit({
   List<AdminOrder>? active,
   List<AdminOrder>? history,
@@ -1210,10 +1357,17 @@ AdminQueueCubit buildAdminQueueCubit({
   AdminFailure? historyFailure,
   FakeGetAdminOrderDetailUseCase? getOrderDetail,
   FakeUpdateAdminOrderStatusUseCase? updateOrderStatus,
+  FakeConfirmAdminOrderPaymentUseCase? confirmOrderPayment,
+  FakeLoadAdminDayCloseUseCase? loadDayClose,
+  FakeCloseAdminDayUseCase? closeDay,
 }) {
   final useCase = FakeLoadAdminQueueUseCase();
   final detail = getOrderDetail ?? FakeGetAdminOrderDetailUseCase();
   final update = updateOrderStatus ?? FakeUpdateAdminOrderStatusUseCase();
+  final confirm =
+      confirmOrderPayment ?? FakeConfirmAdminOrderPaymentUseCase();
+  final preview = loadDayClose ?? FakeLoadAdminDayCloseUseCase();
+  final close = closeDay ?? FakeCloseAdminDayUseCase();
   if (getOrderDetail == null) {
     when(() => detail.call(any())).thenAnswer(
       (_) async => const Left(AdminServerFailure('stub')),
@@ -1225,6 +1379,15 @@ AdminQueueCubit buildAdminQueueCubit({
   // mutación encuentra por id la orden que el state cargó.
   if (updateOrderStatus == null) {
     stubUpdateEcho(update, [...activeList, ...historyList]);
+  }
+  if (confirmOrderPayment == null) {
+    stubConfirmEcho(confirm, [...activeList, ...historyList]);
+  }
+  if (loadDayClose == null) {
+    stubLoadDayClose(preview, activeList, historyList);
+  }
+  if (closeDay == null) {
+    stubCloseDay(close, activeList, historyList);
   }
   when(useCase.call).thenAnswer(
     (_) async => AdminQueueData(
@@ -1240,5 +1403,8 @@ AdminQueueCubit buildAdminQueueCubit({
     loadQueue: useCase,
     getOrderDetail: detail,
     updateOrderStatus: update,
+    confirmOrderPayment: confirm,
+    loadDayClose: preview,
+    closeDay: close,
   );
 }

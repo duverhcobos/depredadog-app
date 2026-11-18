@@ -1,4 +1,5 @@
 import '../../../../../core/network/interfaces/i_network_service.dart';
+import '../../models/admin_day_close_model.dart';
 import '../../models/admin_order_model.dart';
 import '../interfaces/i_admin_remote_datasource.dart';
 
@@ -46,5 +47,25 @@ class AdminRemoteDataSourceImpl implements IAdminRemoteDataSource {
       body: {'to': to, 'cancelReason': ?cancelReason},
     );
     return AdminOrderModel.fromJson(response as Map<String, dynamic>);
+  }
+
+  @override
+  Future<AdminOrderModel> confirmPayment(String orderId) async {
+    final json = await _networkService.post(
+      '/admin/orders/$orderId/confirm-payment',
+    );
+    return AdminOrderModel.fromJson(json as Map<String, dynamic>);
+  }
+
+  @override
+  Future<AdminDayCloseModel> fetchDayClose() async {
+    final json = await _networkService.get('/admin/day-close');
+    return AdminDayCloseModel.fromJson(json as Map<String, dynamic>);
+  }
+
+  @override
+  Future<AdminDayCloseModel> postDayClose() async {
+    final json = await _networkService.post('/admin/day-close');
+    return AdminDayCloseModel.fromJson(json as Map<String, dynamic>);
   }
 }

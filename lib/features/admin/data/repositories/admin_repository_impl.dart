@@ -2,6 +2,7 @@ import 'package:dartz/dartz.dart';
 
 import '../../../../core/network/exceptions/network_exception.dart';
 import '../../../../core/network/interfaces/i_network_info.dart';
+import '../../domain/entities/admin_day_close.dart';
 import '../../domain/entities/admin_order.dart';
 import '../../domain/failures/admin_failure.dart';
 import '../../domain/repositories/i_admin_repository.dart';
@@ -50,6 +51,19 @@ class AdminRepositoryImpl implements IAdminRepository {
       cancelReason: cancelReason,
     ),
   );
+
+  @override
+  Future<Either<AdminFailure, AdminOrder>> confirmOrderPayment(
+    String orderId,
+  ) => _guard(() => _remoteDataSource.confirmPayment(orderId));
+
+  @override
+  Future<Either<AdminFailure, AdminDayClose>> getDayClosePreview() =>
+      _guard(() => _remoteDataSource.fetchDayClose());
+
+  @override
+  Future<Either<AdminFailure, AdminDayClose>> closeDay() =>
+      _guard(() => _remoteDataSource.postDayClose());
 
   /// Red de seguridad idéntica a la de orders: un 200 malformado (cast del
   /// datasource) no es NetworkException — sin el catch de respaldo la UI

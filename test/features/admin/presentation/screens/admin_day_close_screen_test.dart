@@ -1,3 +1,4 @@
+import 'package:dartz/dartz.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
@@ -5,9 +6,12 @@ import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:get_it/get_it.dart';
 import 'package:go_router/go_router.dart';
+import 'package:mocktail/mocktail.dart';
 import 'package:depredadog_app/core/routes/auth_guard.dart';
 import 'package:depredadog_app/core/theme/app_theme.dart';
+import 'package:depredadog_app/features/admin/domain/entities/admin_day_close.dart';
 import 'package:depredadog_app/features/admin/domain/entities/admin_order.dart';
+import 'package:depredadog_app/features/admin/domain/failures/admin_failure.dart';
 import 'package:depredadog_app/features/admin/presentation/cubit/admin_queue_cubit.dart';
 import 'package:depredadog_app/features/admin/presentation/screens/admin_day_close_screen.dart';
 import 'package:depredadog_app/features/admin/presentation/screens/admin_history_screen.dart';
@@ -166,9 +170,10 @@ void main() {
       calls.any((c) => c.arguments['msg'] == 'Día cerrado — \$65.000'),
       isTrue,
     );
-    // El carril Entregado quedó vacío de verdad.
+    // El carril Entregado quedó vacío de verdad — los done al
+    // FRENTE del historial, el más reciente primero (§041).
     expect(cubit.state.deliveredCount, 0);
-    expect(cubit.state.history.first.id, 'adm-16');
+    expect(cubit.state.history.first.id, 'adm-5');
 
     // "Listo" → pop a Cocina: el header ya no muestra el contador
     // (no hay entregados esperando cierre).
@@ -182,6 +187,165 @@ void main() {
       find.descendant(of: find.byType(Badge), matching: find.text('3')),
       findsNothing,
     );
+
+    await tester.pump(const Duration(seconds: 2));
+  });
+
+  testWidgets('preview fallido: vista de error + Reintentar re-pide '
+      'el GET /admin/day-close (§041 — sin el flag era spinner '
+      'eterno)', (tester) async {
+    await cubit.close();
+    await locator.reset();
+    final preview = FakeLoadAdminDayCloseUseCase();
+    when(() => preview.call()).thenAnswer(
+      (_) async => const Left(AdminOfflineFailure()),
+    );
+    cubit = buildAdminQueueCubit(loadDayClose: preview);
+    locator.registerSingleton<AdminQueueCubit>(cubit);
+
+    final router = buildAdminRouter();
+    await pumpAdminApp(tester, router: router);
+    await loadQueue(tester);
+
+    router.push('${AuthGuard.adminRoute}/day-close');
+    await tester.pumpAndSettle();
+
+    // Error en la zona negra — ni spinner ni resumen.
+    expect(find.text('No pudimos cargar el cierre'), findsOneWidget);
+    expect(find.byIcon(Icons.cloud_off_rounded), findsOneWidget);
+    expect(find.text('Reintentar'), findsOneWidget);
+    expect(find.byType(CircularProgressIndicator), findsNothing);
+    // El CTA queda DESHABILITADO — sin resumen no se cierra a
+    // ciegas (revisor §041).
+    expect(
+      tester
+          .widget<FilledButton>(
+            find.widgetWithText(FilledButton, 'Confirmar cierre'),
+          )
+          .onPressed,
+      isNull,
+    );
+    verify(() => preview.call()).called(1);
+
+    // Reintento con el canal sano → segundo GET y el resumen llega.
+    stubLoadDayClose(
+      preview,
+      adminActiveFixtures(),
+      adminHistoryFixtures(),
+    );
+    await tester.tap(find.text('Reintentar'));
+    await tester.pumpAndSettle();
+
+    // UN GET nuevo (verify solo cuenta llamadas aún no
+    // verificadas — la primera ya quedó marcada arriba).
+    verify(() => preview.call()).called(1);
+    expect(find.text('No pudimos cargar el cierre'), findsNothing);
+    expect(find.text('\$65.000'), findsOneWidget);
+    expect(find.text('Confirmar cierre'), findsOneWidget);
+    // Con el resumen visible el CTA vuelve a habilitarse.
+    expect(
+      tester
+          .widget<FilledButton>(
+            find.widgetWithText(FilledButton, 'Confirmar cierre'),
+          )
+          .onPressed,
+      isNotNull,
+    );
+  });
+
+  testWidgets('el cierre falla: toast de error y la pantalla se '
+      'QUEDA en el preview (§041 — decisión: no vuelve sola)', (
+    tester,
+  ) async {
+    final calls = stubToast(tester);
+    await cubit.close();
+    await locator.reset();
+    final close = FakeCloseAdminDayUseCase();
+    when(() => close.call()).thenAnswer(
+      (_) async => const Left(AdminServerFailure('boom')),
+    );
+    cubit = buildAdminQueueCubit(closeDay: close);
+    locator.registerSingleton<AdminQueueCubit>(cubit);
+
+    final router = buildAdminRouter();
+    await pumpAdminApp(tester, router: router);
+    await loadQueue(tester);
+
+    router.push('${AuthGuard.adminRoute}/day-close');
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.text('Confirmar cierre'));
+    await tester.pump(const Duration(milliseconds: 500));
+    await tester.pumpAndSettle();
+
+    // Toast de error específico del cierre — NUNCA el de éxito.
+    expect(
+      calls.any(
+        (c) =>
+            c.arguments['msg'] ==
+            'No pudimos cerrar la caja — inténtalo de nuevo',
+      ),
+      isTrue,
+    );
+    expect(
+      calls.any((c) => (c.arguments['msg'] as String?)?.startsWith('Día cerrado') ?? false),
+      isFalse,
+    );
+    // Sigue en el preview — sin check ni "Listo", el CTA vuelve.
+    expect(find.byIcon(Icons.check_circle_rounded), findsNothing);
+    expect(find.text('\$65.000'), findsOneWidget);
+    expect(find.text('Confirmar cierre'), findsOneWidget);
+    expect(find.text('Listo'), findsNothing);
+    // Los done NO se archivaron.
+    expect(cubit.state.deliveredCount, 3);
+    expect(cubit.state.dayCloseBusy, isFalse);
+
+    await tester.pump(const Duration(seconds: 2));
+  });
+
+  testWidgets('éxito: el resumen mostrado es el SNAPSHOT DEL '
+      'SERVIDOR del POST, no el preview local (§041)', (tester) async {
+    await cubit.close();
+    await locator.reset();
+    // El servidor devuelve un snapshot distinto del preview local
+    // (un pedido terminó entre el GET y el POST — el claim atómico
+    // lo incluyó).
+    const serverSummary = AdminDayClose(
+      orderCount: 4,
+      totalAmount: 99000,
+      byMethod: [
+        AdminDayCloseMethod(method: 'cash', count: 2, amount: 60000),
+        AdminDayCloseMethod(method: 'transfer', count: 2, amount: 39000),
+      ],
+      cancelledCount: 3,
+      cancelledAmount: 85000,
+    );
+    final close = FakeCloseAdminDayUseCase();
+    when(
+      () => close.call(),
+    ).thenAnswer((_) async => const Right(serverSummary));
+    cubit = buildAdminQueueCubit(closeDay: close);
+    locator.registerSingleton<AdminQueueCubit>(cubit);
+
+    final router = buildAdminRouter();
+    await pumpAdminApp(tester, router: router);
+    await loadQueue(tester);
+
+    router.push('${AuthGuard.adminRoute}/day-close');
+    await tester.pumpAndSettle();
+    // El preview mostraba \$65.000 (3 pedidos) — el servidor cerró 4.
+    expect(find.text('\$65.000'), findsOneWidget);
+
+    await tester.tap(find.text('Confirmar cierre'));
+    await tester.pumpAndSettle();
+
+    // El estado de éxito pinta el snapshot del POST — \$99.000 y
+    // 4 pedidos, no los del preview.
+    expect(find.byIcon(Icons.check_circle_rounded), findsOneWidget);
+    expect(find.text('\$99.000'), findsOneWidget);
+    expect(find.text('4 pedidos entregados'), findsOneWidget);
+    expect(find.text('\$65.000'), findsNothing);
+    expect(find.text('Listo'), findsOneWidget);
 
     await tester.pump(const Duration(seconds: 2));
   });

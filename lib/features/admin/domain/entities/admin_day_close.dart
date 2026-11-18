@@ -1,9 +1,9 @@
 import 'package:equatable/equatable.dart';
 
 /// Resumen del cierre de caja (espejo DayClosePreview/DayClose del
-/// backend §022 — solo presentación, lo calculan los mocks):
-/// cuántos pedidos entregados se archivan, el total vendido, el
-/// desglose por método y los cancelados del periodo como contexto.
+/// backend §022 — llega del servidor vía §041): cuántos pedidos
+/// entregados se archivan, el total vendido, el desglose por método
+/// y los cancelados del periodo como contexto.
 class AdminDayClose extends Equatable {
   const AdminDayClose({
     required this.orderCount,
