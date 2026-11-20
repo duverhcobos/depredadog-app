@@ -1,6 +1,7 @@
 # Pendiente: Release Android listo para distribución (firma, permisos, minify)
 
-> **Estado: 🔴 PENDIENTE** — la app compila e instala en release contra el backend local; faltan keystore propio, decisión de minify y build de prod verificado
+> **Estado: 🟡 PARCIAL (2026-11-20)** — `app-release.apk` firmada con keystore propio (`android/app-release.jks` + `key.properties`, propuesta 044) y verificada contra prod (`ENV=prod` + `API_BASE_URL=https://depredadog-api.onrender.com` — catálogo real cargando). **RESPALDAR el .jks** fuera del repo.
+> **Lo que queda:** decisión `minifyEnabled`/`shrinkResources` (reglas ProGuard para `flutter_secure_storage`); ofuscación `--split-debug-info` + guardar símbolos (Crashlytics 001); AAB para Play Store cuando toque.
 > **Producto:** frontend
 > **Bloqueo:** bloqueante — sin firma release no hay APK/AAB distribuible
 
