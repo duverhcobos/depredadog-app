@@ -1424,9 +1424,21 @@ class AppLocalizationsEs extends AppLocalizations {
   String get adminNewOrderCreate => 'Crear pedido';
 
   @override
-  String adminNewOrderCreated(int number) {
-    return 'Pedido #$number en la cola';
+  String adminNewOrderCreatedTitle(String number) {
+    return 'Pedido #$number creado';
   }
+
+  @override
+  String get adminNewOrderBackToQueue => 'Volver a Cocina';
+
+  @override
+  String get adminShareWhatsApp => 'Enviar a cocina';
+
+  @override
+  String get adminShareWhatsAppTooltip => 'Enviar comanda a cocina';
+
+  @override
+  String get adminShareWhatsAppFailed => 'No pudimos compartir la comanda';
 
   @override
   String get adminNewOrderService => 'Servicio';
@@ -1482,4 +1494,29 @@ class AppLocalizationsEs extends AppLocalizations {
   @override
   String get adminNewOrderDispatchFailed =>
       'No pudimos enviar el cobro — cobra en efectivo o inténtalo de nuevo';
+
+  @override
+  String get shareWaServiceInSite => 'En el local';
+
+  @override
+  String get shareWaServicePickup => 'Para llevar';
+
+  @override
+  String get shareWaServiceDelivery => 'Domicilio';
+
+  @override
+  String get shareWaNoteLabel => 'Nota:';
+
+  @override
+  String get shareWaTotalLabel => 'Total del pedido:';
+
+  @override
+  String shareWaItemIndex(int index, int total) {
+    return '$index/$total';
+  }
+
+  @override
+  String shareWaOrderTag(String number) {
+    return 'PEDIDO #$number';
+  }
 }

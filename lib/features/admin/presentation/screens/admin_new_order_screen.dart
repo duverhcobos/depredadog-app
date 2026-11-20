@@ -1,3 +1,5 @@
+import 'dart:async' show unawaited;
+
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
@@ -7,9 +9,12 @@ import '../../../../core/widgets/app_toast.dart';
 import '../../../../l10n/app_localizations.dart';
 import '../../../home/presentation/utils/format_cop.dart';
 import '../../../home/presentation/widgets/signature_strip.dart';
+import '../../domain/entities/admin_order.dart';
 import '../cubit/admin_new_order_cubit.dart';
 import '../cubit/admin_new_order_state.dart';
 import '../cubit/admin_queue_cubit.dart';
+import '../utils/kitchen_order_data.dart';
+import '../widgets/kitchen_item_card.dart';
 import '../widgets/new_order/cobro_step.dart';
 import '../widgets/new_order/comanda_step.dart';
 import '../widgets/new_order/new_order_error_view.dart';
@@ -38,11 +43,17 @@ class _AdminNewOrderScreenState extends State<AdminNewOrderScreen> {
 
   /// Flecha/back nativo — comanda sale a Cocina (pop); cobro
   /// devuelve al paso comanda sin perder el borrador (step
-  /// interno, §042). Durante el submit no hace nada: la pantalla
+  /// interno, §042). En la vista de éxito el back es pop directo:
+  /// el pedido ya existe y la regla cobro→comanda no aplica (§043).
+  /// Durante el submit no hace nada: la pantalla
   /// entera está bloqueada (IgnorePointer + PopScope).
   void _onBack() {
     final cubit = context.read<AdminNewOrderCubit>();
     if (cubit.state.submitting) return;
+    if (cubit.state.createdOrder != null) {
+      context.pop();
+      return;
+    }
     if (cubit.state.step == AdminNewOrderStep.cobro) {
       cubit.backToComanda();
     } else {
@@ -53,23 +64,18 @@ class _AdminNewOrderScreenState extends State<AdminNewOrderScreen> {
   /// "Crear pedido" — el cubit devuelve orden o failure y la
   /// pantalla tosteea por errorCode (mapa §042): catálogo violado,
   /// mesa stale (ya se resincronizó sola), dispatch transfer fallido
-  /// o genérico. Éxito → toast con el consecutivo + resync de la
-  /// cola + pop a Cocina (la card llega animada por el diff).
+  /// o genérico. Éxito → resync de la cola y el cubit emite
+  /// `createdOrder`: la VISTA de éxito (§043) reemplaza al toast+pop
+  /// — el dueño puede mandar la comanda al chat de cocina antes de
+  /// volver.
   Future<void> _submit() async {
     final l10n = AppLocalizations.of(context)!;
     final result = await context.read<AdminNewOrderCubit>().submit();
-    // El resync de la cola NO depende del mounted: si el pop ya
-    // corrió, la orden igual existe y la cola debe reflejarla
+    // El resync de la cola NO depende del mounted: la orden igual
+    // existe y la cola debe reflejarla cuando el dueño vuelva
     // (revisor-ui §042 — antes quedaba stale en ese caso borde).
-    final order = result.order;
-    if (order != null) {
+    if (result.order != null) {
       locator<AdminQueueCubit>().load();
-      if (!mounted) return;
-      AppToast.success(
-        context,
-        l10n.adminNewOrderCreated(order.orderNumber ?? 0),
-      );
-      context.pop();
       return;
     }
     if (!mounted) return;
@@ -133,11 +139,17 @@ class _AdminNewOrderScreenState extends State<AdminNewOrderScreen> {
                                       context.read<AdminNewOrderCubit>().load(),
                                 );
                               }
-                              // Dos pasos, una ruta — la transición queda
+                              // Dos pasos + la vista de éxito (§043),
+                              // una ruta — la transición queda
                               // dentro de la pantalla (§042).
                               return AnimatedSwitcher(
                                 duration: const Duration(milliseconds: 200),
-                                child: state.step == AdminNewOrderStep.comanda
+                                child: state.createdOrder != null
+                                    ? _NewOrderSuccessView(
+                                        key: const ValueKey('exito'),
+                                        order: state.createdOrder!,
+                                      )
+                                    : state.step == AdminNewOrderStep.comanda
                                     ? const ComandaStep(
                                         key: ValueKey('comanda'),
                                       )
@@ -149,11 +161,15 @@ class _AdminNewOrderScreenState extends State<AdminNewOrderScreen> {
                     // Footer fijo opaco full-width (patrón §035): comanda
                     // → "N ítems · $total → Continuar" (disabled si 0);
                     // cobro → "Crear pedido · $total" (spinner en busy).
-                    // Oculto en loading/failed — un CTA "0 ítems"
-                    // disabled bajo el spinner/error es ruido
-                    // (revisor-ui §042).
+                    // Oculto en loading/failed/éxito — un CTA "0 ítems"
+                    // disabled bajo el spinner/error es ruido y en la
+                    // vista de éxito sus dos botones ya viven centrados
+                    // (revisor-ui §042 / §043).
                     BlocSelector<AdminNewOrderCubit, AdminNewOrderState, bool>(
-                      selector: (state) => state.loading || state.failed,
+                      selector: (state) =>
+                          state.loading ||
+                          state.failed ||
+                          state.createdOrder != null,
                       builder: (context, unavailable) {
                         if (unavailable) return const SizedBox.shrink();
                         return DecoratedBox(
@@ -283,6 +299,153 @@ class _AdminNewOrderScreenState extends State<AdminNewOrderScreen> {
                     ),
                     tooltip: l10n.catalogBackTooltip,
                     onPressed: _onBack,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+/// Vista de éxito de la comanda (§043): reemplaza los pasos cuando
+/// el POST respondió — ✓ tertiary + "Pedido #N creado" + el primario
+/// "Enviar a cocina" (share sheet con UNA card PNG por ítem, armada
+/// desde el BORRADOR — sus CartModifier son la forma garantizada
+/// local) + el secundario "Volver a Cocina" (pop; el resync de la
+/// cola ya corrió en el éxito). Decisión del dueño: el pedido se
+/// reenvía al chat de cocina como imágenes — no se imprime ni se
+/// dicta (v2: el formato texto wa.me quedó descartado).
+class _NewOrderSuccessView extends StatefulWidget {
+  const _NewOrderSuccessView({required this.order, super.key});
+
+  /// La orden recién creada — su orderNumber encabeza el título y
+  /// nutre el mensaje (servicio, pago, hora y total del servidor).
+  final AdminOrder order;
+
+  @override
+  State<_NewOrderSuccessView> createState() => _NewOrderSuccessViewState();
+}
+
+class _NewOrderSuccessViewState extends State<_NewOrderSuccessView> {
+  /// El render PNG + share sheet toman ~1s — durante el vuelo el
+  /// CTA ignora taps (IgnorePointer) y muestra spinner onPrimary
+  /// manteniendo el fill mostaza (revisor-ui §043: sin guardia,
+  /// un doble-tap encolaba dos renders y dos sheets).
+  bool _sharing = false;
+
+  /// Share sheet con las cards del borrador (§043 v2) — los ítems y
+  /// la nota salen del state en el toque, no del snapshot del POST.
+  Future<void> _share() async {
+    if (_sharing) return;
+    setState(() => _sharing = true);
+    try {
+      final l10n = AppLocalizations.of(context)!;
+      final state = context.read<AdminNewOrderCubit>().state;
+      await shareKitchenItemCards(
+        context,
+        KitchenOrderData.fromCartItems(
+          state.items,
+          order: widget.order,
+          tableLabel: state.selectedTable?.label,
+          note: state.notes,
+          l10n: l10n,
+        ),
+      );
+    } finally {
+      if (mounted) setState(() => _sharing = false);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
+    final colors = Theme.of(context).colorScheme;
+    final text = Theme.of(context).textTheme;
+    return LayoutBuilder(
+      builder: (context, c) => Padding(
+        padding: EdgeInsets.only(left: c.maxWidth * kSignatureStripFraction),
+        child: Center(
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 32),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                // Tile de éxito §031b — tile + glifo, no ícono pelado:
+                // tertiaryContainer 96 / radio 25% / glifo al 50% en
+                // onTertiaryContainer (revisor-estetico §043: el check
+                // de 44px quedaba tímido como protagonista del payoff).
+                Container(
+                  width: 96,
+                  height: 96,
+                  decoration: BoxDecoration(
+                    color: colors.tertiaryContainer,
+                    borderRadius: BorderRadius.circular(24),
+                  ),
+                  child: Icon(
+                    Icons.check_rounded,
+                    size: 48,
+                    color: colors.onTertiaryContainer,
+                  ),
+                ),
+                const SizedBox(height: 16),
+                Text(
+                  // shortTag 'adm-N' — el MISMO identificador que la
+                  // card compartida y el detalle (revisor-ui §043).
+                  l10n.adminNewOrderCreatedTitle(widget.order.shortTag),
+                  textAlign: TextAlign.center,
+                  // Voz de título naciente — Anton mostaza pesada,
+                  // la misma de Nueva orden / Revisar y cobrar.
+                  style: text.headlineSmall?.copyWith(
+                    color: colors.primary,
+                    fontWeight: FontWeight.w800,
+                  ),
+                ),
+                const SizedBox(height: 24),
+                SizedBox(
+                  width: double.infinity,
+                  // FilledButton global es stadium (sin filledButtonTheme)
+                  // y el OutlinedButton vecino sale radius 14/52 del tema
+                  // — el par apilado comparte forma local (revisor-ui
+                  // §043: dos CTAs full-width con radios/alturas distintas
+                  // se veían descoordinados).
+                  // IgnorePointer — NO disabled: un CTA que se apaga
+                  // a gris en su payoff es la regresión documentada
+                  // dos veces (§035, §042; revisor-ui §043). El botón
+                  // sigue mostaza con spinner onPrimary; la guardia
+                  // `_sharing` corta re-entradas programáticas.
+                  child: IgnorePointer(
+                    ignoring: _sharing,
+                    child: FilledButton.icon(
+                      style: FilledButton.styleFrom(
+                        minimumSize: const Size.fromHeight(52),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(14),
+                        ),
+                      ),
+                      onPressed: () => unawaited(_share()),
+                      icon: _sharing
+                          ? SizedBox(
+                              width: 18,
+                              height: 18,
+                              child: CircularProgressIndicator(
+                                strokeWidth: 2,
+                                color: colors.onPrimary,
+                              ),
+                            )
+                          : const Icon(Icons.share_rounded),
+                      label: Text(l10n.adminShareWhatsApp),
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 8),
+                SizedBox(
+                  width: double.infinity,
+                  child: OutlinedButton(
+                    onPressed: () => context.pop(),
+                    child: Text(l10n.adminNewOrderBackToQueue),
                   ),
                 ),
               ],

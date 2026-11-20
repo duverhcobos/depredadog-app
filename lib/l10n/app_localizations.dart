@@ -2590,11 +2590,35 @@ abstract class AppLocalizations {
   /// **'Crear pedido'**
   String get adminNewOrderCreate;
 
-  /// Toast de éxito tras crear el pedido presencial — number = consecutivo del día (§042)
+  /// Título de la vista de éxito de la comanda presencial (§043) — number = consecutivo del día, o el tag adm-N si el POST no lo trajo
   ///
   /// In es, this message translates to:
-  /// **'Pedido #{number} en la cola'**
-  String adminNewOrderCreated(int number);
+  /// **'Pedido #{number} creado'**
+  String adminNewOrderCreatedTitle(String number);
+
+  /// CTA secundario de la vista de éxito de la comanda (§043) — pop a la cola kanban, que ya se resincronizó en el éxito
+  ///
+  /// In es, this message translates to:
+  /// **'Volver a Cocina'**
+  String get adminNewOrderBackToQueue;
+
+  /// CTA primario de la vista de éxito de la comanda (§043) — abre wa.me con el pedido redactado para el chat de cocina; voz de negocio como el tooltip (revisor-estetico: 'Compartir por WhatsApp' rompía en dos líneas)
+  ///
+  /// In es, this message translates to:
+  /// **'Enviar a cocina'**
+  String get adminShareWhatsApp;
+
+  /// Tooltip del ícono compartir del detalle admin (§043 v2) — lanza el share sheet con la card PNG de cada ítem; ya no menciona WhatsApp: el chooser es del sistema (revisor-ui §043)
+  ///
+  /// In es, this message translates to:
+  /// **'Enviar comanda a cocina'**
+  String get adminShareWhatsAppTooltip;
+
+  /// Toast de error cuando el render PNG o el share sheet lanzan (§043 v2 — genérico: ya no es un fallo de WhatsApp, es de la comanda entera)
+  ///
+  /// In es, this message translates to:
+  /// **'No pudimos compartir la comanda'**
+  String get adminShareWhatsAppFailed;
 
   /// Etiqueta de la sección tipo de servicio del paso cobro (§042)
   ///
@@ -2697,6 +2721,48 @@ abstract class AppLocalizations {
   /// In es, this message translates to:
   /// **'No pudimos enviar el cobro — cobra en efectivo o inténtalo de nuevo'**
   String get adminNewOrderDispatchFailed;
+
+  /// Línea de servicio del pedido dine_in SIN mesa conocida en la comanda de cocina (§043) — con tableLabel la línea es la etiqueta verbatim ('Mesa 2')
+  ///
+  /// In es, this message translates to:
+  /// **'En el local'**
+  String get shareWaServiceInSite;
+
+  /// Línea de servicio del pedido pickup en la comanda de cocina (§043)
+  ///
+  /// In es, this message translates to:
+  /// **'Para llevar'**
+  String get shareWaServicePickup;
+
+  /// Línea de servicio del pedido delivery en la comanda de cocina (§043) — le siguen la línea dirección+referencia y el teléfono del cliente
+  ///
+  /// In es, this message translates to:
+  /// **'Domicilio'**
+  String get shareWaServiceDelivery;
+
+  /// Etiqueta en negrita de la nota del pedido en la comanda de cocina (§043 — la línea entera se omite si la nota viene vacía o solo espacios)
+  ///
+  /// In es, this message translates to:
+  /// **'Nota:'**
+  String get shareWaNoteLabel;
+
+  /// Etiqueta del total final de la comanda de cocina (§043 — única cifra del mensaje: cocina no arma precios por ítem, el total es por si quien entrega cobra). 'del pedido' explícito: en una card self-contained, 'Total:' sugería el total de ESE ítem (revisor-ui §043)
+  ///
+  /// In es, this message translates to:
+  /// **'Total del pedido:'**
+  String get shareWaTotalLabel;
+
+  /// Índice del ítem dentro del pedido en el header de la card de cocina (§043 v2) — '1/2' = ítem 1 de 2; la card lo omite cuando el pedido trae una sola card ('1/1' era ruido, revisor-ui §043)
+  ///
+  /// In es, this message translates to:
+  /// **'{index}/{total}'**
+  String shareWaItemIndex(int index, int total);
+
+  /// Tag del pedido en el header de la card de cocina (§043 v2) — number es el shortTag 'adm-N' en ambos caminos (éxito y detalle) para que cocina lea el MISMO identificador
+  ///
+  /// In es, this message translates to:
+  /// **'PEDIDO #{number}'**
+  String shareWaOrderTag(String number);
 }
 
 class _AppLocalizationsDelegate

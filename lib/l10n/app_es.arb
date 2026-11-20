@@ -1474,14 +1474,30 @@
   "@adminNewOrderCreate": {
     "description": "CTA del footer del paso cobro que manda el POST /admin/orders (§042)"
   },
-  "adminNewOrderCreated": "Pedido #{number} en la cola",
-  "@adminNewOrderCreated": {
-    "description": "Toast de éxito tras crear el pedido presencial — number = consecutivo del día (§042)",
+  "adminNewOrderCreatedTitle": "Pedido #{number} creado",
+  "@adminNewOrderCreatedTitle": {
+    "description": "Título de la vista de éxito de la comanda presencial (§043) — number = consecutivo del día, o el tag adm-N si el POST no lo trajo",
     "placeholders": {
       "number": {
-        "type": "int"
+        "type": "String"
       }
     }
+  },
+  "adminNewOrderBackToQueue": "Volver a Cocina",
+  "@adminNewOrderBackToQueue": {
+    "description": "CTA secundario de la vista de éxito de la comanda (§043) — pop a la cola kanban, que ya se resincronizó en el éxito"
+  },
+  "adminShareWhatsApp": "Enviar a cocina",
+  "@adminShareWhatsApp": {
+    "description": "CTA primario de la vista de éxito de la comanda (§043) — abre wa.me con el pedido redactado para el chat de cocina; voz de negocio como el tooltip (revisor-estetico: 'Compartir por WhatsApp' rompía en dos líneas)"
+  },
+  "adminShareWhatsAppTooltip": "Enviar comanda a cocina",
+  "@adminShareWhatsAppTooltip": {
+    "description": "Tooltip del ícono compartir del detalle admin (§043 v2) — lanza el share sheet con la card PNG de cada ítem; ya no menciona WhatsApp: el chooser es del sistema (revisor-ui §043)"
+  },
+  "adminShareWhatsAppFailed": "No pudimos compartir la comanda",
+  "@adminShareWhatsAppFailed": {
+    "description": "Toast de error cuando el render PNG o el share sheet lanzan (§043 v2 — genérico: ya no es un fallo de WhatsApp, es de la comanda entera)"
   },
   "adminNewOrderService": "Servicio",
   "@adminNewOrderService": {
@@ -1555,5 +1571,46 @@
   "adminNewOrderDispatchFailed": "No pudimos enviar el cobro — cobra en efectivo o inténtalo de nuevo",
   "@adminNewOrderDispatchFailed": {
     "description": "Toast del submit cuando el backend responde 502 PAYMENT_DISPATCH_FAILED — el push transfer no salió (§042)"
+  },
+  "shareWaServiceInSite": "En el local",
+  "@shareWaServiceInSite": {
+    "description": "Línea de servicio del pedido dine_in SIN mesa conocida en la comanda de cocina (§043) — con tableLabel la línea es la etiqueta verbatim ('Mesa 2')"
+  },
+  "shareWaServicePickup": "Para llevar",
+  "@shareWaServicePickup": {
+    "description": "Línea de servicio del pedido pickup en la comanda de cocina (§043)"
+  },
+  "shareWaServiceDelivery": "Domicilio",
+  "@shareWaServiceDelivery": {
+    "description": "Línea de servicio del pedido delivery en la comanda de cocina (§043) — le siguen la línea dirección+referencia y el teléfono del cliente"
+  },
+  "shareWaNoteLabel": "Nota:",
+  "@shareWaNoteLabel": {
+    "description": "Etiqueta en negrita de la nota del pedido en la comanda de cocina (§043 — la línea entera se omite si la nota viene vacía o solo espacios)"
+  },
+  "shareWaTotalLabel": "Total del pedido:",
+  "@shareWaTotalLabel": {
+    "description": "Etiqueta del total final de la comanda de cocina (§043 — única cifra del mensaje: cocina no arma precios por ítem, el total es por si quien entrega cobra). 'del pedido' explícito: en una card self-contained, 'Total:' sugería el total de ESE ítem (revisor-ui §043)"
+  },
+  "shareWaItemIndex": "{index}/{total}",
+  "@shareWaItemIndex": {
+    "description": "Índice del ítem dentro del pedido en el header de la card de cocina (§043 v2) — '1/2' = ítem 1 de 2; la card lo omite cuando el pedido trae una sola card ('1/1' era ruido, revisor-ui §043)",
+    "placeholders": {
+      "index": {
+        "type": "int"
+      },
+      "total": {
+        "type": "int"
+      }
+    }
+  },
+  "shareWaOrderTag": "PEDIDO #{number}",
+  "@shareWaOrderTag": {
+    "description": "Tag del pedido en el header de la card de cocina (§043 v2) — number es el shortTag 'adm-N' en ambos caminos (éxito y detalle) para que cocina lea el MISMO identificador",
+    "placeholders": {
+      "number": {
+        "type": "String"
+      }
+    }
   }
 }

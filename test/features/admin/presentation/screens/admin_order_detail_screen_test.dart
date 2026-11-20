@@ -1,3 +1,5 @@
+import 'dart:io' show Directory;
+
 import 'package:dartz/dartz.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -34,9 +36,8 @@ void main() {
     // = no-op silencioso (los tests del §035-037 no esperan el fetch);
     // el test del §039 lo re-stubbea con su comanda completa.
     detailUseCase = FakeGetAdminOrderDetailUseCase();
-    when(
-      () => detailUseCase.call(any()),
-    ).thenAnswer((_) async => const Left(AdminServerFailure('stub')));
+    when(() => detailUseCase.call(any()))
+        .thenAnswer((_) async => const Left(AdminServerFailure('stub')));
     cubit = buildAdminQueueCubit(getOrderDetail: detailUseCase);
     locator.registerSingleton<AdminQueueCubit>(cubit);
   });
@@ -105,6 +106,46 @@ void main() {
       ),
     );
     return calls;
+  }
+
+  /// Intercepta share_plus (dev.fluttercommunity.plus/share) — el
+  /// share sheet no abre en test; el stub confirma la entrega de
+  /// las cards PNG (`paths`) al chooser del SO (§043 v2).
+  List<MethodCall> stubShare(WidgetTester tester) {
+    const channel = MethodChannel('dev.fluttercommunity.plus/share');
+    final calls = <MethodCall>[];
+    tester.binding.defaultBinaryMessenger.setMockMethodCallHandler(channel, (
+      call,
+    ) async {
+      calls.add(call);
+      return 'dev.fluttercommunity.plus/share/success';
+    });
+    addTearDown(
+      () => tester.binding.defaultBinaryMessenger.setMockMethodCallHandler(
+        channel,
+        null,
+      ),
+    );
+    return calls;
+  }
+
+  /// path_provider → temp dir real del SO — shareKitchenItemCards
+  /// escribe las PNG antes del share (§043 v2; sin stub el canal
+  /// no responde en test).
+  void stubPathProvider(WidgetTester tester) {
+    const channel = MethodChannel('plugins.flutter.io/path_provider');
+    tester.binding.defaultBinaryMessenger.setMockMethodCallHandler(
+      channel,
+      (call) async => call.method == 'getTemporaryDirectory'
+          ? Directory.systemTemp.path
+          : null,
+    );
+    addTearDown(
+      () => tester.binding.defaultBinaryMessenger.setMockMethodCallHandler(
+        channel,
+        null,
+      ),
+    );
   }
 
   /// Router de la rama admin — réplica de app_router (la hija :id
@@ -260,31 +301,32 @@ void main() {
     expect(find.text(r'$118.000'), findsOneWidget);
   });
 
-  testWidgets('ready + pago pendiente: "Entregado" DESHABILITADO con '
-      'pista "Toca Registrar pago primero" y primario "Registrar pago" (§036)', (
-    tester,
-  ) async {
-    final router = buildAdminRouter();
-    await pumpAdminApp(tester, router: router);
-    await loadQueue(tester);
-    // Mesa 7 — ready + efectivo pendiente: el cobro bloquea el
-    // Entregado (único caso donde "Registrar pago" es el primario, §036).
-    await openDetail(tester, router, 'adm-8');
+  testWidgets(
+    'ready + pago pendiente: "Entregado" DESHABILITADO con '
+    'pista "Toca Registrar pago primero" y primario "Registrar pago" (§036)',
+    (tester) async {
+      final router = buildAdminRouter();
+      await pumpAdminApp(tester, router: router);
+      await loadQueue(tester);
+      // Mesa 7 — ready + efectivo pendiente: el cobro bloquea el
+      // Entregado (único caso donde "Registrar pago" es el primario, §036).
+      await openDetail(tester, router, 'adm-8');
 
-    // El avance real es cobrar: primario "Registrar pago" — y el tonal de
-    // la fila de pago se SUPRIME porque la matriz ya lo pone como
-    // primario (eco de composición, revisor-estetico §035).
-    expect(find.text('Registrar pago'), findsOneWidget);
+      // El avance real es cobrar: primario "Registrar pago" — y el tonal de
+      // la fila de pago se SUPRIME porque la matriz ya lo pone como
+      // primario (eco de composición, revisor-estetico §035).
+      expect(find.text('Registrar pago'), findsOneWidget);
 
-    // "Entregado" presente pero bloqueado, con su pista — adelanta
-    // la regla del backend (done exige pago) en vez de fallar con
-    // 409.
-    final doneButton = tester.widget<FilledButton>(
-      find.widgetWithText(FilledButton, 'Entregado'),
-    );
-    expect(doneButton.onPressed, isNull);
-    expect(find.text('Registra el pago primero'), findsOneWidget);
-  });
+      // "Entregado" presente pero bloqueado, con su pista — adelanta
+      // la regla del backend (done exige pago) en vez de fallar con
+      // 409.
+      final doneButton = tester.widget<FilledButton>(
+        find.widgetWithText(FilledButton, 'Entregado'),
+      );
+      expect(doneButton.onPressed, isNull);
+      expect(find.text('Registra el pago primero'), findsOneWidget);
+    },
+  );
 
   testWidgets('confirmado + pago pendiente: "Preparar" primario Y '
       '"Registrar pago" tonal — en mesa se sirve antes de cobrar (§036)', (
@@ -324,9 +366,7 @@ void main() {
 
   testWidgets('pendiente recogida PRESENCIAL sin cobrar: primario '
       '"Registrar pago" + "Confirmar" DESHABILITADO con pista — la '
-      'puerta §036 (la online pickup solo admite Nequi)', (
-    tester,
-  ) async {
+      'puerta §036 (la online pickup solo admite Nequi)', (tester) async {
     final router = buildAdminRouter();
     await pumpAdminApp(tester, router: router);
     await loadQueue(tester);
@@ -356,19 +396,14 @@ void main() {
     // Tomás — received + online pickup + Nequi pending.
     await openDetail(tester, router, 'adm-29');
 
-    expect(
-      find.text('Esperando confirmación de Nequi…'),
-      findsOneWidget,
-    );
+    expect(find.text('Esperando confirmación de Nequi…'), findsOneWidget);
     expect(find.text('Confirmar'), findsNothing);
     expect(find.text('Registrar pago'), findsNothing);
     expect(find.text('Cancelar pedido'), findsNothing);
   });
 
   testWidgets('detalle Nequi FALLIDO: solo "Cancelar pedido" — la '
-      'única salida del cobro rechazado por el webhook (§036)', (
-    tester,
-  ) async {
+      'única salida del cobro rechazado por el webhook (§036)', (tester) async {
     final router = buildAdminRouter();
     await pumpAdminApp(tester, router: router);
     await loadQueue(tester);
@@ -514,9 +549,7 @@ void main() {
   });
 
   testWidgets('cancelar con 409: toast "El pedido ya cambió" + el '
-      'detalle NO hace pop — el pedido no se canceló (§040)', (
-    tester,
-  ) async {
+      'detalle NO hace pop — el pedido no se canceló (§040)', (tester) async {
     final calls = stubToast(tester);
     // PATCH rechazado — la carrera la perdió este cliente (el pedido
     // cambió server-side); el cubit resincroniza la cola solo.
@@ -558,16 +591,12 @@ void main() {
     expect(
       calls.any(
         (c) =>
-            c.arguments['msg'] ==
-            'El pedido ya cambió — la cola se actualizó',
+            c.arguments['msg'] == 'El pedido ya cambió — la cola se actualizó',
       ),
       isTrue,
     );
     // El toast de cancelación NO salió.
-    expect(
-      calls.any((c) => c.arguments['msg'] == 'Pedido cancelado'),
-      isFalse,
-    );
+    expect(calls.any((c) => c.arguments['msg'] == 'Pedido cancelado'), isFalse);
 
     await tester.pump(const Duration(seconds: 2));
   });
@@ -655,10 +684,7 @@ void main() {
       await tester.pumpAndSettle();
       expect(find.text('Entrega'), findsOneWidget);
       expect(find.text('Casa'), findsOneWidget);
-      expect(
-        find.text('Portón negro frente a la cancha'),
-        findsOneWidget,
-      );
+      expect(find.text('Portón negro frente a la cancha'), findsOneWidget);
       expect(find.text('Barrio La Esperanza'), findsOneWidget);
       expect(find.text('Con ubicación de Google'), findsOneWidget);
       expect(find.text('Recibe: 300 123 4567'), findsOneWidget);
@@ -686,10 +712,7 @@ void main() {
       await tester.pumpAndSettle();
       await tester.tap(find.text('Con ubicación de Google'));
       await tester.pumpAndSettle();
-      expect(
-        launches.any((c) => c.arguments['url'] == mapsLink),
-        isTrue,
-      );
+      expect(launches.any((c) => c.arguments['url'] == mapsLink), isTrue);
       await tester.tap(find.byTooltip('Copiar ubicación'));
       await tester.pumpAndSettle();
       expect(copied, contains(mapsLink));
@@ -752,9 +775,7 @@ void main() {
 
     testWidgets('ítem con modificadores nace DESPLEGADO — "Cebolla" '
         'en quitados y el extra con su +\$2.500 sin tocar nada; el '
-        'ítem con solo incluidos espera el chip "Detalle"', (
-      tester,
-    ) async {
+        'ítem con solo incluidos espera el chip "Detalle"', (tester) async {
       final router = buildAdminRouter();
       await pumpAdminApp(tester, router: router);
       await loadQueue(tester);
@@ -859,12 +880,9 @@ void main() {
           ),
         ],
       );
-      final full = snapshot.copyWith(
-        items: [snapshot.items[0], hydratedPapas],
-      );
-      when(
-        () => detailUseCase.call('adm-1'),
-      ).thenAnswer((_) async => Right(full));
+      final full = snapshot.copyWith(items: [snapshot.items[0], hydratedPapas]);
+      when(() => detailUseCase.call('adm-1'))
+          .thenAnswer((_) async => Right(full));
 
       await openDetail(tester, router, 'adm-1');
 
@@ -887,5 +905,46 @@ void main() {
         findsOneWidget,
       );
     });
+  });
+
+  testWidgets('compartir: el ícono del título lanza el share sheet '
+      'con UNA card PNG por ítem del pedido hidratado (§043 v2)', (
+    tester,
+  ) async {
+    stubPathProvider(tester);
+    final shares = stubShare(tester);
+    final router = buildAdminRouter();
+    await pumpAdminApp(tester, router: router);
+    await loadQueue(tester);
+    // adm-1 — online delivery transfer pendiente con todo el bloque
+    // de entrega sembrado (Casa / referencia / barrio / pin / 300…)
+    // y 2 ítems en la comanda.
+    await openDetail(tester, router, 'adm-1');
+
+    // El ícono compartir vive a la derecha del "Detalle del pedido"
+    // (mismo patrón del 🕐 de Cocina) — primer hijo del ListView.
+    // runAsync: el render de las cards usa toImage/toByteData +
+    // writeAsBytes — async real del engine/IO que no progresa en la
+    // zona fake de testWidgets; los pumps manuales dan los frames
+    // que espera cada endOfFrame del overlay offscreen y el delayed
+    // cede al event loop real para que el IO de las PNG aterrice.
+    await tester.runAsync(() async {
+      await tester.tap(find.byIcon(Icons.share_rounded));
+      for (var i = 0; i < 200 && shares.isEmpty; i++) {
+        await tester.pump();
+        await Future<void>.delayed(const Duration(milliseconds: 1));
+      }
+    });
+    await tester.pumpAndSettle();
+
+    final call = shares.firstWhere((c) => c.method == 'share');
+    final paths = (call.arguments['paths'] as List).cast<String>();
+    // Una imagen por ítem del pedido — la card es self-contained
+    // (decisión del dueño v2: imagen, no texto wa.me). Tag del
+    // filename sanitizado: 'adm-1' → 'adm1'.
+    expect(paths, hasLength(2));
+    expect(paths.every((p) => p.endsWith('.png')), isTrue);
+    expect(paths.first, contains('pedido_adm1_item_1.png'));
+    expect(paths.last, contains('pedido_adm1_item_2.png'));
   });
 }
