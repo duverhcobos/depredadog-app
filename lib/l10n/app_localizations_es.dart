@@ -1399,4 +1399,87 @@ class AppLocalizationsEs extends AppLocalizations {
 
   @override
   String get adminLaneEmpty => 'Sin pedidos';
+
+  @override
+  String get adminNewOrderTitle => 'Nueva orden';
+
+  @override
+  String get adminNewOrderReviewTitle => 'Revisar y cobrar';
+
+  @override
+  String get adminNewOrderContinue => 'Continuar';
+
+  @override
+  String adminNewOrderItems(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count ítems',
+      one: '1 ítem',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get adminNewOrderCreate => 'Crear pedido';
+
+  @override
+  String adminNewOrderCreated(int number) {
+    return 'Pedido #$number en la cola';
+  }
+
+  @override
+  String get adminNewOrderService => 'Servicio';
+
+  @override
+  String get adminNewOrderDineIn => 'Mesa';
+
+  @override
+  String get adminNewOrderPickup => 'Para llevar';
+
+  @override
+  String get adminNewOrderCategoryAll => 'Todo';
+
+  @override
+  String get adminNewOrderPayment => 'Pago';
+
+  @override
+  String get adminNewOrderPayerPhone => 'Celular que recibe el cobro';
+
+  @override
+  String get adminNewOrderPhoneHint => 'Ej: 3001234567';
+
+  @override
+  String get adminNewOrderPhoneError => 'Escribe el celular de 10 dígitos';
+
+  @override
+  String get adminNewOrderNote => 'Nota (opcional)';
+
+  @override
+  String get adminNewOrderEmpty => 'Sin productos en esta categoría';
+
+  @override
+  String get adminNewOrderTicketEmpty => 'Toca un producto para agregarlo';
+
+  @override
+  String adminNewOrderTableBusy(int number) {
+    return '#$number';
+  }
+
+  @override
+  String get adminNewOrderSheetAdd => 'Agregar';
+
+  @override
+  String get adminNewOrderLoadError => 'No pudimos cargar la comanda';
+
+  @override
+  String get adminNewOrderCatalogViolation =>
+      'Un ítem ya no está disponible — revisa la comanda';
+
+  @override
+  String get adminNewOrderTableStale => 'La mesa cambió — elige otra';
+
+  @override
+  String get adminNewOrderDispatchFailed =>
+      'No pudimos enviar el cobro — cobra en efectivo o inténtalo de nuevo';
 }

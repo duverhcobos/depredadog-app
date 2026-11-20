@@ -1,7 +1,9 @@
 import 'package:dartz/dartz.dart';
 
 import '../entities/admin_day_close.dart';
+import '../entities/admin_new_order_draft.dart';
 import '../entities/admin_order.dart';
+import '../entities/admin_table.dart';
 import '../failures/admin_failure.dart';
 
 /// Tamaño de página del historial admin (convención orders §027).
@@ -51,4 +53,13 @@ abstract class IAdminRepository {
   /// POST /admin/day-close (§041): cierra el periodo — devuelve el
   /// snapshot persistido del servidor.
   Future<Either<AdminFailure, AdminDayClose>> closeDay();
+
+  /// Mesas del local con ocupación (§042 — picker de la comanda).
+  Future<Either<AdminFailure, List<AdminTable>>> getTables();
+
+  /// POST /admin/orders (§042): crea el presencial del borrador.
+  /// dineIn→confirmed / pickup→pending según el backend.
+  Future<Either<AdminFailure, AdminOrder>> createInPersonOrder(
+    AdminNewOrderDraft draft,
+  );
 }

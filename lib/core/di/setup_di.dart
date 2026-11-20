@@ -7,10 +7,13 @@ import '../../features/admin/data/repositories/admin_repository_impl.dart';
 import '../../features/admin/domain/repositories/i_admin_repository.dart';
 import '../../features/admin/domain/use_cases/close_admin_day_use_case.dart';
 import '../../features/admin/domain/use_cases/confirm_admin_order_payment_use_case.dart';
+import '../../features/admin/domain/use_cases/create_admin_order_use_case.dart';
 import '../../features/admin/domain/use_cases/get_admin_order_detail_use_case.dart';
 import '../../features/admin/domain/use_cases/load_admin_day_close_use_case.dart';
 import '../../features/admin/domain/use_cases/load_admin_queue_use_case.dart';
+import '../../features/admin/domain/use_cases/load_admin_tables_use_case.dart';
 import '../../features/admin/domain/use_cases/update_admin_order_status_use_case.dart';
+import '../../features/admin/presentation/cubit/admin_new_order_cubit.dart';
 import '../../features/admin/presentation/cubit/admin_queue_cubit.dart';
 import '../../features/auth/data/datasources/implementations/auth_local_datasource_impl.dart';
 import '../../features/auth/data/datasources/implementations/auth_remote_datasource_impl.dart';
@@ -349,6 +352,23 @@ void setupDI() {
       confirmOrderPayment: locator(),
       loadDayClose: locator(),
       closeDay: locator(),
+    ),
+  );
+  // Comanda presencial (§042): mesas + create + FACTORY del cubit —
+  // cada entrada a /admin/orders/new obtiene un borrador limpio y el
+  // abandonado muere con la pantalla (a diferencia del singleton de
+  // la cola).
+  locator.registerLazySingleton<LoadAdminTablesUseCase>(
+    () => LoadAdminTablesUseCase(locator()),
+  );
+  locator.registerLazySingleton<CreateAdminOrderUseCase>(
+    () => CreateAdminOrderUseCase(locator()),
+  );
+  locator.registerFactory<AdminNewOrderCubit>(
+    () => AdminNewOrderCubit(
+      getMenu: locator<GetCatalogMenuUseCase>(),
+      loadTables: locator<LoadAdminTablesUseCase>(),
+      createOrder: locator<CreateAdminOrderUseCase>(),
     ),
   );
 

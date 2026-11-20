@@ -108,5 +108,76 @@ void main() {
       expect(res.cancelledAmount, 16000);
       verify(() => network.post('/admin/day-close')).called(1);
     });
+
+    test('fetchTables → GET /admin/tables y parsea el envelope '
+        '{items} con los tres estados (§042)', () async {
+      when(() => network.get('/admin/tables')).thenAnswer(
+        (_) async => {
+          'items': const [
+            {
+              'id': 't-1',
+              'label': 'Mesa 1',
+              'isActive': true,
+              'activeOrderNumber': null,
+            },
+            {
+              'id': 't-3',
+              'label': 'Mesa 3',
+              'isActive': true,
+              'activeOrderNumber': 7,
+            },
+            {
+              'id': 't-4',
+              'label': 'Mesa 4',
+              'isActive': false,
+              'activeOrderNumber': null,
+            },
+          ],
+        },
+      );
+
+      final res = await dataSource.fetchTables();
+
+      expect(res, hasLength(3));
+      expect(res[0].isFree, isTrue);
+      expect(res[1].isFree, isFalse);
+      expect(res[1].activeOrderNumber, 7);
+      expect(res[2].isActive, isFalse);
+      verify(() => network.get('/admin/tables')).called(1);
+    });
+
+    test('createOrder → POST /admin/orders con el payload verbatim '
+        'del repo y parsea la vista admin del 201 (§042)', () async {
+      const payload = {
+        'serviceType': 'dine_in',
+        'tableId': 't-2',
+        'items': [
+          {
+            'productId': 'p-cachorro',
+            'quantity': 1,
+            'modifiers': [
+              {'optionId': 'o-cebolla', 'action': 'removed'},
+            ],
+          },
+        ],
+        'paymentMethod': 'cash',
+        'notes': 'Mesa de la esquina',
+      };
+      when(
+        () => network.post('/admin/orders', body: payload),
+      ).thenAnswer(
+        (_) async => orderJson(
+          id: 'ord-nueva',
+          status: 'confirmed',
+          serviceType: 'dine_in',
+        ),
+      );
+
+      final res = await dataSource.createOrder(payload);
+
+      expect(res.id, 'ord-nueva');
+      expect(res.status, OrderStatus.confirmed);
+      verify(() => network.post('/admin/orders', body: payload)).called(1);
+    });
   });
 }

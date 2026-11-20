@@ -8,11 +8,14 @@ import 'package:depredadog_app/features/admin/data/datasources/implementations/a
 import 'package:depredadog_app/features/admin/data/datasources/interfaces/i_admin_remote_datasource.dart';
 import 'package:depredadog_app/features/admin/data/models/admin_day_close_model.dart';
 import 'package:depredadog_app/features/admin/data/models/admin_order_model.dart';
+import 'package:depredadog_app/features/admin/data/models/admin_table_model.dart';
 import 'package:depredadog_app/features/admin/data/repositories/admin_repository_impl.dart';
 import 'package:depredadog_app/features/admin/domain/entities/admin_day_close.dart';
+import 'package:depredadog_app/features/admin/domain/entities/admin_new_order_draft.dart';
 import 'package:depredadog_app/features/admin/domain/entities/admin_order.dart';
 import 'package:depredadog_app/features/admin/domain/failures/admin_failure.dart';
 import 'package:depredadog_app/features/admin/domain/repositories/i_admin_repository.dart';
+import 'package:depredadog_app/features/cart/domain/entities/cart_item.dart';
 import 'package:depredadog_app/features/cart/domain/entities/cart_modifier.dart';
 import 'package:depredadog_app/features/orders/domain/entities/customer_order.dart';
 
@@ -486,6 +489,249 @@ void main() {
         );
         verifyNever(() => remote.fetchDayClose());
         verifyNever(() => remote.postDayClose());
+      });
+    });
+
+    group('getTables + createInPersonOrder (§042)', () {
+      /// Borrador dine_in con un ítem personalizado: removed
+      /// cebolla + added tocineta cobrada + added piña (salsa) —
+      /// cubre las dos acciones y el replacesOptionId nullable.
+      AdminNewOrderDraft dineInDraft() => AdminNewOrderDraft(
+        serviceType: AdminServiceType.dineIn,
+        tableId: 't-2',
+        paymentMethod: AdminPaymentMethod.cash,
+        notes: '  Mesa de la esquina  ',
+        items: const [
+          CartItem(
+            id: 'comanda-1',
+            productId: 'p-cachorro',
+            productSlug: 'cachorro',
+            productName: 'El Cachorro',
+            unitBase: 14000,
+            quantity: 2,
+            modifiers: [
+              CartModifier(
+                optionId: 'o-cebolla',
+                optionName: 'Cebolla',
+                action: CartModifierAction.removed,
+                priceDelta: 0,
+                group: CartModifierGroup.ingredient,
+              ),
+              CartModifier(
+                optionId: 'o-tocineta',
+                optionName: 'Tocineta crocante',
+                action: CartModifierAction.added,
+                priceDelta: 4000,
+                group: CartModifierGroup.extra,
+              ),
+              CartModifier(
+                optionId: 'o-pina',
+                optionName: 'Piña',
+                action: CartModifierAction.added,
+                priceDelta: 0,
+                replacesOptionId: 'o-cebolla',
+                group: CartModifierGroup.sauce,
+              ),
+            ],
+          ),
+        ],
+      );
+
+      test('getTables éxito → Right(List<AdminTable>) del '
+          'datasource', () async {
+        // El datasource resuelve MODELS (parse del JSON) — el repo
+        // los deja pasar como entidades AdminTable.
+        final tables = [
+          AdminTableModel.fromJson(const {
+            'id': 't-1',
+            'label': 'Mesa 1',
+            'isActive': true,
+            'activeOrderNumber': null,
+          }),
+          AdminTableModel.fromJson(const {
+            'id': 't-3',
+            'label': 'Mesa 3',
+            'isActive': true,
+            'activeOrderNumber': 7,
+          }),
+        ];
+        when(
+          () => remote.fetchTables(),
+        ).thenAnswer((_) async => tables);
+
+        final result = await repository.getTables();
+
+        result.fold(
+          (_) => fail('se esperaba Right con las mesas'),
+          (ts) => expect(ts, tables),
+        );
+        verify(() => remote.fetchTables()).called(1);
+      });
+
+      test('payload dine_in EXACTO: serviceType, tableId, items con '
+          'modifiers (optionId+action+replacesOptionId solo cuando '
+          'viaja), cash SIN payerPhone y notes trimmeadas', () async {
+        final order = AdminOrderModel.fromJson(
+          orderJson(id: 'ord-nueva', serviceType: 'dine_in'),
+        );
+        when(() => remote.createOrder(any())).thenAnswer((_) async => order);
+
+        final result = await repository.createInPersonOrder(dineInDraft());
+
+        result.fold(
+          (_) => fail('se esperaba Right con la orden creada'),
+          (o) => expect(o.id, 'ord-nueva'),
+        );
+        final captured = verify(
+          () => remote.createOrder(captureAny()),
+        ).captured.single as Map<String, dynamic>;
+        expect(captured, {
+          'serviceType': 'dine_in',
+          'tableId': 't-2',
+          'items': [
+            {
+              'productId': 'p-cachorro',
+              'quantity': 2,
+              'modifiers': [
+                {'optionId': 'o-cebolla', 'action': 'removed'},
+                {'optionId': 'o-tocineta', 'action': 'added'},
+                {
+                  'optionId': 'o-pina',
+                  'action': 'added',
+                  'replacesOptionId': 'o-cebolla',
+                },
+              ],
+            },
+          ],
+          'paymentMethod': 'cash',
+          'notes': 'Mesa de la esquina',
+        });
+      });
+
+      test('payload pickup + transfer: serviceType pickup SIN '
+          'tableId, payerPhone viaja y la nota vacía se omite', () async {
+        final order = AdminOrderModel.fromJson(
+          orderJson(id: 'ord-p', serviceType: 'pickup'),
+        );
+        when(() => remote.createOrder(any())).thenAnswer((_) async => order);
+
+        await repository.createInPersonOrder(
+          const AdminNewOrderDraft(
+            serviceType: AdminServiceType.pickup,
+            paymentMethod: AdminPaymentMethod.transfer,
+            payerPhone: '3001234567',
+            notes: '   ',
+            items: [
+              CartItem(
+                id: 'comanda-1',
+                productId: 'p-papas',
+                productSlug: 'manada-papas',
+                productName: 'Manada de papas',
+                unitBase: 10000,
+                modifiers: [],
+              ),
+            ],
+          ),
+        );
+
+        final captured = verify(
+          () => remote.createOrder(captureAny()),
+        ).captured.single as Map<String, dynamic>;
+        expect(captured, {
+          'serviceType': 'pickup',
+          'items': [
+            {
+              'productId': 'p-papas',
+              'quantity': 1,
+              'modifiers': <dynamic>[],
+            },
+          ],
+          'paymentMethod': 'transfer',
+          'payerPhone': '3001234567',
+        });
+        expect(captured.containsKey('tableId'), isFalse);
+        expect(captured.containsKey('notes'), isFalse);
+      });
+
+      test('404 TABLE_NOT_FOUND → AdminServerFailure CON errorCode '
+          '(la comanda resincroniza mesas y tosteea "la mesa '
+          'cambió")', () async {
+        when(() => remote.createOrder(any())).thenThrow(
+          const ServerException(
+            'Table not found',
+            statusCode: 404,
+            errorCode: 'TABLE_NOT_FOUND',
+          ),
+        );
+
+        final result = await repository.createInPersonOrder(dineInDraft());
+
+        expect(
+          result,
+          const Left<AdminFailure, AdminOrder>(
+            AdminServerFailure(
+              'Table not found',
+              errorCode: 'TABLE_NOT_FOUND',
+            ),
+          ),
+        );
+      });
+
+      test('409 ORDER_CATALOG_VIOLATION → AdminConflictFailure con '
+          'el código (un ítem se agotó entre el load y el POST)', () async {
+        when(() => remote.createOrder(any())).thenThrow(
+          const ServerException(
+            'Catalog violation',
+            statusCode: 409,
+            errorCode: 'ORDER_CATALOG_VIOLATION',
+          ),
+        );
+
+        final result = await repository.createInPersonOrder(dineInDraft());
+
+        expect(
+          result,
+          const Left<AdminFailure, AdminOrder>(
+            AdminConflictFailure('ORDER_CATALOG_VIOLATION'),
+          ),
+        );
+      });
+
+      test('502 PAYMENT_DISPATCH_FAILED → AdminServerFailure CON '
+          'errorCode (el push transfer no salió)', () async {
+        when(() => remote.createOrder(any())).thenThrow(
+          const ServerException(
+            'Dispatch failed',
+            statusCode: 502,
+            errorCode: 'PAYMENT_DISPATCH_FAILED',
+          ),
+        );
+
+        final result = await repository.createInPersonOrder(dineInDraft());
+
+        expect(
+          result,
+          const Left<AdminFailure, AdminOrder>(
+            AdminServerFailure(
+              'Dispatch failed',
+              errorCode: 'PAYMENT_DISPATCH_FAILED',
+            ),
+          ),
+        );
+      });
+
+      test('sin conectividad → Left(AdminOfflineFailure) y el '
+          'datasource NUNCA se llama', () async {
+        when(() => networkInfo.isConnected).thenAnswer((_) async => false);
+
+        final result = await repository.createInPersonOrder(dineInDraft());
+
+        expect(
+          result,
+          const Left<AdminFailure, AdminOrder>(AdminOfflineFailure()),
+        );
+        verifyNever(() => remote.createOrder(any()));
+        verifyNever(() => remote.fetchTables());
       });
     });
   });

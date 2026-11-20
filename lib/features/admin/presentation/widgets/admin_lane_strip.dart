@@ -3,6 +3,8 @@ import 'package:flutter/material.dart';
 import '../../../../l10n/app_localizations.dart';
 import '../../../orders/domain/entities/customer_order.dart';
 import '../cubit/admin_queue_state.dart';
+import 'admin_chip_band.dart';
+import 'admin_filter_chip.dart';
 
 /// Strip de carriles del kanban (§036): 5 chips label+count que son
 /// también el resumen del tablero ("3 preparando" se ve sin entrar
@@ -69,42 +71,19 @@ class _AdminLaneStripState extends State<AdminLaneStrip> {
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
     final lanes = AdminQueueState.laneStatuses;
-    return Container(
-      // La banda — negro puro del scaffold, ancho completo.
-      width: double.infinity,
-      color: Theme.of(context).scaffoldBackgroundColor,
-      child: LayoutBuilder(
-        builder: (context, c) => SingleChildScrollView(
-          scrollDirection: Axis.horizontal,
-          child: ConstrainedBox(
-            // minWidth = viewport: el Row se centra cuando los
-            // chips caben; al desbordar conserva su ancho real
-            // y el scroll horizontal sigue funcionando.
-            constraints: BoxConstraints(minWidth: c.maxWidth),
-            child: Padding(
-              padding: const EdgeInsets.symmetric(
-                horizontal: 12,
-                vertical: 8,
-              ),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  for (var i = 0; i < lanes.length; i++) ...[
-                    if (i > 0) const SizedBox(width: 8),
-                    _LaneChip(
-                      key: _chipKeys[i],
-                      label: _laneLabel(l10n, lanes[i]),
-                      count: widget.state.laneOrders(lanes[i]).length,
-                      selected: i == widget.index,
-                      onTap: () => widget.onJump(i),
-                    ),
-                  ],
-                ],
-              ),
-            ),
+    return AdminChipBand(
+      children: [
+        for (var i = 0; i < lanes.length; i++) ...[
+          if (i > 0) const SizedBox(width: 8),
+          AdminFilterChip(
+            key: _chipKeys[i],
+            label: _laneLabel(l10n, lanes[i]),
+            count: widget.state.laneOrders(lanes[i]).length,
+            selected: i == widget.index,
+            onTap: () => widget.onJump(i),
           ),
-        ),
-      ),
+        ],
+      ],
     );
   }
 
@@ -116,152 +95,4 @@ class _AdminLaneStripState extends State<AdminLaneStrip> {
     OrderStatus.done => l10n.orderStatusDelivered,
     OrderStatus.cancelled => '',
   };
-}
-
-/// Un chip del strip — PULSA cuando su contador cambia (fix UX
-/// §040, decisión del dueño: la card que sale de un carril colapsa
-/// animada y el chip del carril que recibe —o pierde— hace un
-/// "pop" de ~450ms que dice a dónde cayó sin mover la pantalla).
-/// Chip completo 1→1.06→1 + badge del conteo 1→1.22→1 en el mismo
-/// reloj; el rebote no se repite en builds sin cambio de conteo.
-class _LaneChip extends StatefulWidget {
-  const _LaneChip({
-    required this.label,
-    required this.count,
-    required this.selected,
-    required this.onTap,
-    super.key,
-  });
-
-  final String label;
-  final int count;
-  final bool selected;
-  final VoidCallback onTap;
-
-  @override
-  State<_LaneChip> createState() => _LaneChipState();
-}
-
-class _LaneChipState extends State<_LaneChip>
-    with SingleTickerProviderStateMixin {
-  late final AnimationController _pulse = AnimationController(
-    vsync: this,
-    duration: const Duration(milliseconds: 450),
-  );
-
-  late final Animation<double> _chipScale = TweenSequence<double>([
-    TweenSequenceItem(
-      tween: Tween<double>(begin: 1, end: 1.06).chain(
-        CurveTween(curve: Curves.easeOut),
-      ),
-      weight: 40,
-    ),
-    TweenSequenceItem(
-      tween: Tween<double>(begin: 1.06, end: 1).chain(
-        CurveTween(curve: Curves.easeInOut),
-      ),
-      weight: 60,
-    ),
-  ]).animate(_pulse);
-
-  late final Animation<double> _badgeScale = TweenSequence<double>([
-    TweenSequenceItem(
-      tween: Tween<double>(begin: 1, end: 1.22).chain(
-        CurveTween(curve: Curves.easeOut),
-      ),
-      weight: 40,
-    ),
-    TweenSequenceItem(
-      tween: Tween<double>(begin: 1.22, end: 1).chain(
-        CurveTween(curve: Curves.easeInOut),
-      ),
-      weight: 60,
-    ),
-  ]).animate(_pulse);
-
-  @override
-  void didUpdateWidget(covariant _LaneChip oldWidget) {
-    super.didUpdateWidget(oldWidget);
-    if (oldWidget.count != widget.count) _pulse.forward(from: 0);
-  }
-
-  @override
-  void dispose() {
-    _pulse.dispose();
-    super.dispose();
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final colors = Theme.of(context).colorScheme;
-    final text = Theme.of(context).textTheme;
-    return Semantics(
-      // Navegación primaria del tablero — el lector anuncia qué
-      // carril está activo (precedente segmented_toggle).
-      selected: widget.selected,
-      inMutuallyExclusiveGroup: true,
-      button: true,
-      child: InkWell(
-        onTap: widget.onTap,
-        borderRadius: BorderRadius.circular(10),
-        child: ScaleTransition(
-          scale: _chipScale,
-          child: AnimatedContainer(
-            duration: const Duration(milliseconds: 180),
-            // Hit area ≥44dp — navegación de uso constante en cocina
-            // (misma corrección §034b del filtro).
-            constraints: const BoxConstraints(minHeight: 44),
-            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-            decoration: BoxDecoration(
-              color: widget.selected
-                  ? colors.primary.withValues(alpha: 0.16)
-                  : colors.surfaceContainerHigh,
-              borderRadius: BorderRadius.circular(10),
-              border: Border.all(
-                color: widget.selected ? colors.primary : Colors.transparent,
-              ),
-            ),
-            child: Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Text(
-                  widget.label,
-                  style: text.labelMedium?.copyWith(
-                    fontWeight: FontWeight.w700,
-                    color:
-                        widget.selected ? colors.primary : colors.onSurface,
-                  ),
-                ),
-                const SizedBox(width: 6),
-                ScaleTransition(
-                  scale: _badgeScale,
-                  child: Container(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 6,
-                      vertical: 1,
-                    ),
-                    decoration: BoxDecoration(
-                      color: widget.selected
-                          ? colors.primary
-                          : colors.onSurface.withValues(alpha: 0.12),
-                      borderRadius: BorderRadius.circular(8),
-                    ),
-                    child: Text(
-                      '${widget.count}',
-                      style: text.labelSmall?.copyWith(
-                        fontWeight: FontWeight.w800,
-                        color: widget.selected
-                            ? colors.onPrimary
-                            : colors.onSurface,
-                      ),
-                    ),
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ),
-      ),
-    );
-  }
 }

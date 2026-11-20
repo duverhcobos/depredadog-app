@@ -1448,5 +1448,112 @@
   "adminLaneEmpty": "Sin pedidos",
   "@adminLaneEmpty": {
     "description": "Vacío compacto de un carril del kanban de Cocina sin pedidos — el carril existe aunque esté vacío (§036)"
+  },
+  "adminNewOrderTitle": "Nueva orden",
+  "@adminNewOrderTitle": {
+    "description": "Título naciente de la comanda presencial del dueño (§042 — paso comanda)"
+  },
+  "adminNewOrderReviewTitle": "Revisar y cobrar",
+  "@adminNewOrderReviewTitle": {
+    "description": "Título naciente del paso cobro de la comanda presencial (§042 — esqueleto _CobroTitle)"
+  },
+  "adminNewOrderContinue": "Continuar",
+  "@adminNewOrderContinue": {
+    "description": "CTA del footer del paso comanda que lleva al paso cobro (§042)"
+  },
+  "adminNewOrderItems": "{count, plural, =1{1 ítem} other{{count} ítems}}",
+  "@adminNewOrderItems": {
+    "description": "Conteo de unidades del ticket en el footer del paso comanda (§042)",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "adminNewOrderCreate": "Crear pedido",
+  "@adminNewOrderCreate": {
+    "description": "CTA del footer del paso cobro que manda el POST /admin/orders (§042)"
+  },
+  "adminNewOrderCreated": "Pedido #{number} en la cola",
+  "@adminNewOrderCreated": {
+    "description": "Toast de éxito tras crear el pedido presencial — number = consecutivo del día (§042)",
+    "placeholders": {
+      "number": {
+        "type": "int"
+      }
+    }
+  },
+  "adminNewOrderService": "Servicio",
+  "@adminNewOrderService": {
+    "description": "Etiqueta de la sección tipo de servicio del paso cobro (§042)"
+  },
+  "adminNewOrderDineIn": "Mesa",
+  "@adminNewOrderDineIn": {
+    "description": "Chip del servicio dine_in (pedido a mesa del local, §042)"
+  },
+  "adminNewOrderPickup": "Para llevar",
+  "@adminNewOrderPickup": {
+    "description": "Chip del servicio pickup (pedido de mostrador/para llevar, §042)"
+  },
+  "adminNewOrderCategoryAll": "Todo",
+  "@adminNewOrderCategoryAll": {
+    "description": "Chip de filtro sin categoría de la comanda — muestra la carta completa (§042)"
+  },
+  "adminNewOrderPayment": "Pago",
+  "@adminNewOrderPayment": {
+    "description": "Etiqueta de la sección método de pago del paso cobro (§042)"
+  },
+  "adminNewOrderPayerPhone": "Celular que recibe el cobro",
+  "@adminNewOrderPayerPhone": {
+    "description": "Label del campo celular del pagador — visible solo en Transf. (§042, exigido por el contrato)"
+  },
+  "adminNewOrderPhoneHint": "Ej: 3001234567",
+  "@adminNewOrderPhoneHint": {
+    "description": "Hint del campo celular del pagador (§042 — formato 3XXXXXXXXX)"
+  },
+  "adminNewOrderPhoneError": "Escribe el celular de 10 dígitos",
+  "@adminNewOrderPhoneError": {
+    "description": "Error inline del campo celular cuando no cumple ^3\\d{9}$ — solo en Transf. (§042)"
+  },
+  "adminNewOrderNote": "Nota (opcional)",
+  "@adminNewOrderNote": {
+    "description": "Label del campo de nota del pedido completo — maxLength 500 (§042; items[].notes fuera de alcance). Corto: el label vive en la zona angosta y 'Nota del pedido (opcional)' truncaba a media palabra (revisor-estetico §042)"
+  },
+  "adminNewOrderEmpty": "Sin productos en esta categoría",
+  "@adminNewOrderEmpty": {
+    "description": "Vacío de la lista de la comanda cuando la categoría filtrada no tiene productos (§042)"
+  },
+  "adminNewOrderTicketEmpty": "Toca un producto para agregarlo",
+  "@adminNewOrderTicketEmpty": {
+    "description": "Vacío del bloque de ítems del paso cobro (§042)"
+  },
+  "adminNewOrderTableBusy": "#{number}",
+  "@adminNewOrderTableBusy": {
+    "description": "Tag de la mesa ocupada en el picker — number = consecutivo del pedido vivo que la tiene (§042)",
+    "placeholders": {
+      "number": {
+        "type": "int"
+      }
+    }
+  },
+  "adminNewOrderSheetAdd": "Agregar",
+  "@adminNewOrderSheetAdd": {
+    "description": "CTA del sheet de personalización que produce el CartItem y cierra (§042)"
+  },
+  "adminNewOrderLoadError": "No pudimos cargar la comanda",
+  "@adminNewOrderLoadError": {
+    "description": "Vista de error de la comanda cuando la carga de carta+mesas falla — con botón Reintentar (§042)"
+  },
+  "adminNewOrderCatalogViolation": "Un ítem ya no está disponible — revisa la comanda",
+  "@adminNewOrderCatalogViolation": {
+    "description": "Toast del submit cuando el backend responde 409 ORDER_CATALOG_VIOLATION — un ítem se agotó en el medio (§042)"
+  },
+  "adminNewOrderTableStale": "La mesa cambió — elige otra",
+  "@adminNewOrderTableStale": {
+    "description": "Toast del submit cuando el backend responde 404 TABLE_NOT_FOUND — las mesas se resincronizan solas (§042)"
+  },
+  "adminNewOrderDispatchFailed": "No pudimos enviar el cobro — cobra en efectivo o inténtalo de nuevo",
+  "@adminNewOrderDispatchFailed": {
+    "description": "Toast del submit cuando el backend responde 502 PAYMENT_DISPATCH_FAILED — el push transfer no salió (§042)"
   }
 }

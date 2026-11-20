@@ -1,22 +1,31 @@
+import 'dart:async' show unawaited;
+
 import 'package:dartz/dartz.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:get_it/get_it.dart';
+import 'package:go_router/go_router.dart';
 import 'package:mocktail/mocktail.dart';
+import 'package:depredadog_app/core/routes/auth_guard.dart';
 import 'package:depredadog_app/core/theme/app_theme.dart';
+import 'package:depredadog_app/features/admin/domain/entities/admin_new_order_draft.dart';
 import 'package:depredadog_app/features/admin/domain/entities/admin_order.dart';
 import 'package:depredadog_app/features/admin/domain/failures/admin_failure.dart';
 import 'package:depredadog_app/features/admin/domain/repositories/i_admin_repository.dart';
 import 'package:depredadog_app/features/admin/domain/use_cases/load_admin_queue_use_case.dart';
+import 'package:depredadog_app/features/admin/presentation/cubit/admin_new_order_cubit.dart';
 import 'package:depredadog_app/features/admin/presentation/cubit/admin_queue_cubit.dart';
+import 'package:depredadog_app/features/admin/presentation/screens/admin_new_order_screen.dart';
 import 'package:depredadog_app/features/admin/presentation/screens/admin_queue_screen.dart';
 import 'package:depredadog_app/features/admin/presentation/widgets/admin_lane_strip.dart';
 import 'package:depredadog_app/features/admin/presentation/widgets/admin_order_card.dart';
 import 'package:depredadog_app/features/orders/domain/entities/customer_order.dart';
 import 'package:depredadog_app/l10n/app_localizations.dart';
 
+import '../../fixtures/admin_new_order_fixtures.dart';
 import '../../fixtures/admin_order_fixtures.dart';
 
 /// Use case falso stub-eado con las fixtures — el mismo cableado de
@@ -158,6 +167,18 @@ class _StaleErrorQueueCubit extends AdminQueueCubit {
 void main() {
   final locator = GetIt.instance;
   late AdminQueueCubit cubit;
+
+  setUpAll(() {
+    // mocktail necesita un fallback del draft para `create.call(any())`
+    // en buildAdminNewOrderCubit (test del FAB → /orders/new).
+    registerFallbackValue(
+      const AdminNewOrderDraft(
+        serviceType: AdminServiceType.dineIn,
+        paymentMethod: AdminPaymentMethod.cash,
+        items: [],
+      ),
+    );
+  });
 
   setUp(() {
     // Cubit real con las fixtures de fábrica (30 activos — todos los
@@ -617,23 +638,6 @@ void main() {
     await expectFrozen('Daniela Cuatro', rejected);
   });
 
-  testWidgets('FAB "Nueva orden" → toast "Disponible próximamente" '
-      '(form en el ciclo 3)', (tester) async {
-    final calls = stubToast(tester);
-    await pumpQueue(tester);
-    await loadQueue(tester);
-
-    await tester.tap(find.byType(FloatingActionButton));
-    await tester.pump();
-
-    expect(calls, hasLength(1));
-    expect(calls.first.method, 'showToast');
-    expect(calls.first.arguments['msg'], 'Disponible próximamente');
-
-    // Expira el Future.delayed interno de fluttertoast.
-    await tester.pump(const Duration(seconds: 2));
-  });
-
   testWidgets('tap en "Confirmar" mueve la card al carril Confirmado '
       'y el contador del chip cambia — sin navegar (§036)', (tester) async {
     final calls = stubToast(tester);
@@ -825,5 +829,63 @@ void main() {
 
       await tester.pump(const Duration(seconds: 2));
     });
+  });
+
+  testWidgets('FAB "+": navega a la comanda presencial /orders/new '
+      '(§042 — adiós al toast "próximamente")', (tester) async {
+    // La comanda se resuelve por locator como hace la ruta real.
+    final newOrder = buildAdminNewOrderCubit();
+    locator.registerFactory<AdminNewOrderCubit>(() => newOrder);
+    // Sin await — ver tearDown de la pantalla (done de broadcast +
+    // FakeAsync congelado = hang del test).
+    addTearDown(() => unawaited(newOrder.close()));
+
+    // Rama admin réplica de app_router con la hija literal
+    // orders/new — el FAB hace context.push a esa ruta.
+    final router = GoRouter(
+      initialLocation: AuthGuard.adminRoute,
+      routes: [
+        GoRoute(
+          path: AuthGuard.adminRoute,
+          builder: (context, state) => const AdminQueueScreen(),
+          routes: [
+            GoRoute(
+              path: 'orders/new',
+              builder: (context, state) => BlocProvider(
+                create: (_) => locator<AdminNewOrderCubit>(),
+                child: const AdminNewOrderScreen(),
+              ),
+            ),
+          ],
+        ),
+      ],
+    );
+    await tester.pumpWidget(
+      MaterialApp.router(
+        theme: AppTheme.dark(),
+        routerConfig: router,
+        localizationsDelegates: const [
+          AppLocalizations.delegate,
+          GlobalMaterialLocalizations.delegate,
+          GlobalWidgetsLocalizations.delegate,
+          GlobalCupertinoLocalizations.delegate,
+        ],
+        supportedLocales: AppLocalizations.supportedLocales,
+        locale: const Locale('es'),
+      ),
+    );
+    await loadQueue(tester);
+
+    final calls = stubToast(tester);
+    // El FAB grande es el de nueva orden (el small de back-to-top
+    // nace oculto — solo existe un FAB en superficie).
+    await tester.tap(find.byType(FloatingActionButton));
+    await tester.pumpAndSettle();
+
+    expect(find.byType(AdminNewOrderScreen), findsOneWidget);
+    expect(router.state.matchedLocation, '/admin/orders/new');
+    expect(find.text('Nueva orden'), findsOneWidget);
+    // Nada del placeholder viejo — el FAB ya no tosteea.
+    expect(calls, isEmpty);
   });
 }

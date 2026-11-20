@@ -7,7 +7,6 @@ import 'package:go_router/go_router.dart';
 
 import '../../../../core/di/setup_di.dart';
 import '../../../../core/routes/auth_guard.dart';
-import '../../../../core/widgets/app_toast.dart';
 import '../../../../l10n/app_localizations.dart';
 import '../../../home/presentation/widgets/signature_strip.dart';
 import '../cubit/admin_queue_cubit.dart';
@@ -34,8 +33,8 @@ import '../widgets/admin_queue_lane.dart';
 /// sobre el FAB que regresa lista + header al inicio. Estados:
 /// spinner de primera carga, vacío global, error + reintentar,
 /// pull-to-refresh (overscroll del outer, depth 0). FAB "Nueva
-/// orden" ancla el CTA del dueño (form en el ciclo 3 — toast
-/// "Disponible próximamente"); tap en card → detalle /admin/:id.
+/// orden" → /admin/orders/new (§042 — la comanda presencial);
+/// tap en card → detalle /admin/:id.
 /// Es tab — no lleva flecha.
 class AdminQueueScreen extends StatefulWidget {
   const AdminQueueScreen({super.key});
@@ -148,7 +147,10 @@ class _AdminQueueScreenState extends State<AdminQueueScreen> {
                 : const SizedBox.shrink(key: ValueKey('noBackToTop')),
           ),
           FloatingActionButton(
-            onPressed: () => AppToast.info(context, l10n.comingSoon),
+            // Comanda presencial (§042) — push sobre la rama de la
+            // cola para que el back regrese a Cocina.
+            onPressed: () =>
+                context.push('${AuthGuard.adminRoute}/orders/new'),
             backgroundColor: colors.primary,
             foregroundColor: colors.onPrimary,
             tooltip: l10n.adminNewOrder,

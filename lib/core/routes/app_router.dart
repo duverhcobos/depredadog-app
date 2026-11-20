@@ -2,8 +2,10 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../features/admin/domain/entities/admin_order.dart';
+import '../../features/admin/presentation/cubit/admin_new_order_cubit.dart';
 import '../../features/admin/presentation/cubit/admin_queue_cubit.dart';
 import '../../features/admin/presentation/screens/admin_day_close_screen.dart';
+import '../../features/admin/presentation/screens/admin_new_order_screen.dart';
 import '../../features/admin/presentation/screens/admin_history_screen.dart';
 import '../../features/admin/presentation/screens/admin_order_detail_screen.dart';
 import '../../features/admin/presentation/screens/admin_queue_screen.dart';
@@ -362,6 +364,18 @@ class AppRouter {
                       BlocProvider.value(
                         value: locator<AdminQueueCubit>(),
                         child: const AdminHistoryScreen(),
+                      ),
+                    ),
+                  ),
+                  // Comanda presencial (§042) — cubit propio por
+                  // visita (factory): el borrador muere al salir.
+                  GoRoute(
+                    path: 'orders/new',
+                    pageBuilder: (context, state) => CustomTransitions.slideUp(
+                      state,
+                      BlocProvider(
+                        create: (_) => locator<AdminNewOrderCubit>(),
+                        child: const AdminNewOrderScreen(),
                       ),
                     ),
                   ),

@@ -1,5 +1,6 @@
 import '../../models/admin_day_close_model.dart';
 import '../../models/admin_order_model.dart';
+import '../../models/admin_table_model.dart';
 
 /// Puerto remoto de la cola del local (GET /admin/orders — backend §019).
 /// El envelope {items,total,page,limit}: `active` no pagina (page/limit se
@@ -45,4 +46,15 @@ abstract class IAdminRemoteDataSource {
   /// atómico — crea el registro, estampa `day_close_id` en los
   /// terminales y devuelve el snapshot persistido.
   Future<AdminDayCloseModel> postDayClose();
+
+  /// GET /admin/tables (§042 — backend §019): mesas con ocupación
+  /// en vivo para el picker de la comanda.
+  Future<List<AdminTableModel>> fetchTables();
+
+  /// POST /admin/orders (§042 — backend §019): crea el presencial.
+  /// `payload` ya viene en forma JSON del repo (serviceType, tableId?,
+  /// items con modifiers, paymentMethod, payerPhone?, notes?). 201 →
+  /// la vista admin completa; 400/404/409/502 salen como
+  /// ServerException con errorCode.
+  Future<AdminOrderModel> createOrder(Map<String, dynamic> payload);
 }

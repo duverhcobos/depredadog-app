@@ -1,6 +1,7 @@
 import '../../../../../core/network/interfaces/i_network_service.dart';
 import '../../models/admin_day_close_model.dart';
 import '../../models/admin_order_model.dart';
+import '../../models/admin_table_model.dart';
 import '../interfaces/i_admin_remote_datasource.dart';
 
 /// SOLID (SRP): solo llama GET /admin/orders y parsea — el Bearer lo pone
@@ -67,5 +68,20 @@ class AdminRemoteDataSourceImpl implements IAdminRemoteDataSource {
   Future<AdminDayCloseModel> postDayClose() async {
     final json = await _networkService.post('/admin/day-close');
     return AdminDayCloseModel.fromJson(json as Map<String, dynamic>);
+  }
+
+  @override
+  Future<List<AdminTableModel>> fetchTables() async {
+    final json = await _networkService.get('/admin/tables');
+    return [
+      for (final t in (json['items'] as List? ?? const []))
+        AdminTableModel.fromJson(t as Map<String, dynamic>),
+    ];
+  }
+
+  @override
+  Future<AdminOrderModel> createOrder(Map<String, dynamic> payload) async {
+    final json = await _networkService.post('/admin/orders', body: payload);
+    return AdminOrderModel.fromJson(json as Map<String, dynamic>);
   }
 }

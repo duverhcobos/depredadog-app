@@ -2559,6 +2559,144 @@ abstract class AppLocalizations {
   /// In es, this message translates to:
   /// **'Sin pedidos'**
   String get adminLaneEmpty;
+
+  /// Título naciente de la comanda presencial del dueño (§042 — paso comanda)
+  ///
+  /// In es, this message translates to:
+  /// **'Nueva orden'**
+  String get adminNewOrderTitle;
+
+  /// Título naciente del paso cobro de la comanda presencial (§042 — esqueleto _CobroTitle)
+  ///
+  /// In es, this message translates to:
+  /// **'Revisar y cobrar'**
+  String get adminNewOrderReviewTitle;
+
+  /// CTA del footer del paso comanda que lleva al paso cobro (§042)
+  ///
+  /// In es, this message translates to:
+  /// **'Continuar'**
+  String get adminNewOrderContinue;
+
+  /// Conteo de unidades del ticket en el footer del paso comanda (§042)
+  ///
+  /// In es, this message translates to:
+  /// **'{count, plural, =1{1 ítem} other{{count} ítems}}'**
+  String adminNewOrderItems(int count);
+
+  /// CTA del footer del paso cobro que manda el POST /admin/orders (§042)
+  ///
+  /// In es, this message translates to:
+  /// **'Crear pedido'**
+  String get adminNewOrderCreate;
+
+  /// Toast de éxito tras crear el pedido presencial — number = consecutivo del día (§042)
+  ///
+  /// In es, this message translates to:
+  /// **'Pedido #{number} en la cola'**
+  String adminNewOrderCreated(int number);
+
+  /// Etiqueta de la sección tipo de servicio del paso cobro (§042)
+  ///
+  /// In es, this message translates to:
+  /// **'Servicio'**
+  String get adminNewOrderService;
+
+  /// Chip del servicio dine_in (pedido a mesa del local, §042)
+  ///
+  /// In es, this message translates to:
+  /// **'Mesa'**
+  String get adminNewOrderDineIn;
+
+  /// Chip del servicio pickup (pedido de mostrador/para llevar, §042)
+  ///
+  /// In es, this message translates to:
+  /// **'Para llevar'**
+  String get adminNewOrderPickup;
+
+  /// Chip de filtro sin categoría de la comanda — muestra la carta completa (§042)
+  ///
+  /// In es, this message translates to:
+  /// **'Todo'**
+  String get adminNewOrderCategoryAll;
+
+  /// Etiqueta de la sección método de pago del paso cobro (§042)
+  ///
+  /// In es, this message translates to:
+  /// **'Pago'**
+  String get adminNewOrderPayment;
+
+  /// Label del campo celular del pagador — visible solo en Transf. (§042, exigido por el contrato)
+  ///
+  /// In es, this message translates to:
+  /// **'Celular que recibe el cobro'**
+  String get adminNewOrderPayerPhone;
+
+  /// Hint del campo celular del pagador (§042 — formato 3XXXXXXXXX)
+  ///
+  /// In es, this message translates to:
+  /// **'Ej: 3001234567'**
+  String get adminNewOrderPhoneHint;
+
+  /// Error inline del campo celular cuando no cumple ^3\d{9}$ — solo en Transf. (§042)
+  ///
+  /// In es, this message translates to:
+  /// **'Escribe el celular de 10 dígitos'**
+  String get adminNewOrderPhoneError;
+
+  /// Label del campo de nota del pedido completo — maxLength 500 (§042; items[].notes fuera de alcance). Corto: el label vive en la zona angosta y 'Nota del pedido (opcional)' truncaba a media palabra (revisor-estetico §042)
+  ///
+  /// In es, this message translates to:
+  /// **'Nota (opcional)'**
+  String get adminNewOrderNote;
+
+  /// Vacío de la lista de la comanda cuando la categoría filtrada no tiene productos (§042)
+  ///
+  /// In es, this message translates to:
+  /// **'Sin productos en esta categoría'**
+  String get adminNewOrderEmpty;
+
+  /// Vacío del bloque de ítems del paso cobro (§042)
+  ///
+  /// In es, this message translates to:
+  /// **'Toca un producto para agregarlo'**
+  String get adminNewOrderTicketEmpty;
+
+  /// Tag de la mesa ocupada en el picker — number = consecutivo del pedido vivo que la tiene (§042)
+  ///
+  /// In es, this message translates to:
+  /// **'#{number}'**
+  String adminNewOrderTableBusy(int number);
+
+  /// CTA del sheet de personalización que produce el CartItem y cierra (§042)
+  ///
+  /// In es, this message translates to:
+  /// **'Agregar'**
+  String get adminNewOrderSheetAdd;
+
+  /// Vista de error de la comanda cuando la carga de carta+mesas falla — con botón Reintentar (§042)
+  ///
+  /// In es, this message translates to:
+  /// **'No pudimos cargar la comanda'**
+  String get adminNewOrderLoadError;
+
+  /// Toast del submit cuando el backend responde 409 ORDER_CATALOG_VIOLATION — un ítem se agotó en el medio (§042)
+  ///
+  /// In es, this message translates to:
+  /// **'Un ítem ya no está disponible — revisa la comanda'**
+  String get adminNewOrderCatalogViolation;
+
+  /// Toast del submit cuando el backend responde 404 TABLE_NOT_FOUND — las mesas se resincronizan solas (§042)
+  ///
+  /// In es, this message translates to:
+  /// **'La mesa cambió — elige otra'**
+  String get adminNewOrderTableStale;
+
+  /// Toast del submit cuando el backend responde 502 PAYMENT_DISPATCH_FAILED — el push transfer no salió (§042)
+  ///
+  /// In es, this message translates to:
+  /// **'No pudimos enviar el cobro — cobra en efectivo o inténtalo de nuevo'**
+  String get adminNewOrderDispatchFailed;
 }
 
 class _AppLocalizationsDelegate
