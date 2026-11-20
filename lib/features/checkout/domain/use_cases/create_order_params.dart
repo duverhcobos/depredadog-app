@@ -70,6 +70,7 @@ class OrderModifierInput {
   const OrderModifierInput({
     required this.optionId,
     required this.action,
+    this.times = 1,
     this.replacesOptionId,
   });
 
@@ -77,6 +78,10 @@ class OrderModifierInput {
 
   /// 'added' | 'removed' — el enum del backend.
   final String action;
+
+  /// Porciones del extra (§045) — solo `added` de adicionales
+  /// cobrados; el resto viaja en 1.
+  final int times;
 
   /// Solo en `added` de un reemplazo gratis (§021): apunta al
   /// ingrediente incluido agotado que esta opción reemplaza.

@@ -10,6 +10,7 @@ import '../../../../home/domain/entities/modifier_option.dart';
 import '../../../../home/presentation/utils/catalog_assets.dart';
 import '../../../../home/presentation/utils/format_cop.dart';
 import '../../../../home/presentation/widgets/customization_section.dart';
+import '../../../../home/presentation/widgets/extra_stepper_row.dart';
 import '../../../../home/presentation/widgets/product_image.dart';
 
 /// Sheet de personalización de la comanda (§042): header
@@ -49,9 +50,10 @@ class ItemCustomizeSheet extends StatefulWidget {
 class _ItemCustomizeSheetState extends State<ItemCustomizeSheet> {
   /// Selecciones del sheet — espejo de DetailSelections del detalle
   /// SIN replacements (V1: el agotado solo se muestra, no se cambia,
-  /// §042 fuera de alcance).
+  /// §042 fuera de alcance). `_extras` es optionId → porciones (§045):
+  /// el dueño también vende porciones dobles.
   final Set<String> _removed = {};
-  final Set<String> _extras = {};
+  final Map<String, int> _extras = {};
   final Set<String> _toppings = {};
   final Set<String> _sauces = {};
   int _qty = 1;
@@ -59,11 +61,11 @@ class _ItemCustomizeSheetState extends State<ItemCustomizeSheet> {
   void _toggle(Set<String> s, String id) =>
       setState(() => s.contains(id) ? s.remove(id) : s.add(id));
 
-  /// Total del CTA — (base + adicionales) × unidades.
+  /// Total del CTA — (base + adicionales × porciones) × unidades.
   int get _total {
     var t = widget.product.basePrice;
     for (final o in widget.product.additionalOptions) {
-      if (_extras.contains(o.id)) t += o.extraPrice;
+      t += o.extraPrice * (_extras[o.id] ?? 0);
     }
     return t * _qty;
   }
@@ -85,10 +87,12 @@ class _ItemCustomizeSheetState extends State<ItemCustomizeSheet> {
   List<CartModifier> _buildModifiers() {
     CartModifier? mod(
       String id,
-      CartModifierAction a, [
+      CartModifierAction a, {
       int price = 0,
       CartModifierGroup group = CartModifierGroup.ingredient,
-    ]) {
+      // Porciones del extra (§045) — solo extras cobrados; el resto 1.
+      int times = kMinExtraTimes,
+    }) {
       final o = _optionById(id);
       if (o == null) return null;
       return CartModifier(
@@ -96,23 +100,26 @@ class _ItemCustomizeSheetState extends State<ItemCustomizeSheet> {
         optionName: o.name,
         action: a,
         priceDelta: price,
+        times: times,
         group: group,
       );
     }
 
     return [
       for (final id in _removed) ?mod(id, CartModifierAction.removed),
-      for (final id in _extras)
+      for (final e in _extras.entries)
         ?mod(
-          id,
+          e.key,
           CartModifierAction.added,
-          _optionById(id)?.extraPrice ?? 0,
-          CartModifierGroup.extra,
+          // priceDelta = total de línea (extra × porciones, §045).
+          price: (_optionById(e.key)?.extraPrice ?? 0) * e.value,
+          group: CartModifierGroup.extra,
+          times: e.value,
         ),
       for (final id in _toppings)
-        ?mod(id, CartModifierAction.added, 0, CartModifierGroup.topping),
+        ?mod(id, CartModifierAction.added, group: CartModifierGroup.topping),
       for (final id in _sauces)
-        ?mod(id, CartModifierAction.added, 0, CartModifierGroup.sauce),
+        ?mod(id, CartModifierAction.added, group: CartModifierGroup.sauce),
     ];
   }
 
@@ -243,7 +250,13 @@ class _ItemCustomizeSheetState extends State<ItemCustomizeSheet> {
                                 label: o.name,
                                 removed: _removed.contains(o.id),
                                 enabled: o.isAvailable,
-                                onTap: () => _toggle(_removed, o.id),
+                                // Quitar también limpia su extra
+                                // (§045) — "sin X con X extra" es
+                                // inválido (duplicate modifier).
+                                onTap: () {
+                                  _toggle(_removed, o.id);
+                                  _extras.remove(o.id);
+                                },
                               ),
                           ],
                         ),
@@ -252,16 +265,25 @@ class _ItemCustomizeSheetState extends State<ItemCustomizeSheet> {
                           title: l10n.detailSectionExtras,
                           children: [
                             for (final o in extras)
-                              OptionRow(
+                              ExtraStepperRow(
                                 label: o.name,
-                                selected: _extras.contains(o.id),
-                                enabled: o.isAvailable,
-                                trailingLabel: !o.isAvailable
-                                    ? l10n.catalogSoldOut
-                                    : o.extraPrice > 0
-                                    ? '+${formatCop(o.extraPrice)}'
-                                    : null,
-                                onTap: () => _toggle(_extras, o.id),
+                                unitPrice: o.extraPrice,
+                                times: _extras[o.id] ?? 0,
+                                disabledLabel:
+                                    o.isAvailable ? null : l10n.catalogSoldOut,
+                                // Agotada, o quitada del perro (§045):
+                                // no se puede pedir su extra.
+                                enabled:
+                                    o.isAvailable && !_removed.contains(o.id),
+                                onChanged: (n) => setState(() {
+                                  // Sin tope (§045) — clamp solo por
+                                  // abajo: 0 o menos quita el extra.
+                                  if (n < kMinExtraTimes) {
+                                    _extras.remove(o.id);
+                                  } else {
+                                    _extras[o.id] = n;
+                                  }
+                                }),
                               ),
                           ],
                         ),

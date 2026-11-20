@@ -10,18 +10,20 @@ import '../../domain/entities/catalog_product.dart';
 class DetailSelections {
   DetailSelections({
     Set<String>? removed,
-    Set<String>? extras,
+    Map<String, int>? extras,
     Set<String>? toppings,
     Set<String>? sauces,
     Map<String, String>? replacements,
   }) : removed = removed ?? <String>{},
-       extras = extras ?? <String>{},
+       extras = extras ?? <String, int>{},
        toppings = toppings ?? <String>{},
        sauces = sauces ?? <String>{},
        replacements = replacements ?? <String, String>{};
 
   final Set<String> removed;
-  final Set<String> extras;
+  /// optionId → porciones (§045) — solo extras cobrados; ≥ 1, sin
+  /// tope. Un id ausente = no seleccionado.
+  final Map<String, int> extras;
   final Set<String> toppings;
   final Set<String> sauces;
   final Map<String, String> replacements;
@@ -38,7 +40,7 @@ class DetailSelections {
   factory DetailSelections.fromCartItem(CartItem item, CatalogProduct product) {
     final removed = <String>{};
     final replacements = <String, String>{};
-    final addedIds = <String>{};
+    final addedById = <String, CartModifier>{};
     for (final m in item.modifiers) {
       switch (m.action) {
         case CartModifierAction.removed:
@@ -47,7 +49,7 @@ class DetailSelections {
           if (m.replacesOptionId != null) {
             replacements[m.replacesOptionId!] = m.optionId;
           } else {
-            addedIds.add(m.optionId);
+            addedById[m.optionId] = m;
           }
       }
     }
@@ -65,17 +67,18 @@ class DetailSelections {
       return null;
     }
 
-    final extras = <String>{};
+    final extras = <String, int>{};
     final toppings = <String>{};
     final sauces = <String>{};
-    for (final id in addedIds) {
-      switch (groupOf(id)) {
+    for (final e in addedById.entries) {
+      switch (groupOf(e.key)) {
         case 'extras':
-          extras.add(id);
+          // times del snapshot (§045) — las filas viejas vienen en 1.
+          extras[e.key] = e.value.times;
         case 'toppings':
-          toppings.add(id);
+          toppings.add(e.key);
         case 'sauces':
-          sauces.add(id);
+          sauces.add(e.key);
         case null:
           break; // opción ya no existe — la edición la descarta
       }

@@ -18,6 +18,7 @@ import '../utils/detail_selections.dart';
 import '../utils/format_cop.dart';
 import '../widgets/catalog_states.dart';
 import '../widgets/customization_section.dart';
+import '../widgets/extra_stepper_row.dart';
 import '../widgets/product_image.dart';
 import '../widgets/signature_strip.dart';
 
@@ -87,7 +88,8 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
   int get _total {
     var t = _item?.basePrice ?? 0;
     for (final o in _item?.additionalOptions ?? const <ModifierOption>[]) {
-      if (_sel.extras.contains(o.id)) t += o.extraPrice;
+      final n = _sel.extras[o.id];
+      if (n != null) t += o.extraPrice * n;
     }
     return t;
   }
@@ -116,7 +118,11 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
   /// un candidato no se puede escoger dos veces en el mismo perro.
   Iterable<ModifierOption> _swapCandidates(String exhaustedId) {
     return (_item?.additionalOptions ?? const <ModifierOption>[]).where(
+      // !includedByDefault: reemplazar = cambiar lo incluido por algo
+      // que NO viene — una incluida ya está en el perro (§045 las
+      // incluidas entraron a additionalOptions como extra cobrado).
       (e) =>
+          !e.includedByDefault &&
           e.isAvailable &&
           e.isReplacementEligible &&
           (_sel.replacements[exhaustedId] == e.id ||
@@ -152,11 +158,13 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
   List<CartModifier> _buildModifiers(CatalogProduct item) {
     CartModifier? mod(
       String id,
-      CartModifierAction a, [
+      CartModifierAction a, {
       int price = 0,
       String? replacesOptionId,
       CartModifierGroup group = CartModifierGroup.ingredient,
-    ]) {
+      // Porciones del extra (§045) — solo extras cobrados; el resto 1.
+      int times = kMinExtraTimes,
+    }) {
       final o = _optionById(item, id);
       if (o == null) return null;
       return CartModifier(
@@ -164,6 +172,7 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
         optionName: o.name,
         action: a,
         priceDelta: price,
+        times: times,
         replacesOptionId: replacesOptionId,
         group: group,
       );
@@ -181,20 +190,24 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
           ?mod(id, CartModifierAction.removed),
       for (final e in _sel.replacements.entries) ...[
         ?mod(e.key, CartModifierAction.removed),
-        ?mod(e.value, CartModifierAction.added, 0, e.key),
-      ],
-      for (final id in _sel.extras)
         ?mod(
-          id,
+          e.value,
           CartModifierAction.added,
-          _optionById(item, id)?.extraPrice ?? 0,
-          null,
-          CartModifierGroup.extra,
+          replacesOptionId: e.key,
+        ),
+      ],
+      for (final e in _sel.extras.entries)
+        ?mod(
+          e.key,
+          CartModifierAction.added,
+          price: (_optionById(item, e.key)?.extraPrice ?? 0) * e.value,
+          group: CartModifierGroup.extra,
+          times: e.value,
         ),
       for (final id in _sel.toppings)
-        ?mod(id, CartModifierAction.added, 0, null, CartModifierGroup.topping),
+        ?mod(id, CartModifierAction.added, group: CartModifierGroup.topping),
       for (final id in _sel.sauces)
-        ?mod(id, CartModifierAction.added, 0, null, CartModifierGroup.sauce),
+        ?mod(id, CartModifierAction.added, group: CartModifierGroup.sauce),
     ];
   }
 
@@ -436,7 +449,14 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
                                         : null,
                                     swapExpanded: _swapOpen.contains(o.id),
                                     swapLabel: l10n.detailSwapCta,
-                                    onTap: () => _toggle(_sel.removed, o.id),
+                                    // Quitar también limpia su extra
+                                    // (§045): "sin X pero con X extra"
+                                    // es inválido — el backend lo
+                                    // rechaza con duplicate modifier.
+                                    onTap: () {
+                                      _toggle(_sel.removed, o.id);
+                                      _sel.extras.remove(o.id);
+                                    },
                                   ),
                                   // Reemplazo elegido: fila propia bajo el
                                   // agotado, sangrada + gancho ↳ para que
@@ -533,14 +553,26 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
                             title: l10n.detailSectionExtras,
                             children: [
                               for (final o in extras)
-                                OptionRow(
+                                ExtraStepperRow(
                                   label: o.name,
-                                  trailingLabel: o.isAvailable
-                                      ? '+${formatCop(o.extraPrice)}'
-                                      : l10n.catalogSoldOut,
-                                  selected: _sel.extras.contains(o.id),
-                                  enabled: o.isAvailable,
-                                  onTap: () => _toggle(_sel.extras, o.id),
+                                  unitPrice: o.extraPrice,
+                                  times: _sel.extras[o.id] ?? 0,
+                                  disabledLabel:
+                                      o.isAvailable ? null : l10n.catalogSoldOut,
+                                  // Agotada, o quitada del perro (§045):
+                                  // no se puede pedir su extra.
+                                  enabled:
+                                      o.isAvailable &&
+                                      !_sel.removed.contains(o.id),
+                                  onChanged: (n) => setState(() {
+                                    // Sin tope (§045) — clamp solo por
+                                    // abajo: 0 o menos quita el extra.
+                                    if (n < kMinExtraTimes) {
+                                      _sel.extras.remove(o.id);
+                                    } else {
+                                      _sel.extras[o.id] = n;
+                                    }
+                                  }),
                                 ),
                             ],
                           ),

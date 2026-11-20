@@ -1,5 +1,8 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:depredadog_app/features/home/data/models/catalog_models.dart';
+import 'package:depredadog_app/features/home/domain/entities/catalog_product.dart';
+import 'package:depredadog_app/features/home/domain/entities/modifier_group.dart';
+import 'package:depredadog_app/features/home/domain/entities/modifier_option.dart';
 
 void main() {
   group('CatalogCategoryModel.fromJson', () {
@@ -133,6 +136,68 @@ void main() {
       expect(product.toppingOptions, isEmpty);
       expect(product.sauceOptions, isEmpty);
       expect(product.ingredientsSummary, '');
+    });
+  });
+
+  group('CatalogProduct.additionalOptions (§045)', () {
+    ModifierOption opt(
+      String id, {
+      required bool included,
+      required int extraPrice,
+      bool removable = true,
+    }) => ModifierOption(
+      id: id,
+      name: id,
+      extraPrice: extraPrice,
+      isAvailable: true,
+      isRemovable: removable,
+      includedByDefault: included,
+    );
+
+    CatalogProduct product(List<ModifierOption> options) => CatalogProduct(
+      id: 'p-1',
+      slug: 'perro',
+      name: 'Perro',
+      tagline: '',
+      basePrice: 10000,
+      imageUrl: null,
+      isAvailable: true,
+      isFeatured: false,
+      isCombo: false,
+      modifierGroups: [
+        ModifierGroup(
+          id: 'g-ing',
+          slug: 'ingredients',
+          name: 'Ingredientes',
+          minSelect: 0,
+          maxSelect: null,
+          options: options,
+        ),
+      ],
+    );
+
+    test('incluida + removible + extraPrice > 0 → SÍ entra '
+        '(repetir cobrado, §045)', () {
+      final p = product([
+        opt('o-moza', included: true, extraPrice: 3500),
+      ]);
+      expect(p.additionalOptions.map((o) => o.id), ['o-moza']);
+    });
+
+    test('incluida + extraPrice == 0 → NO entra (no se vende suelta)', () {
+      final p = product([opt('o-pan', included: true, extraPrice: 0)]);
+      expect(p.additionalOptions, isEmpty);
+    });
+
+    test('no incluida → SÍ entra, con o sin precio', () {
+      final p = product([
+        opt('o-tocineta', included: false, extraPrice: 4000),
+        opt('o-gratis', included: false, extraPrice: 0),
+      ]);
+      expect(p.additionalOptions.map((o) => o.id), [
+        'o-tocineta',
+        'o-gratis',
+      ]);
     });
   });
 }

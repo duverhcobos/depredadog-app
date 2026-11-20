@@ -23,6 +23,7 @@ class CartModifier extends Equatable {
     required this.optionName,
     required this.action,
     required this.priceDelta,
+    this.times = 1,
     this.replacesOptionId,
     this.group,
   });
@@ -49,12 +50,18 @@ class CartModifier extends Equatable {
   /// sameConfiguration — una opción nunca vive en dos grupos.
   final CartModifierGroup? group;
 
+  /// Porciones del adicional (§045) — solo aplica a `added` de extras
+  /// cobrados; `priceDelta` ya es el total de línea (extra × times).
+  /// Removed, toppings, salsas y reemplazos siempre son 1.
+  final int times;
+
   @override
   List<Object?> get props => [
     optionId,
     optionName,
     action,
     priceDelta,
+    times,
     replacesOptionId,
     group,
   ];

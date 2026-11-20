@@ -1,4 +1,5 @@
 import 'dart:async' show Completer, unawaited;
+import 'dart:io' show Directory;
 
 import 'package:dartz/dartz.dart';
 import 'package:flutter/material.dart';
@@ -22,6 +23,7 @@ import 'package:depredadog_app/features/admin/presentation/screens/admin_new_ord
 import 'package:depredadog_app/features/admin/presentation/screens/admin_queue_screen.dart';
 import 'package:depredadog_app/features/cart/domain/entities/cart_modifier.dart';
 import 'package:depredadog_app/features/home/domain/entities/catalog_category.dart';
+import 'package:depredadog_app/features/home/presentation/widgets/extra_stepper_row.dart';
 import 'package:depredadog_app/l10n/app_localizations.dart';
 
 import '../../fixtures/admin_new_order_fixtures.dart';
@@ -106,6 +108,48 @@ void main() {
     return calls;
   }
 
+  /// Intercepta share_plus (dev.fluttercommunity.plus/share) — el
+  /// share sheet no abre en test; el stub confirma la entrega de
+  /// las cards PNG (`paths`) al chooser del SO. `fail` lanza
+  /// PlatformException para ejercitar el toast de fallo (§043 v2).
+  List<MethodCall> stubShare(WidgetTester tester, {bool fail = false}) {
+    const channel = MethodChannel('dev.fluttercommunity.plus/share');
+    final calls = <MethodCall>[];
+    tester.binding.defaultBinaryMessenger.setMockMethodCallHandler(channel, (
+      call,
+    ) async {
+      calls.add(call);
+      if (fail) throw PlatformException(code: 'share_failed');
+      return 'dev.fluttercommunity.plus/share/success';
+    });
+    addTearDown(
+      () => tester.binding.defaultBinaryMessenger.setMockMethodCallHandler(
+        channel,
+        null,
+      ),
+    );
+    return calls;
+  }
+
+  /// path_provider → temp dir real del SO — shareKitchenItemCards
+  /// escribe las PNG antes del share (§043 v2; sin stub el canal
+  /// no responde en test).
+  void stubPathProvider(WidgetTester tester) {
+    const channel = MethodChannel('plugins.flutter.io/path_provider');
+    tester.binding.defaultBinaryMessenger.setMockMethodCallHandler(
+      channel,
+      (call) async => call.method == 'getTemporaryDirectory'
+          ? Directory.systemTemp.path
+          : null,
+    );
+    addTearDown(
+      () => tester.binding.defaultBinaryMessenger.setMockMethodCallHandler(
+        channel,
+        null,
+      ),
+    );
+  }
+
   /// Rama admin réplica de app_router — 'orders/new' ANTES de la
   /// pantalla, con el cubit factory por locator igual que prod.
   GoRouter buildAdminRouter() => GoRouter(
@@ -171,9 +215,33 @@ void main() {
     expect(find.text('¿Se le quita algo?'), findsOneWidget);
     await tester.tap(find.text('Cebolla'));
     await tester.pump();
-    await tester.tap(find.text('Tocineta crocante'));
+    // Extra con stepper (§045): el + de la fila de Tocineta la agrega
+    // en 1 porción — el tap sobre el nombre ya no alterna.
+    final tocinetaRow = find.widgetWithText(
+      ExtraStepperRow,
+      'Tocineta crocante',
+    );
+    await tester.ensureVisible(tocinetaRow);
+    await tester.pump();
+    await tester.tap(
+      find.descendant(of: tocinetaRow, matching: find.byIcon(Icons.add_rounded)),
+    );
     await tester.pump();
     await tester.tap(find.text('Agregar · \$18.000'));
+    await tester.pumpAndSettle();
+  }
+
+  /// Deja la pantalla en la vista de éxito (§043): Cachorro por el
+  /// sheet → cobro → Mesa 2 → "Crear pedido" (el stub devuelve el
+  /// pedido #8 de `newOrderCreated`).
+  Future<void> reachSuccessView(WidgetTester tester, GoRouter router) async {
+    await openNewOrder(tester, router);
+    await addCachorro(tester);
+    await tester.tap(find.byType(FilledButton));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Mesa 2'));
+    await tester.pump();
+    await tester.tap(find.byType(FilledButton));
     await tester.pumpAndSettle();
   }
 
@@ -237,11 +305,7 @@ void main() {
     expect(find.text(r'$18.000'), findsOneWidget);
     expect(find.text('Continuar'), findsOneWidget);
     expect(
-      tester
-          .widget<FilledButton>(
-            find.byType(FilledButton),
-          )
-          .onPressed,
+      tester.widget<FilledButton>(find.byType(FilledButton)).onPressed,
       isNotNull,
     );
   });
@@ -272,11 +336,7 @@ void main() {
 
     // dineIn por defecto SIN mesa → "Crear pedido" disabled.
     expect(
-      tester
-          .widget<FilledButton>(
-            find.byType(FilledButton),
-          )
-          .onPressed,
+      tester.widget<FilledButton>(find.byType(FilledButton)).onPressed,
       isNull,
     );
 
@@ -289,11 +349,7 @@ void main() {
     await tester.pump();
     expect(cubit.state.selectedTableId, 't-2');
     expect(
-      tester
-          .widget<FilledButton>(
-            find.byType(FilledButton),
-          )
-          .onPressed,
+      tester.widget<FilledButton>(find.byType(FilledButton)).onPressed,
       isNotNull,
     );
   });
@@ -315,11 +371,7 @@ void main() {
     // Las mesas se esconden en pickup y la puerta se abre sin mesa.
     expect(find.text('Mesa 2'), findsNothing);
     expect(
-      tester
-          .widget<FilledButton>(
-            find.byType(FilledButton),
-          )
-          .onPressed,
+      tester.widget<FilledButton>(find.byType(FilledButton)).onPressed,
       isNotNull,
     );
 
@@ -328,11 +380,7 @@ void main() {
     expect(find.text('Celular que recibe el cobro'), findsOneWidget);
     // Transfer sin celular válido → disabled.
     expect(
-      tester
-          .widget<FilledButton>(
-            find.byType(FilledButton),
-          )
-          .onPressed,
+      tester.widget<FilledButton>(find.byType(FilledButton)).onPressed,
       isNull,
     );
 
@@ -342,59 +390,141 @@ void main() {
     );
     await tester.pump();
     expect(
-      tester
-          .widget<FilledButton>(
-            find.byType(FilledButton),
-          )
-          .onPressed,
+      tester.widget<FilledButton>(find.byType(FilledButton)).onPressed,
       isNotNull,
     );
   });
 
-  testWidgets('submit éxito: toast "Pedido #8 en la cola" + pop a '
-      'Cocina + load() de resync del singleton (§042)', (tester) async {
-    final calls = stubToast(tester);
+  testWidgets('submit éxito: VISTA de éxito "Pedido #adm-8 creado" con '
+      'compartir + volver — reemplazó al toast+pop del §042 (§043)', (
+    tester,
+  ) async {
     final router = buildAdminRouter();
     await pumpAdminApp(tester, router);
-    await openNewOrder(tester, router);
-    await addCachorro(tester);
-    await tester.tap(find.byType(FilledButton));
-    await tester.pumpAndSettle();
-    await tester.tap(find.text('Mesa 2'));
-    await tester.pump();
+    await reachSuccessView(tester, router);
 
-    await tester.tap(find.byType(FilledButton));
-    await tester.pumpAndSettle();
+    // La pantalla NO popeó — la vista de éxito ofrece mandar la
+    // comanda al chat de cocina antes de volver (decisión del dueño).
+    expect(find.byType(AdminNewOrderScreen), findsOneWidget);
+    expect(find.text('Pedido #adm-8 creado'), findsOneWidget);
+    expect(find.text('Enviar a cocina'), findsOneWidget);
+    expect(find.text('Volver a Cocina'), findsOneWidget);
+    // Los pasos quedaron atrás — el footer "Crear pedido" también
+    // se esconde en éxito (como en loading/failed).
+    expect(find.text('Crear pedido'), findsNothing);
+    expect(cubit.state.createdOrder?.orderNumber, 8);
 
-    expect(
-      calls.any((c) => c.arguments['msg'] == 'Pedido #8 en la cola'),
-      isTrue,
-    );
-    // La pantalla se fue — quedó Cocina detrás.
-    expect(find.byType(AdminNewOrderScreen), findsNothing);
-    expect(find.byType(AdminQueueScreen), findsOneWidget);
-    // El POST recibió el draft dineIn + mesa + cash.
+    // El POST recibió el draft dineIn + mesa + cash — UNA sola vez
+    // (la vista de éxito no lo re-dispara).
     final draft =
         verify(() => create.call(captureAny())).captured.single
             as AdminNewOrderDraft;
     expect(draft.serviceType, AdminServiceType.dineIn);
     expect(draft.tableId, 't-2');
     expect(draft.paymentMethod, AdminPaymentMethod.cash);
-    // Resync de la cola — el singleton recargó al volver (uno por
-    // el load inicial del pump, otro por el éxito).
+    // Resync de la cola — el singleton recargó igual que antes (uno
+    // por el load inicial del pump, otro por el éxito).
     verify(() => loadQueueUseCase.call()).called(2);
+  });
+
+  testWidgets('vista de éxito: "Enviar a cocina" lanza el share '
+      'sheet con UNA card PNG por ítem del BORRADOR (§043 v2)', (tester) async {
+    stubPathProvider(tester);
+    final shares = stubShare(tester);
+    final router = buildAdminRouter();
+    await pumpAdminApp(tester, router);
+    await reachSuccessView(tester, router);
+
+    // runAsync: el render de las cards usa toImage/toByteData +
+    // writeAsBytes — async real del engine/IO que no progresa en la
+    // zona fake de testWidgets; los pumps manuales dan los frames
+    // que espera cada endOfFrame del overlay offscreen y el delayed
+    // cede al event loop real para que el IO de las PNG aterrice.
+    await tester.runAsync(() async {
+      await tester.tap(find.text('Enviar a cocina'));
+      for (var i = 0; i < 200 && shares.isEmpty; i++) {
+        await tester.pump();
+        await Future<void>.delayed(const Duration(milliseconds: 1));
+      }
+    });
+    await tester.pumpAndSettle();
+
+    // Una imagen por ítem del borrador — la card es self-contained
+    // (decisión del dueño v2: imagen, no texto wa.me).
+    final call = shares.firstWhere((c) => c.method == 'share');
+    final paths = (call.arguments['paths'] as List).cast<String>();
+    expect(paths, hasLength(cubit.state.items.length));
+    expect(paths.every((p) => p.endsWith('.png')), isTrue);
+    // La orden sigue viva en pantalla y el POST no se re-disparó.
+    expect(find.byType(AdminNewOrderScreen), findsOneWidget);
+    verify(() => create.call(any())).called(1);
+  });
+
+  testWidgets('vista de éxito: exception del share sheet → toast "No '
+      'pudimos compartir la comanda" (§043 v2)', (tester) async {
+    final calls = stubToast(tester);
+    stubPathProvider(tester);
+    stubShare(tester, fail: true);
+    final router = buildAdminRouter();
+    await pumpAdminApp(tester, router);
+    await reachSuccessView(tester, router);
+
+    // runAsync — el render de las cards es async real del engine/IO
+    // (ver el test del share arriba); aquí se espera el TOAST del
+    // catch, no la llamada share.
+    await tester.runAsync(() async {
+      await tester.tap(find.text('Enviar a cocina'));
+      for (var i = 0; i < 200 && calls.isEmpty; i++) {
+        await tester.pump();
+        await Future<void>.delayed(const Duration(milliseconds: 1));
+      }
+    });
+    await tester.pumpAndSettle();
+
+    expect(
+      calls.any((c) => c.arguments['msg'] == 'No pudimos compartir la comanda'),
+      isTrue,
+    );
+    // Se queda en la vista de éxito para reintentar o volver.
+    expect(find.text('Pedido #adm-8 creado'), findsOneWidget);
 
     // Expira el Future.delayed interno de fluttertoast.
     await tester.pump(const Duration(seconds: 2));
+  });
+
+  testWidgets('vista de éxito: "Volver a Cocina" hace pop a la cola '
+      '(el resync ya corrió en el éxito — §043)', (tester) async {
+    final router = buildAdminRouter();
+    await pumpAdminApp(tester, router);
+    await reachSuccessView(tester, router);
+
+    await tester.tap(find.text('Volver a Cocina'));
+    await tester.pumpAndSettle();
+
+    expect(find.byType(AdminNewOrderScreen), findsNothing);
+    expect(find.byType(AdminQueueScreen), findsOneWidget);
+    verify(() => create.call(any())).called(1);
+  });
+
+  testWidgets('vista de éxito: el back NATIVO hace pop directo a '
+      'Cocina — la regla cobro→comanda no aplica (§043)', (tester) async {
+    final router = buildAdminRouter();
+    await pumpAdminApp(tester, router);
+    await reachSuccessView(tester, router);
+
+    await tester.binding.handlePopRoute();
+    await tester.pumpAndSettle();
+
+    expect(find.byType(AdminNewOrderScreen), findsNothing);
+    expect(find.byType(AdminQueueScreen), findsOneWidget);
   });
 
   testWidgets('submit TABLE_NOT_FOUND: toast "la mesa cambió" y la '
       'pantalla se QUEDA (§042)', (tester) async {
     final calls = stubToast(tester);
     when(() => create.call(any())).thenAnswer(
-      (_) async => const Left(
-        AdminServerFailure('nf', errorCode: 'TABLE_NOT_FOUND'),
-      ),
+      (_) async =>
+          const Left(AdminServerFailure('nf', errorCode: 'TABLE_NOT_FOUND')),
     );
     final router = buildAdminRouter();
     await pumpAdminApp(tester, router);
@@ -424,12 +554,12 @@ void main() {
     await tester.pump(const Duration(seconds: 2));
   });
 
-  testWidgets('submit error genérico: toast de la cola y se queda',
-      (tester) async {
+  testWidgets('submit error genérico: toast de la cola y se queda', (
+    tester,
+  ) async {
     final calls = stubToast(tester);
-    when(() => create.call(any())).thenAnswer(
-      (_) async => const Left(AdminOfflineFailure()),
-    );
+    when(() => create.call(any()))
+        .thenAnswer((_) async => const Left(AdminOfflineFailure()));
     final router = buildAdminRouter();
     await pumpAdminApp(tester, router);
     await openNewOrder(tester, router);

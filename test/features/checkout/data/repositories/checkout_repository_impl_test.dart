@@ -288,10 +288,11 @@ void main() {
               'productId': 'p-1',
               'quantity': 2,
               'modifiers': [
-                {'optionId': 'm-1', 'action': 'removed'},
+                {'optionId': 'm-1', 'action': 'removed', 'times': 1},
                 {
                   'optionId': 'm-9',
                   'action': 'added',
+                  'times': 1,
                   'replacesOptionId': 'm-1',
                 },
               ],

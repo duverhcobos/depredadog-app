@@ -173,9 +173,34 @@ void main() {
       // emitiría la fila `removed` duplicada al guardar (revisor-ui).
       expect(sel.removed, {'o-huevo'});
       expect(sel.replacements, {'o-mozzarella': 'o-tocineta'});
-      expect(sel.extras, {'o-salchicha'});
+      // Doble salchicha (§045): extras es optionId → porciones.
+      expect(sel.extras['o-salchicha'], 1);
       expect(sel.toppings, {'o-ripio'});
       expect(sel.sauces, {'o-ketchup'});
+    });
+
+    test('added con times N → extras conserva las porciones (§045)', () {
+      const item = CartItem(
+        id: 'cart-1',
+        productId: 'p-cachorro',
+        productSlug: 'cachorro',
+        productName: 'El Cachorro',
+        unitBase: 14000,
+        modifiers: [
+          // Doble tocineta — priceDelta ya es el total de línea.
+          CartModifier(
+            optionId: 'o-tocineta',
+            optionName: 'Tocineta crocante',
+            action: CartModifierAction.added,
+            priceDelta: 8000,
+            times: 2,
+          ),
+        ],
+      );
+
+      final sel = DetailSelections.fromCartItem(item, _cachorro());
+
+      expect(sel.extras['o-tocineta'], 2);
     });
 
     test('added de una opción que ya no está en el producto → se descarta', () {
@@ -231,7 +256,7 @@ void main() {
       final sel = DetailSelections();
       expect(() {
         sel.removed.add('x');
-        sel.extras.add('x');
+        sel.extras['x'] = 1;
         sel.toppings.add('x');
         sel.sauces.add('x');
         sel.replacements['a'] = 'b';

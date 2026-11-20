@@ -449,6 +449,7 @@ class CheckoutCubit extends Cubit<CheckoutState> {
                 OrderModifierInput(
                   optionId: m.optionId,
                   action: m.action.name,
+                  times: m.times,
                   replacesOptionId: m.replacesOptionId,
                 ),
             ],

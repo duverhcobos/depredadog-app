@@ -90,7 +90,14 @@ class CartItemDetailPanel extends StatelessWidget {
                     Text.rich(
                       TextSpan(
                         children: [
-                          TextSpan(text: m.optionName, style: value),
+                          // Extra repetido (§045) → "×2 Salami"; el
+                          // precio ya es el total de línea.
+                          TextSpan(
+                            text: m.times > 1
+                                ? '×${m.times} ${m.optionName}'
+                                : m.optionName,
+                            style: value,
+                          ),
                           // El precio del extra canta en mostaza como
                           // en toda la familia (pulido §021).
                           if (m.priceDelta > 0)

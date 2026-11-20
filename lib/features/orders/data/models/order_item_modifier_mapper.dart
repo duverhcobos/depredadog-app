@@ -22,6 +22,9 @@ CartModifier cartModifierFromOrderJson(Map<String, dynamic> m) {
     optionName: m['optionName'] as String,
     action: action,
     priceDelta: m['priceDelta'] as int,
+    // Porciones del extra (§045) — filas viejas del backend vienen sin
+    // el campo → 1.
+    times: m['times'] as int? ?? 1,
     replacesOptionId: replaces,
     group: group,
   );

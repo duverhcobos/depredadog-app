@@ -63,6 +63,9 @@ class CheckoutRepositoryImpl implements ICheckoutRepository {
                 {
                   'optionId': m.optionId,
                   'action': m.action,
+                  // Siempre viaja (§045) — el backend también acepta
+                  // su ausencia como 1.
+                  'times': m.times,
                   if (m.replacesOptionId != null)
                     'replacesOptionId': m.replacesOptionId,
                 },

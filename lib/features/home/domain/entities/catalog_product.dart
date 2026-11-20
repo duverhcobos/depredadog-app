@@ -3,6 +3,10 @@ import 'package:equatable/equatable.dart';
 import 'modifier_group.dart';
 import 'modifier_option.dart';
 
+/// Mínimo de porciones al agregar un adicional (§045) — no hay tope
+/// superior (decisión del usuario); el stepper solo clampa por abajo.
+const int kMinExtraTimes = 1;
+
 /// Producto del menú (§019). Helpers de personalización replican las
 /// reglas del modelo aprobado §018 — ver la propuesta.
 class CatalogProduct extends Equatable {
@@ -66,15 +70,14 @@ class CatalogProduct extends Equatable {
           .where((o) => o.includedByDefault && o.isRemovable)
           .toList();
 
-  /// "¿Le agregamos algo más?": las que NO vienen por defecto, más los
-  /// fijos con precio (doble salchicha — incluida/no removible pero
-  /// cobrada si se repite; el pan no entra porque su precio es 0).
+  /// "¿Le agregamos algo más?": las que NO vienen por defecto, más TODA
+  /// incluida con precio — cualquier ingrediente del perro se repite
+  /// pagándolo como adicional (§045). Pan y salchicha quedan fuera
+  /// porque su extra_price es 0 — no se venden sueltos.
   List<ModifierOption> get additionalOptions =>
       (groupBySlug(ModifierGroupSlugs.ingredients)?.options ??
               const <ModifierOption>[])
-          .where(
-            (o) => !o.includedByDefault || (!o.isRemovable && o.extraPrice > 0),
-          )
+          .where((o) => !o.includedByDefault || o.extraPrice > 0)
           .toList();
 
   List<ModifierOption> get toppingOptions =>

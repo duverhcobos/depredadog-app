@@ -18,6 +18,7 @@ import 'package:depredadog_app/features/home/presentation/cubit/catalog_cubit.da
 import 'package:depredadog_app/features/home/presentation/cubit/catalog_state.dart';
 import 'package:depredadog_app/features/home/presentation/screens/product_detail_screen.dart';
 import 'package:depredadog_app/features/home/presentation/widgets/customization_section.dart';
+import 'package:depredadog_app/features/home/presentation/widgets/extra_stepper_row.dart';
 import 'package:depredadog_app/l10n/app_localizations.dart';
 
 class MockCatalogCubit extends MockCubit<CatalogState>
@@ -279,8 +280,11 @@ void main() {
     // "¿Se le quita algo?" solo lista removibles incluidos — pan y
     // salchicha son FIJOS y no aparecen (§018/§019).
     expect(find.byType(RemovableRow), findsNWidgets(2));
-    expect(find.text('Queso mozzarella'), findsOneWidget);
-    expect(find.text('Huevo de codorniz'), findsOneWidget);
+    // §045: mozzarella y huevo duplican texto — su fila removible y
+    // su ExtraStepperRow en Adicionales (incluida con precio = extra
+    // cobrado al repetir).
+    expect(find.text('Queso mozzarella'), findsNWidgets(2));
+    expect(find.text('Huevo de codorniz'), findsNWidgets(2));
     // La salchicha fija SÍ sale como adicional (doble salchicha §018).
     expect(find.text('Salchicha americana'), findsOneWidget);
     expect(find.text(r'+$5.000'), findsOneWidget);
@@ -297,10 +301,15 @@ void main() {
     await pumpDetail(tester, 'cachorro', _stateWith(_cachorro()));
     await tester.pumpAndSettle();
 
-    await tester.tap(find.text('Huevo de codorniz'));
+    // §045: 'Huevo de codorniz' sale 2× — la fila quitable es la
+    // RemovableRow (la otra es su stepper de extra).
+    final huevoRow = find.widgetWithText(RemovableRow, 'Huevo de codorniz');
+    await tester.tap(huevoRow);
     await tester.pump();
 
-    final text = tester.widget<Text>(find.text('Huevo de codorniz'));
+    final text = tester.widget<Text>(
+      find.descendant(of: huevoRow, matching: find.text('Huevo de codorniz')),
+    );
     expect(text.style?.decoration, TextDecoration.lineThrough);
     expect(find.byIcon(Icons.remove_circle_outline_rounded), findsOneWidget);
   });
@@ -315,8 +324,14 @@ void main() {
     await pumpDetail(tester, 'cachorro', _stateWith(_cachorro()));
     await tester.pumpAndSettle();
 
-    // Tocineta no es ingrediente propio del Cachorro → adicional +$4.000.
-    await tester.tap(find.text('Tocineta crocante'));
+    // Tocineta no es ingrediente propio del Cachorro → adicional
+    // +$4.000; con stepper (§045) el + de su fila agrega 1 porción.
+    await tester.tap(
+      find.descendant(
+        of: find.widgetWithText(ExtraStepperRow, 'Tocineta crocante'),
+        matching: find.byIcon(Icons.add_rounded),
+      ),
+    );
     await tester.pump();
 
     expect(find.text(r'$18.000'), findsOneWidget); // 14.000 + 4.000
@@ -356,16 +371,18 @@ void main() {
     // El trailing del extra muestra "Agotado" en vez de "+$4.000".
     expect(find.text('Agotado'), findsOneWidget);
     expect(find.text(r'+$4.000'), findsNothing);
-    final row = tester.widget<OptionRow>(
-      find.ancestor(
-        of: find.text('Tocineta crocante'),
-        matching: find.byType(OptionRow),
-      ),
+    final rowFinder = find.ancestor(
+      of: find.text('Tocineta crocante'),
+      matching: find.byType(ExtraStepperRow),
     );
+    final row = tester.widget<ExtraStepperRow>(rowFinder);
     expect(row.enabled, isFalse);
 
-    // Tap inerte — el total no se mueve.
-    await tester.tap(find.text('Tocineta crocante'));
+    // Stepper inerte (IgnorePointer) — el total no se mueve.
+    await tester.tap(
+      find.descendant(of: rowFinder, matching: find.byIcon(Icons.add_rounded)),
+      warnIfMissed: false,
+    );
     await tester.pump();
     expect(find.text(r'$18.000'), findsNothing);
     expect(find.text(r'$14.000'), findsNWidgets(2));
@@ -549,9 +566,18 @@ void main() {
       await tester.pumpAndSettle();
 
       // Un quitado + un adicional del fixture → 2 filas CartModifier.
-      await tester.tap(find.text('Huevo de codorniz'));
+      // §045: el quitado va por su RemovableRow ('Huevo de codorniz'
+      // duplica con su fila de extra) y el extra por el + del stepper.
+      await tester.tap(
+        find.widgetWithText(RemovableRow, 'Huevo de codorniz'),
+      );
       await tester.pump();
-      await tester.tap(find.text('Tocineta crocante'));
+      await tester.tap(
+        find.descendant(
+          of: find.widgetWithText(ExtraStepperRow, 'Tocineta crocante'),
+          matching: find.byIcon(Icons.add_rounded),
+        ),
+      );
       await tester.pump();
 
       await tester.tap(find.text('Agregar al carrito'));
@@ -661,18 +687,23 @@ void main() {
       expect(find.text('Editando · El Cachorro'), findsOneWidget);
 
       // Quitado precargado → la fila del huevo arranca tachada.
-      final huevo = tester.widget<Text>(find.text('Huevo de codorniz'));
+      // §045: 'Huevo de codorniz' duplica con su fila de extra — la
+      // tachada es la de la RemovableRow.
+      final huevoRow = find.widgetWithText(RemovableRow, 'Huevo de codorniz');
+      final huevo = tester.widget<Text>(
+        find.descendant(of: huevoRow, matching: find.text('Huevo de codorniz')),
+      );
       expect(huevo.style?.decoration, TextDecoration.lineThrough);
 
-      // Extra precargado → OptionRow seleccionada + total con su
+      // Extra precargado → stepper en 1 porción + total con su
       // +$4.000 (14.000 + 4.000).
-      final tocineta = tester.widget<OptionRow>(
+      final tocineta = tester.widget<ExtraStepperRow>(
         find.ancestor(
           of: find.text('Tocineta crocante'),
-          matching: find.byType(OptionRow),
+          matching: find.byType(ExtraStepperRow),
         ),
       );
-      expect(tocineta.selected, isTrue);
+      expect(tocineta.times, 1);
       expect(find.text(r'$18.000'), findsOneWidget);
 
       // Chips precargados — las secciones de abajo son lazy.
@@ -743,10 +774,17 @@ void main() {
     );
     await tester.pumpAndSettle();
 
-    // Edición real: se devuelve el huevo y se agrega tocineta.
-    await tester.tap(find.text('Huevo de codorniz'));
+    // Edición real: se devuelve el huevo (RemovableRow — §045 el
+    // texto duplica con su fila de extra) y se agrega tocineta por
+    // el + de su stepper.
+    await tester.tap(find.widgetWithText(RemovableRow, 'Huevo de codorniz'));
     await tester.pump();
-    await tester.tap(find.text('Tocineta crocante'));
+    await tester.tap(
+      find.descendant(
+        of: find.widgetWithText(ExtraStepperRow, 'Tocineta crocante'),
+        matching: find.byIcon(Icons.add_rounded),
+      ),
+    );
     await tester.pump();
 
     await tester.tap(find.text('Guardar cambios'));
@@ -835,7 +873,10 @@ void main() {
 
       // Un cambio real para que el guardado no sea no-op: quitar
       // el huevo (la regresión emitía el removed de mozzarella 2×).
-      await tester.tap(find.text('Huevo de codorniz'));
+      // §045: el texto duplica con la fila de extra → RemovableRow.
+      await tester.tap(
+        find.widgetWithText(RemovableRow, 'Huevo de codorniz'),
+      );
       await tester.pump();
       await tester.tap(find.text('Guardar cambios'));
       await tester.pumpAndSettle();
@@ -1001,7 +1042,8 @@ void main() {
     await tester.pumpAndSettle();
 
     // Sin cambios el back sale directo — primero provocar uno.
-    await tester.tap(find.text('Huevo de codorniz'));
+    // §045: el texto duplica con la fila de extra → RemovableRow.
+    await tester.tap(find.widgetWithText(RemovableRow, 'Huevo de codorniz'));
     await tester.pump();
     await tester.tap(find.byIcon(Icons.arrow_back_rounded));
     await tester.pumpAndSettle();
