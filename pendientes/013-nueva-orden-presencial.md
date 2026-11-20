@@ -1,6 +1,11 @@
 # Pendiente: Nueva orden presencial (form del FAB de Cocina)
 
-> **Estado: 🔴 PENDIENTE** — detectado en evaluacion-modulo de admin/Cocina
+> **Estado: 🟢 RESUELTO** — §042, commit f69f427 (2026-11-20).
+> Alcance implementado: dine_in (mesa) + pickup (mostrador) con
+> personalización completa, pago Efectivo/Transf. y nota — cae al
+> carril correcto vía POST /admin/orders real. Domicilio presencial
+> quedó fuera por decisión (el dueño reparte él mismo, se puede
+> agregar si surge la necesidad).
 > **Producto:** app
 > **Bloqueo:** bloqueante para operación presencial desde la app —
 > hoy el dueño no puede tomar pedidos de mostrador/mesa/teléfono

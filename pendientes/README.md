@@ -18,6 +18,6 @@
 | 010 | [Extraer widgets del detalle de producto (umbral de tamaño)](010-extraer-widgets-detalle-producto.md) | 🔴 PENDIENTE | recomendado |
 | 011 | ["Gratis" en el copy del carrusel de promos](011-copy-gratis-carrusel-promos.md) | 🔴 PENDIENTE | menor |
 | 012 | [Fallback ciego 409 en auth puede etiquetar mal un rechazo](012-fallback-409-ciego-auth.md) | 🔴 PENDIENTE | condicional (Google OAuth / otros 409) |
-| 013 | [Nueva orden presencial (form del FAB de Cocina)](013-nueva-orden-presencial.md) | 🔴 PENDIENTE | bloqueante para operación presencial desde la app |
+| 013 | [Nueva orden presencial (form del FAB de Cocina)](013-nueva-orden-presencial.md) | 🟢 RESUELTO | bloqueante para operación presencial desde la app |
 | 014 | [Historial definitivo de Cocina (ubicación, paginación, cierres)](014-historial-definitivo.md) | 🔴 PENDIENTE | recomendado |
 | 015 | [Campo nota opcional en el cierre de caja](015-nota-cierre-caja.md) | 🔴 PENDIENTE | menor |
