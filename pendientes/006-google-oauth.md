@@ -1,29 +1,25 @@
-# Pendiente: Login con Google listo para producción (SHA-1 release + publicar consent screen)
+# Pendiente: Login con Google listo para producción
 
-> **Estado: � PARCIAL** — flujo Google FUNCIONAL en dev (propuesta 014: SDK → POST /auth/google → sesión, verificado en emulador con clientes OAuth reales); falta la configuración de producción
+> **Estado: ✅ FUNCIONAL en prod para el dueño** — login Google verificado en APK release firmada contra Render (2026-11-20)
 > **Producto:** frontend (requiere config también en backend)
-> **Bloqueo:** bloqueante solo si Google login entra al MVP
 
 ## Contexto
 
-El botón "Continuar con Google" (`GoogleSignInButton` compartido) está integrado en login y en el paso 1 del registro (propuesta 014). En dev ya funciona end-to-end con el proyecto Google Cloud real ("Depredadog"): selector de cuentas → consentimiento → `idToken` → POST /auth/google → sesión.
+El botón "Continuar con Google" (`GoogleSignInButton` compartido) está integrado en login y en el paso 1 del registro (propuesta 014). SDK → `idToken` → POST /auth/google → sesión.
 
-Valores dev configurados (2026-11-02):
-- **Web client ID** (serverClientId de la app + `aud` que verifica el backend): `323199681728-75tbhjfu8e9pohi7h3ucmm1smgkpjtsv.apps.googleusercontent.com` — en `.env` backend (`GOOGLE_CLIENT_IDS`) y `--dart-define=GOOGLE_SERVER_CLIENT_ID` en la app.
-- **Android client debug**: package `com.depredadog.app` + SHA-1 debug `E9:F0:28:41:17:2C:2F:77:DF:84:A3:67:B7:6B:E2:72:E7:DA:94:50`.
-- **Consent screen**: External, modo "Prueba", test user `duverhernandezcobos@gmail.com`.
-- El mismo **web client ID sirve para prod** (es el `aud` del idToken) — no hace falta crear otro.
+**Proyecto OAuth de producción** (2026-11-20): creado desde cero en el correo nuevo del dueño — el proyecto viejo quedó en otra cuenta y se abandonó. Valores:
 
-## Qué falta para prod
+- **Web client ID** (`serverClientId` de la app + `aud` que verifica el backend): `924464796986-hn07t8pmbosktloo8k4erhohm9v47nct.apps.googleusercontent.com` — en `.env` backend, `render.yaml` (`GOOGLE_CLIENT_IDS`) y `--dart-define=GOOGLE_SERVER_CLIENT_ID` en la app.
+- **Android client release**: package `com.depredadog.app` + SHA-1 keystore release `79:95:FA:A5:CD:B0:CF:C0:8F:C3:97:1A:C9:DA:7B:5F:67:E3:D3:FF`.
+- **Consent screen**: External, modo "Prueba" — test user `duverhernandezcobos@gmail.com` (el admin sembrado; entró directo como dueño en el primer login — `google-login.use-case` vincula `googleId` sin tocar `role`).
 
-- **Android client release** — nuevo cliente OAuth Android con el **SHA-1 del keystore release** (pendiente 003: el keystore ni existe aún). El de debug no sirve para la app firmada.
-- **SHA-1 de Play App Signing** — si Play gestiona la firma, registrar ese fingerprint también ("App integrity" en Play Console tras el primer upload).
-- **Publicar el consent screen** — pasar de "Prueba" a "En producción" (scopes openid/email/profile no exigen verificación) o mantener Prueba gestionando la lista de test users.
-- **Backend prod** — `GOOGLE_CLIENT_IDS` del entorno prod con el web client ID (mismo valor dev; sumar el Android client release si se crea).
+## Qué falta
+
+- **Publicar el consent screen** — hoy SOLO entran los correos en "Test users". Para clientes finales hay que pasar de "Prueba" a "En producción" (scopes openid/email/profile no exigen verificación de Google) o agregar cada correo como test user mientras tanto.
+- **SHA-1 de Play App Signing** — solo si se publica en Play Store y Play gestiona la firma: registrar ese fingerprint adicional ("App integrity" en Play Console tras el primer upload).
 - **iOS client** — solo si sale build iOS: cliente OAuth iOS + `GIDClientID` en el plist.
-- **Decisión de alcance** — si Google login no entra al MVP, ocultar el botón en builds de prod (es widget compartido, resuelve ambas superficies).
 
 ## Criterio de cierre
 
-- Login con Google funcional en build release firmado con el keystore de prod.
-- O: botón oculto en prod + decisión documentada de diferir Google login.
+- ~~Login con Google funcional en build release firmado con el keystore de prod.~~ ✅ hecho
+- Consent screen publicada (o lista de test users gestionada) para que cualquier cliente pueda entrar.
