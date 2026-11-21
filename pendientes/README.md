@@ -21,3 +21,5 @@
 | 013 | [Nueva orden presencial (form del FAB de Cocina)](013-nueva-orden-presencial.md) | 🟢 RESUELTO | bloqueante para operación presencial desde la app |
 | 014 | [Historial definitivo de Cocina (ubicación, paginación, cierres)](014-historial-definitivo.md) | 🔴 PENDIENTE | recomendado |
 | 015 | [Campo nota opcional en el cierre de caja](015-nota-cierre-caja.md) | 🔴 PENDIENTE | menor |
+| 016 | [Refresh del catálogo en home (CatalogCubit singleton)](016-refresh-catalogo-home.md) | 🔴 PENDIENTE | recomendado |
+| 017 | [Combos en la app — carta ya decidida por el dueño](017-combos-carta.md) | 🔴 PENDIENTE | post-MVP |
